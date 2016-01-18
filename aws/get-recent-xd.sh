@@ -57,8 +57,7 @@ python $XD/main.py --raw-to-xd --scraper latimes -i $LATRAW -o lat$TODAY.zip && 
 echo $TODAY > LAST_FETCH
 $S3CP LAST_FETCH s3://$BUCKET/src/LAST_FETCH
 
-# sudo in production
-poweroff
+#poweroff
 
 exit 0
 
