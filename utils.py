@@ -19,7 +19,7 @@ class URLUtils(object):
 
 
 class DateUtils(object):
-    DEFAULT_DATE_FORMAT = '%d-%m-%Y'
+    DEFAULT_DATE_FORMAT = '%Y-%m-%d'
 
     @staticmethod
     def today():

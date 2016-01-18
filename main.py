@@ -1,8 +1,12 @@
+#!/usr/bin/python
+
 import os
 import argparse
 
 from utils import DateUtils
 from utils import ZipUtils
+from errors import *
+
 
 
 DEFAULT_CONTENT_TYPE = 'html'
@@ -16,8 +20,8 @@ def parse_args():
     parser.add_argument('-s', '--scraper', required=True)
     parser.add_argument('-o', '--outfile', required=True)
     parser.add_argument('-i', '--infile')
-    parser.add_argument('-f', '--from-date', help='Format "DD-MM-YYYY"')
-    parser.add_argument('-t', '--to-date', help='Format "DD-MM-YYYY"')
+    parser.add_argument('-f', '--from-date', help='Format "YYYY-MM-DD"')
+    parser.add_argument('-t', '--to-date', help='Format "YYYY-MM-DD"')
     args = parser.parse_args()
 
     # additional validations

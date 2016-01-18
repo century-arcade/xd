@@ -76,11 +76,11 @@ class Crossword(object):
             + self._puzzle_as_string() \
             + EOL + EOL \
             + self._clues_as_string() \
-            + EOL
+            + EOL + EOL
         return xd_content
 
     def _meta_data_as_string(self):
-        return EOL.join(self.meta_data)
+        return EOL.join(self.meta_data) + EOL
 
     def _clues_as_string(self, with_solution=True):
         string = ''
@@ -96,7 +96,7 @@ class Crossword(object):
         return string.strip()
 
     def _puzzle_as_string(self):
-        return EOL.join([''.join(row) for row in self.puzzle])
+        return EOL.join([''.join(row) for row in self.puzzle]) + EOL
 
     def __str__(self):
         return self.as_xd()
@@ -121,7 +121,7 @@ class Clue(object):
     def as_string(self, with_solution=True):
         text = self.text
         if self.hint:
-            text = '%s(Hint: %s)' %(text, self.hint)
+            text = '%s [Hint](%s)' %(text, self.hint)
         if with_solution and self.solution:
             text = '%s %s %s' %(text, Constants.SOLUTION_SEPARATOR, self.solution)
         return '%s. %s' %(self.id, text)
