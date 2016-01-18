@@ -2,8 +2,6 @@
 
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
-BUCKET=$1
-
 REGION=us-west-2
 S3CP="aws s3 cp --region $REGION"
 
@@ -21,6 +19,11 @@ XD=xd-master
 
 $S3CP s3://$BUCKET/src/LAST_FETCH LAST_FETCH
 LAST_FETCH=`cat LAST_FETCH`
+
+if [ -z "$LAST_FETCH" ]; then
+    LAST_FETCH=$TODAY
+fi
+
 TODAY=`date +"%Y-%m-%d"`
 
 ### nyt
