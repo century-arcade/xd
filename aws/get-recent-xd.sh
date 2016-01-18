@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# requires REGION, BRANCH, and BUCKET
+
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
 REGION=us-west-2
@@ -12,12 +14,12 @@ sudo apt-get update && \
     sudo apt-get install --yes zip awscli python-lxml python-pip && \
     sudo pip install cssselect
 
-wget https://github.com/century-arcade/xd/archive/master.zip
+wget https://github.com/century-arcade/xd/archive/$(BRANCH).zip
 
-unzip master.zip
-XD=xd-master
+unzip $(BRANCH).zip
+XD=xd-$(BRANCH)
 
-$S3CP s3://$BUCKET/src/LAST_FETCH LAST_FETCH
+$S3CP s3://$(BUCKET)/src/LAST_FETCH LAST_FETCH
 LAST_FETCH=`cat LAST_FETCH`
 
 if [ -z "$LAST_FETCH" ]; then
@@ -32,13 +34,13 @@ NYTRAW=nyt$TODAY-raw.zip
 $XD/scrapers/dl-xwordinfo.com.py $LAST_FETCH $TODAY
 
 zip $NYTRAW *.html && \
-    $S3CP $NYTRAW s3://$BUCKET/src/xwordinfo.com-$TODAY.zip && \
+    $S3CP $NYTRAW s3://$(BUCKET)/src/xwordinfo.com-$TODAY.zip && \
     rm $NYTRAW
 
 for i in *.html ; do
     NYTXD=${i%.html}.xd
     $XD/scrapers/xwi2xd.py $i $NYTXD && \
-        $S3CP --acl public-read $NYTXD s3://$BUCKET/crosswords/nytimes/ && \
+        $S3CP --acl public-read $NYTXD s3://$(BUCKET)/crosswords/nytimes/ && \
         rm $i $NYTXD
 done
 
@@ -47,16 +49,17 @@ done
 LATRAW=lat$TODAY-raw.zip
 LATXD=lat$(TODAY).zip
 
-python $XD/main.py --download-raw --scraper latimes --outfile $LATRAW --from-date $LAST_FETCH --to-date $TODAY
+python $XD/main.py --download-raw --scraper latimes --outfile $LATRAW --from-date $LAST_FETCH --to-date $TODAY && \
+    $S3CP $LATRAW s3://$(BUCKET)/src/
 
 python $XD/main.py --raw-to-xd --scraper latimes -i $LATRAW -o lat$TODAY.zip && \
-    $S3CP $LATXD s3://$BUCKET/crosswords/latimes/xdlat$TODAY.zip && \
+    $S3CP $LATXD s3://$(BUCKET)/crosswords/latimes/xdlat$TODAY.zip && \
     rm $LATRAW
 
 ### finish
 
 echo $TODAY > LAST_FETCH
-$S3CP LAST_FETCH s3://$BUCKET/src/LAST_FETCH
+$S3CP LAST_FETCH s3://$(BUCKET)/src/LAST_FETCH
 
 #poweroff
 

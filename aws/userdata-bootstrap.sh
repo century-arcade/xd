@@ -1,10 +1,13 @@
 #!/bin/bash
 
-export KEY=keyname
 export REGION=us-west-2
-export BUCKET=bucketname
+export BUCKET=nantuck.it
+export BRANCH=master
 
-wget http://raw.githubusercontent.com/century-arcade/xd/master/aws/get-recent-xd.sh
+cd /tmp
 
-exec get-recent-xd.sh
+wget https://raw.githubusercontent.com/century-arcade/xd/$(BRANCH)/aws/get-recent-xd.sh
 
+sudo -E /bin/bash -x /tmp/get-recent-xd.sh
+
+sudo poweroff
