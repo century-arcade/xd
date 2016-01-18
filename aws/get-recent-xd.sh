@@ -45,11 +45,12 @@ done
 ### lat
 
 LATRAW=lat$TODAY-raw.zip
+LATXD=lat$(TODAY).zip
 
 python $XD/main.py --download-raw --scraper latimes --outfile $LATRAW --from-date $LAST_FETCH --to-date $TODAY
 
 python $XD/main.py --raw-to-xd --scraper latimes -i $LATRAW -o lat$TODAY.zip && \
-    $S3CP $LATRAW s3://$BUCKET/crosswords/latimes/xdlat$TODAY.zip && \
+    $S3CP $LATXD s3://$BUCKET/crosswords/latimes/xdlat$TODAY.zip && \
     rm $LATRAW
 
 ### finish
