@@ -1,0 +1,55 @@
+PRE-REQUISITES:
+OS:
+Linux/Mac OSX; Not tested in Windows - but it shouldn't be that hard supporting it
+
+Softwares:
+* Python
+* PIP
+
+SET UP:
+1. Copy the zip file over to some local directory and extract it
+2. Install all the dependency modules with PIP
+* Open the terminal
+* Navigate to the directory where the zip file has been extracted - `cd`
+* Execute `pip install -r requirements.txt` (as of now, we do not have any external requirements so we dont have a requirements.txt and so you can skip this step)
+
+EXECUTION:
+1. Open a terminal
+
+2. Navigate to the directory where the zip file has been extracted - `cd`
+
+3. Execute main.py
+
+* Usage 1 - Download RAW Format Crosswords:
+`python main.py --download-raw --scraper <SCRAPER_NAME> --outfile <OUTFILE> --from-date <DD-MM-YYYY> --to-date <DD-MM-YYYY>`
+ex. `python main.py --download-raw --scraper LATimesScraper --outfile x.zip --from-date 01-01-2016 --to-date 10-01-2016`
+ex. `python main.py --download-raw -s LATimesScraper -o x.zip -f 01-01-2016 -t 10-01-2016`
+
+* Usage 2 - Download XD Format Crosswords:
+`python main.py --download-xd --scraper <SCRAPER_NAME> --outfile <OUTFILE> --from-date <DD-MM-YYYY> --to-date <DD-MM-YYYY>`
+ex. `python main.py --download-xd --scraper LATimesScraper --outfile x.zip --from-date 01-01-2016 --to-date 10-01-2016`
+ex. `python main.py --download-xd -s LATimesScraper -o x.zip -f 01-01-2016 -t 10-01-2016`
+
+* Usage 3 - Convert RAW Format Crosswords to XD Format Crosswords:
+`python main.py --raw-to-xd --scraper <SCRAPER_NAME> --infile <INFILE> --outfile <OUTFILE>`
+ex. `python main.py --raw-to-xd --scraper LATimesScraper --infile x.zip --outfile y.zip`
+ex. `python main.py --raw-to-xd -s LATimesScraper -i x.zip -o y.zip`
+
+4. How to write and plug in a new scraper (for a new website)?
+
+* All you have to do is write a Python module for the scraper and make sure it implements the following methods (same signature) -
+** get_content(self, date)
+  This method should be able to build a website specific URL and retrive content from the web (you can use URLUtils to facilitate download)
+  Throw NoCrosswordError or ContentDownloadError appropriately, just in case
+** build_crossword(self, content)
+  This method should build and return a valid Crossword instance (import from crosswords.py module)
+** RAW_CONTENT_TYPE, FILENAME_PREFIX
+  These constants are to be overridden as well (the names are self explanatory)
+
+* Import your scraper in scrapers/__init__.py so that it is directly accessible
+
+* After this you can just execute main.py as you usually would and everything should work as is.
+
+* The Core module is capable to converting and writing RAW/XD Crossword files with just these info.
+
+* If the new scraper has any dependencies (like on 3rd party Python modules), make sure to add it to the requirements.txt file
