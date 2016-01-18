@@ -2,7 +2,7 @@
 
 #exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
-BUCKET=xd.workmuch.com
+BUCKET=$1
 
 REGION=us-west-2
 S3CP="aws s3 cp --region $REGION"
