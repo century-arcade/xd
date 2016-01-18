@@ -11,15 +11,15 @@ from errors import ContentDownloadError
 from errors import NoCrosswordError
 
 
-class LATimesScraper(object):
+class latimes(object):
     FILENAME_PREFIX = 'latimes'
     RAW_CONTENT_TYPE = 'xml'
     DAILY_PUZZLE_URL = 'http://cdn.games.arkadiumhosted.com/latimes/assets/DailyCrossword/la%s.xml'
     DATE_FORMAT = '%y%m%d'
 
     def get_content(self, date):
-        date = DateUtils.to_string(date, LATimesScraper.DATE_FORMAT)
-        url = LATimesScraper.DAILY_PUZZLE_URL %date
+        date = DateUtils.to_string(date, latimes.DATE_FORMAT)
+        url = latimes.DAILY_PUZZLE_URL %date
         try:
             content = URLUtils.get_content(url)
         except ContentDownloadError:

@@ -1,1 +1,1 @@
-from latimes import LATimesScraper
+from latimes import latimes
