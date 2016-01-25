@@ -71,11 +71,11 @@ class Crossword(object):
         self.clues[clue.type].append(clue)
 
     def as_xd(self):
-        xd_content = self._meta_data_as_string() \
+        xd_content = self._meta_data_as_string().encode('utf-8') \
             + EOL + EOL \
-            + self._puzzle_as_string() \
+            + self._puzzle_as_string().encode('utf-8') \
             + EOL + EOL \
-            + self._clues_as_string() \
+            + self._clues_as_string().encode('utf-8') \
             + EOL + EOL
         return xd_content
 
