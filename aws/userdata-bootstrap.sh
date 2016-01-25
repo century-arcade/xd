@@ -9,6 +9,15 @@ export BUCKET=xd.example
 export BRANCH=master
 export EMAIL=xd@example.com
 
+export LOGFILE=/var/log/user-data.log
+
+exec > >(tee ${LOGFILE}|logger -t user-data -s 2>/dev/console) 2>&1
+
+export DEBIAN_FRONTEND=noninteractive
+sudo apt-get update && \
+    sudo apt-get install --yes zip awscli python-lxml python-pip && \
+    sudo pip install cssselect
+
 cd /tmp
 
 wget https://raw.githubusercontent.com/century-arcade/xd/${BRANCH}/aws/get-recent-xd.sh
