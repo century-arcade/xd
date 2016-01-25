@@ -13,7 +13,9 @@ cd /tmp
 
 wget https://raw.githubusercontent.com/century-arcade/xd/${BRANCH}/aws/get-recent-xd.sh
 
-sudo -E /bin/bash -x /tmp/get-recent-xd.sh
+/bin/bash -x /tmp/get-recent-xd.sh
+
+aws s3 cp --region ${REGION} ${LOGFILE} s3://${BUCKET}/logs/
 
 sudo poweroff
 

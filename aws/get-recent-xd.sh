@@ -4,18 +4,7 @@
 # run this script 
 # requires REGION, BRANCH, and BUCKET
 
-LOGFILE=/var/log/user-data.log
-
-exec > >(tee ${LOGFILE}|logger -t user-data -s 2>/dev/console) 2>&1
-
 S3CP="aws s3 cp --region ${REGION}"
-
-### setup
-
-export DEBIAN_FRONTEND=noninteractive
-sudo apt-get update && \
-    sudo apt-get install --yes zip awscli python-lxml python-pip && \
-    sudo pip install cssselect
 
 #### download/unzip xd sources
 
