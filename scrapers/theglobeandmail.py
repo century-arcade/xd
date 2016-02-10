@@ -1,5 +1,3 @@
-import textwrap
-
 from lxml import etree
 
 from crossword import Clue
