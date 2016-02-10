@@ -7,3 +7,4 @@ from theglobeandmail import theglobeandmail_universal
 from denverpost import denverpost
 from washingtonpost import washingtonpost
 from usatoday import usatoday
+from chronicle import chronicle
