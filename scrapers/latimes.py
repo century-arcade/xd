@@ -5,26 +5,14 @@ from lxml import etree
 from crossword import Clue
 from crossword import Constants
 from crossword import Crossword
-from utils import URLUtils
-from utils import DateUtils
-from errors import ContentDownloadError
-from errors import NoCrosswordError
+from scrapers import basescraper
 
 
-class latimes(object):
+class latimes(basescraper):
     FILENAME_PREFIX = 'latimes'
     RAW_CONTENT_TYPE = 'xml'
     DAILY_PUZZLE_URL = 'http://cdn.games.arkadiumhosted.com/latimes/assets/DailyCrossword/la%s.xml'
     DATE_FORMAT = '%y%m%d'
-
-    def get_content(self, date):
-        date = DateUtils.to_string(date, latimes.DATE_FORMAT)
-        url = latimes.DAILY_PUZZLE_URL %date
-        try:
-            content = URLUtils.get_content(url)
-        except ContentDownloadError:
-            raise NoCrosswordError('Date: %s; URL: %s' %(date, url))
-        return content
 
     def build_crossword(self, content):
         ns = {

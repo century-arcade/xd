@@ -6,13 +6,10 @@ from constants import REBUS_SHORT_HANDS, REBUS_LONG_HANDS
 from crossword import Clue
 from crossword import Constants
 from crossword import Crossword
-from utils import URLUtils
-from utils import DateUtils
-from errors import ContentDownloadError
-from errors import NoCrosswordError
+from scrapers import basescraper
 
 
-class xwordinfo(object):
+class xwordinfo(basescraper):
     FILENAME_PREFIX = 'xwordinfo'
     RAW_CONTENT_TYPE = 'html'
     DAILY_PUZZLE_URL = 'http://www.xwordinfo.com/PS?date=%s'
@@ -20,15 +17,6 @@ class xwordinfo(object):
 
     PT_CLUE = re.compile(r'(\d+)\. (.*) :')
     SPLIT_REBUS_TITLES = "CRYPTOCROSSWORD TIC-TAC-TOE".split()
-
-    def get_content(self, date):
-        date = DateUtils.to_string(date, xwordinfo.DATE_FORMAT)
-        url = xwordinfo.DAILY_PUZZLE_URL %date
-        try:
-            content = URLUtils.get_content(url)
-        except ContentDownloadError:
-            raise NoCrosswordError('Date: %s; URL: %s' %(date, url))
-        return content
 
     def build_crossword(self, content):
         # replace quick mark-ups

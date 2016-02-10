@@ -4,28 +4,16 @@ import json
 from crossword import Clue
 from crossword import Constants
 from crossword import Crossword
-from utils import URLUtils
-from utils import DateUtils
-from errors import ContentDownloadError
-from errors import NoCrosswordError
+from scrapers import basescraper
 
 
-class denverpost(object):
+class denverpost(basescraper):
     FILENAME_PREFIX = 'denverpost'
     RAW_CONTENT_TYPE = 'json'
     DAILY_PUZZLE_URL = 'https://embed.universaluclick.com/c/den/l/U2FsdGVkX1%%2FzdjyNCxD2oIjmBu5RQ2D0u3CYiGzfbDYhqyd3VDCsDPrMqAftBRF3%%0ArR9LLkAVhk4jtszeUlje4aAmlc6Vsu1yjJPHlBqtF0k%%3D/g/fcx/d/%s/data.json'
     DATE_FORMAT = '%Y-%m-%d'
 
     POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright']
-
-    def get_content(self, date):
-        date = DateUtils.to_string(date, denverpost.DATE_FORMAT)
-        url = denverpost.DAILY_PUZZLE_URL %date
-        try:
-            content = URLUtils.get_content(url)
-        except ContentDownloadError:
-            raise NoCrosswordError('Date: %s; URL: %s' %(date, url))
-        return content
 
     def build_crossword(self, content):
         json_data = json.loads(content)

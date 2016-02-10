@@ -3,28 +3,16 @@ from lxml import etree
 from crossword import Clue
 from crossword import Constants
 from crossword import Crossword
-from utils import URLUtils
-from utils import DateUtils
-from errors import ContentDownloadError
-from errors import NoCrosswordError
+from scrapers import basescraper
 
 
-class theglobeandmail(object):
+class theglobeandmail(basescraper):
     FILENAME_PREFIX = 'theglobeandmail'
     RAW_CONTENT_TYPE = 'xml'
     DAILY_PUZZLE_URL = 'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_canadian/source/can%s-data.xml'
     DATE_FORMAT = '%y%m%d'
 
     POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright']
-
-    def get_content(self, date):
-        date = DateUtils.to_string(date, theglobeandmail.DATE_FORMAT)
-        url = theglobeandmail.DAILY_PUZZLE_URL %date
-        try:
-            content = URLUtils.get_content(url)
-        except ContentDownloadError:
-            raise NoCrosswordError('Date: %s; URL: %s' %(date, url))
-        return content
 
     def build_crossword(self, content):
         root = etree.fromstring(content)
