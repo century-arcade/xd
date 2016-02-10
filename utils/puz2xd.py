@@ -1,13 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import os.path
+import os
 import sys
 import string
 import crossword
 import puz
 
-EOL = '\n'
+EOL = os.linesep
 
 rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
 
@@ -40,7 +40,7 @@ def is_block(puz, x, y):
     return x < 0 or y < 0 or x >= puz.width or y >= puz.height or puz[x, y].solution == '.'
 
 def puz2xd(fn):
-    puz_object = puz.read(fn)
+    puz_object = puz.load(fn)
     puzzle = crossword.from_puz(puz_object)
 
     grid_dict = dict(zip(string.uppercase, string.uppercase))
@@ -50,7 +50,7 @@ def puz2xd(fn):
     for k, v in puzzle.meta():
         if v:
             k = k[0].upper() + k[1:].lower()
-            out += "%s: %s" % (k, v) + EOL
+            out += "%s: %s" % (k, v.strip()) + EOL
 
     out += EOL + EOL
 
@@ -58,7 +58,7 @@ def puz2xd(fn):
     clue_num = 1
 
     for r, row in enumerate(puzzle):
-        rowstr = " "
+        rowstr = ""
         for c, cell in enumerate(row):
             if puzzle.block is None and cell.solution == '.':
                 rowstr += "#"
@@ -98,7 +98,6 @@ def puz2xd(fn):
 
                 if new_clue:
                     clue_num += 1
-                
         out += rowstr + EOL
 
     out += EOL + EOL
@@ -111,15 +110,15 @@ def puz2xd(fn):
     for number, clue in puzzle.clues.down():
         out += "D%s. %s ~ %s" % (number, clue, answers["D"+str(number)]) + EOL
 
-    out += EOL + EOL
+#    out += EOL + EOL
 
 #    out += puzzle.notes
 #
 #    out += EOL + EOL
 
-    return out
+    return out.encode('utf-8')
 
-for fn in sys.argv[1:]:
-    base, ext = os.path.splitext(fn)
-    file(base+".xd", 'w').write(puz2xd(fn).encode("utf-8"))
+# for fn in sys.argv[1:]:
+    # base, ext = os.path.splitext(fn)
+    # file(base+".xd", 'w').write(puz2xd(fn).encode("utf-8"))
 

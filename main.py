@@ -3,6 +3,7 @@
 import os
 import argparse
 
+from utils.puz2xd import puz2xd
 from utils.general import DateUtils
 from utils.general import ZipUtils
 from errors import NoCrosswordError
@@ -86,8 +87,13 @@ if __name__ ==  '__main__':
             prefix = scraper.FILENAME_PREFIX or scraper.__name__.replace('Scraper', '').lower()
 
             if args.download_xd:
-                crossword = scraper.build_crossword(content)
-                content = str(crossword)
+                if format == 'puz':
+                    # TODO: Make puz2xd a utility and use it in scrapers
+                    # then remove this hack
+                    content = puz2xd(content)
+                else:
+                    crossword = scraper.build_crossword(content)
+                    content = str(crossword)
                 format = 'xd'
 
             if content:
