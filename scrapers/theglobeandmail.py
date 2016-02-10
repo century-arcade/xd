@@ -7,9 +7,7 @@ from scrapers import basescraper
 
 
 class theglobeandmail(basescraper):
-    FILENAME_PREFIX = 'theglobeandmail'
     RAW_CONTENT_TYPE = 'xml'
-    DAILY_PUZZLE_URL = 'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_canadian/source/can%s-data.xml'
     DATE_FORMAT = '%y%m%d'
 
     POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright', 'Category']
@@ -54,3 +52,13 @@ class theglobeandmail(basescraper):
                 crossword.add_clue(Clue(number, type, text, solution))
 
         return crossword
+
+
+class theglobeandmail_universal(theglobeandmail):
+    FILENAME_PREFIX = 'theglobeandmail_universal'
+    DAILY_PUZZLE_URL = 'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_universal/source/fcx%s-data.xml'
+
+
+class theglobeandmail_canadian(theglobeandmail):
+    FILENAME_PREFIX = 'theglobeandmail_canadian'
+    DAILY_PUZZLE_URL = 'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_canadian/source/can%s-data.xml'
