@@ -57,15 +57,13 @@ class theglobeandmail(object):
         crossword.set_puzzle(puzzle)
 
         # add clues
-        for clue in root.xpath('//crossword/across')[0].getchildren():
-            number = int(clue.attrib['cn'])
-            text = clue.attrib['c']
-            solution = clue.attrib['a']
-            crossword.add_clue(Clue(number, Constants.ACROSS, text, solution))
-        for clue in root.xpath('//crossword/down')[0].getchildren():
-            number = int(clue.attrib['cn'])
-            text = clue.attrib['c']
-            solution = clue.attrib['a']
-            crossword.add_clue(Clue(number, Constants.DOWN, text, solution))
+        clue_types = ('across', 'down')
+        for clue_type in clue_types:
+            for clue in root.xpath('//crossword/'+clue_type)[0].getchildren():
+                number = int(clue.attrib['cn'])
+                text = clue.attrib['c']
+                type = getattr(Constants, clue_type.upper())
+                solution = clue.attrib['a']
+                crossword.add_clue(Clue(number, type, text, solution))
 
         return crossword
