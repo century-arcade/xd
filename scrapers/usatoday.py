@@ -1,4 +1,4 @@
-from scrapers import theglobeandmail
+from scrapers.theglobeandmail import theglobeandmail
 
 
 class usatoday(theglobeandmail):
