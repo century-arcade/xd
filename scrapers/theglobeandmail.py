@@ -1,8 +1,8 @@
 from lxml import etree
 
-from crossword import Clue
-from crossword import Constants
-from crossword import Crossword
+from puzzle import Clue
+from puzzle import Constants
+from puzzle import Crossword
 from scrapers import basescraper
 
 

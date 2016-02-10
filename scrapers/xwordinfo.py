@@ -3,9 +3,9 @@ import re
 from lxml import html
 
 from constants import REBUS_SHORT_HANDS, REBUS_LONG_HANDS
-from crossword import Clue
-from crossword import Constants
-from crossword import Crossword
+from puzzle import Clue
+from puzzle import Constants
+from puzzle import Crossword
 from scrapers import basescraper
 
 
