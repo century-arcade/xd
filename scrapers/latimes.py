@@ -40,7 +40,7 @@ class latimes(object):
 
         # add meta data
         for metadata in root.xpath('//puzzle:metadata', namespaces=ns)[0]:
-            text = metadata.text and metadata.text.encode('utf-8').strip()
+            text = metadata.text and metadata.text.strip()
             title = re.sub('\{[^\}]*\}', '', metadata.tag.title())
             if text:
                 crossword.add_meta_data('%s: %s' %(title, text))
@@ -70,7 +70,7 @@ class latimes(object):
             for clue in clues.xpath('./puzzle:clue', namespaces=ns):
                 word_id = clue.attrib['word']
                 number = int(clue.attrib['number'])
-                text = clue.text.encode('utf-8').strip()
+                text = clue.text.strip()
                 solution = self._get_solution(word_id, word_map, puzzle)
                 crossword.add_clue(Clue(number, type, text, solution))
 

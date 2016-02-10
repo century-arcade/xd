@@ -39,7 +39,6 @@ class denverpost(object):
         for item in denverpost.POSSIBLE_META_DATA:
             text = json_data.get(item, None)
             if text:
-                text = text.encode('utf-8').strip()
                 crossword.add_meta_data('%s: %s' %(item, text))
 
         # add puzzle

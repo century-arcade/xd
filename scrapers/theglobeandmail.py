@@ -39,7 +39,6 @@ class theglobeandmail(object):
             try:
                 text = root.xpath('//crossword/' + item)[0].attrib['v']
                 if text:
-                    text = text.encode('utf-8').strip()
                     crossword.add_meta_data('%s: %s' %(item, text))
             except:
                 pass
@@ -61,9 +60,9 @@ class theglobeandmail(object):
         for clue_type in clue_types:
             for clue in root.xpath('//crossword/'+clue_type)[0].getchildren():
                 number = int(clue.attrib['cn'])
-                text = clue.attrib['c'].encode('utf-8').strip()
+                text = clue.attrib['c'].strip()
                 type = getattr(Constants, clue_type.upper())
-                solution = clue.attrib['a'].encode('utf-8').strip()
+                solution = clue.attrib['a'].strip()
                 crossword.add_clue(Clue(number, type, text, solution))
 
         return crossword
