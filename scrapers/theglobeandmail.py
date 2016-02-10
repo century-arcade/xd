@@ -12,7 +12,7 @@ class theglobeandmail(basescraper):
     DAILY_PUZZLE_URL = 'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_canadian/source/can%s-data.xml'
     DATE_FORMAT = '%y%m%d'
 
-    POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright']
+    POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright', 'Category']
 
     def build_crossword(self, content):
         root = etree.fromstring(content)
