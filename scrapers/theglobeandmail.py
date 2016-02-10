@@ -15,6 +15,8 @@ class theglobeandmail(object):
     DAILY_PUZZLE_URL = 'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_canadian/source/can%s-data.xml'
     DATE_FORMAT = '%y%m%d'
 
+    POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright']
+
     def get_content(self, date):
         date = DateUtils.to_string(date, theglobeandmail.DATE_FORMAT)
         url = theglobeandmail.DAILY_PUZZLE_URL %date
@@ -33,10 +35,14 @@ class theglobeandmail(object):
         crossword = Crossword(rows, cols)
 
         # add meta data
-        title = root.xpath('//crossword/Title')[0].attrib['v']
-        crossword.add_meta_data('%s: %s' %('Title', title))
-        author = root.xpath('//crossword/Author')[0].attrib['v']
-        crossword.add_meta_data('%s: %s' %('Author', author))
+        for item in theglobeandmail.POSSIBLE_META_DATA:
+            try:
+                text = root.xpath('//crossword/' + item)[0].attrib['v']
+                if text:
+                    text = text.encode('utf-8').strip()
+                    crossword.add_meta_data('%s: %s' %(item, text))
+            except:
+                pass
 
         # add puzzle
         puzzle = crossword.puzzle
