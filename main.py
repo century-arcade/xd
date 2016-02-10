@@ -3,10 +3,10 @@
 import os
 import argparse
 
-from utils import DateUtils
-from utils import ZipUtils
-from errors import *
-
+from utils.general import DateUtils
+from utils.general import ZipUtils
+from errors import NoCrosswordError
+from errors import ContentDownloadError
 
 
 DEFAULT_CONTENT_TYPE = 'html'

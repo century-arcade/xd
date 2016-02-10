@@ -1,7 +1,7 @@
-from utils import URLUtils
-from utils import DateUtils
-from errors import ContentDownloadError
+from utils.general import URLUtils
+from utils.general import DateUtils
 from errors import NoCrosswordError
+from errors import ContentDownloadError
 
 
 class basescraper(object):
