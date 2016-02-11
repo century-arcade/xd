@@ -8,3 +8,5 @@ from denverpost import denverpost
 from washingtonpost import washingtonpost
 from usatoday import usatoday
 from chronicle import chronicle
+from newsday import newsday
+from wsj import wsj
