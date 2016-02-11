@@ -12,8 +12,8 @@ from errors import ContentDownloadError
 from errors import NoCrosswordError
 
 
-class xwordinfo(object):
-    FILENAME_PREFIX = 'xwordinfo'
+class nytimes(object):
+    FILENAME_PREFIX = 'nytimes'
     RAW_CONTENT_TYPE = 'html'
     DAILY_PUZZLE_URL = 'http://www.xwordinfo.com/PS?date=%s'
     DATE_FORMAT = '%-m/%-d/%Y'
@@ -22,8 +22,8 @@ class xwordinfo(object):
     SPLIT_REBUS_TITLES = "CRYPTOCROSSWORD TIC-TAC-TOE".split()
 
     def get_content(self, date):
-        date = DateUtils.to_string(date, xwordinfo.DATE_FORMAT)
-        url = xwordinfo.DAILY_PUZZLE_URL %date
+        date = DateUtils.to_string(date, nytimes.DATE_FORMAT)
+        url = nytimes.DAILY_PUZZLE_URL %date
         try:
             content = URLUtils.get_content(url)
         except ContentDownloadError:
@@ -156,7 +156,7 @@ class xwordinfo(object):
                 clues.append(Clue(number, type, text, solution))
                 text = number = solution = None
             else:
-                match = re.match(xwordinfo.PT_CLUE, content)
+                match = re.match(nytimes.PT_CLUE, content)
                 number = int(match.group(1))
                 text = match.group(2)
         return clues

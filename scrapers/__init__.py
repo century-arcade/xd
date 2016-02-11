@@ -1,2 +1,2 @@
 from latimes import latimes
-from xwordinfo import xwordinfo
+from nytimes import nytimes

@@ -5,11 +5,11 @@
 # have to be specified inline here.
 
 export REGION=us-west-2
-export BUCKET=xd.example
 export BRANCH=master
-export EMAIL=xd@example.com
+export BUCKET=xd.workmuch.com
+export EMAIL=xd@workmuch.com
 
-export LOGFILE=/var/log/user-data.log
+export LOGFILE=/var/log/`date +"%Y-%m-%d"`.log
 
 exec > >(tee ${LOGFILE}|logger -t user-data -s 2>/dev/console) 2>&1
 

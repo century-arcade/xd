@@ -1,6 +1,6 @@
 # .xd futureproof crossword format
 
-.xd is a corpus-oriented format, modeled after the simplicity and intuitiveness of the markdown format.  It supports 99.99% of published crosswords, and is intended to be convenient for bulk analysis of crosswords by both humans and machines, from either the present or the future.
+.xd is a corpus-oriented format, modeled after the simplicity and intuitiveness of the markdown format.  It supports 99.99% of published crosswords, and is intended to be convenient for bulk analysis of crosswords by both humans and machines, from the present and into the future.
 
 ## xdfile.py
 
@@ -150,7 +150,8 @@ second level is Machine, the third level is Internal.
 
 ### Grid (Section 2)
 
-Optional leading whitespace and trailing whitespace.  Never any whitespace in the grid itself.
+Optional leading whitespace and trailing whitespace on each line.  Never any
+whitespace between characters in a grid line.
 
 One line per row.  One UTF-8 character per cell.
 
@@ -182,7 +183,7 @@ The clues should be sorted, with a single newline separating clue groups (Across
 
 Minimal markup is available.  An example clue line:
 
-    A51. //Italic//, **bold**, and __underscore__ ~ MARKUP
+    A51. //Italic//, **bold**, or __underscore__ ~ MARKUP
 
 The clue is separated from the answer by a tilde with spaces on both sides (' ~ ').
 

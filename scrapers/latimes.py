@@ -2,6 +2,8 @@ import re
 
 from lxml import etree
 
+import string
+
 from crossword import Clue
 from crossword import Constants
 from crossword import Crossword
@@ -30,6 +32,14 @@ class latimes(object):
         ns = {
             'puzzle': 'http://crossword.info/xml/rectangular-puzzle'
         }
+        content = content.replace("<b>", "**")
+        content = content.replace("</b>", "**")
+        content = content.replace("<i>", "//")
+        content = content.replace("</i>", "//")
+        content = content.replace("<em>", "//")
+        content = content.replace("</em>", "//")
+        content = content.replace("<u>", "__")
+        content = content.replace("</u>", "__")
         root = etree.fromstring(content)
 
         # init crossword
@@ -64,13 +74,13 @@ class latimes(object):
 
         for clues in root.xpath('//puzzle:crossword/puzzle:clues', namespaces=ns):
             type = clues.xpath('./puzzle:title', namespaces=ns)[0]
-            type = etree.tostring(type, method='text').upper()
+            type = "".join(x for x in etree.tostring(type, method='text').upper() if x in string.uppercase)
             type = getattr(Constants, type)
 
             for clue in clues.xpath('./puzzle:clue', namespaces=ns):
                 word_id = clue.attrib['word']
                 number = int(clue.attrib['number'])
-                text = clue.text.encode('utf-8').strip()
+                text = "".join(clue.itertext()).encode('utf-8').strip()
                 solution = self._get_solution(word_id, word_map, puzzle)
                 crossword.add_clue(Clue(number, type, text, solution))
 
