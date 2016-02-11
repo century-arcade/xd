@@ -8,6 +8,7 @@ from utils.general import DateUtils
 from utils.general import ZipUtils
 from errors import NoCrosswordError
 from errors import ContentDownloadError
+from errors import ScraperNotImplementedError
 
 
 DEFAULT_CONTENT_TYPE = 'html'
@@ -64,7 +65,11 @@ if __name__ ==  '__main__':
 
         for filename, content in ZipUtils.read(args.infile):
             print 'Processing Raw Crossword - %s' %filename
-            crossword = scraper.build_crossword(content)
+            try:
+                crossword = scraper.build_crossword(content)
+            except ScraperNotImplementedError:
+                print '\tERR: Scraper not implemented; only "RAW" format available'
+                continue
             content = str(crossword)
             filename = filename.replace(format, 'xd')
 
@@ -92,7 +97,11 @@ if __name__ ==  '__main__':
                     # then remove this hack
                     content = puz2xd(content)
                 else:
-                    crossword = scraper.build_crossword(content)
+                    try:
+                        crossword = scraper.build_crossword(content)
+                    except ScraperNotImplementedError:
+                        print '\tERR: Scraper not implemented; only "RAW" format available'
+                        continue
                     content = str(crossword)
                 format = 'xd'
 
