@@ -3,7 +3,7 @@ import urllib2
 import zipfile
 
 from datetime import timedelta
-from datetime import datetime
+import datetime
 
 from errors import ContentDownloadError
 
@@ -23,11 +23,12 @@ class DateUtils(object):
 
     @staticmethod
     def today():
-        return datetime.today()
+        d = datetime.datetime.today()
+        return datetime.date(d.year, d.month, d.day)
 
     @staticmethod
     def from_string(string, format=DEFAULT_DATE_FORMAT):
-        return datetime.strptime(string, format)
+        return datetime.datetime.strptime(string, format)
 
     @staticmethod
     def to_string(date, format=DEFAULT_DATE_FORMAT):
@@ -69,12 +70,14 @@ class ZipUtils(object):
                 yield (filename, content)
 
     @staticmethod
-    def append(content, file_name, target_zip_file):
-        zip_info = zipfile.ZipInfo()
+    def append(target_zf, content, file_name, date=None):
+        if date is None:
+            date = datetime.datetime.now()
+
+        zip_info = zipfile.ZipInfo(file_name, date.timetuple())
         zip_info.volume = 0
-        zip_info.filename = file_name
         zip_info.external_attr = 0444 << 16L
         zip_info.compress_type = zipfile.ZIP_DEFLATED
 
-        with zipfile.ZipFile(target_zip_file, 'a') as zip:
-            zip.writestr(zip_info, content)
+        target_zf.writestr(zip_info, content)
+

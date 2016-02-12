@@ -9,14 +9,23 @@ from puzzle import Crossword
 from scrapers import basescraper
 
 
-class xwordinfo(basescraper):
-    FILENAME_PREFIX = 'xwordinfo'
+class nytimes(object):
+    FILENAME_PREFIX = 'nytimes'
     RAW_CONTENT_TYPE = 'html'
     DAILY_PUZZLE_URL = 'http://www.xwordinfo.com/PS?date=%s'
     DATE_FORMAT = '%-m/%-d/%Y'
 
     PT_CLUE = re.compile(r'(\d+)\. (.*) :')
     SPLIT_REBUS_TITLES = "CRYPTOCROSSWORD TIC-TAC-TOE".split()
+
+    def get_content(self, date):
+        date = DateUtils.to_string(date, nytimes.DATE_FORMAT)
+        url = nytimes.DAILY_PUZZLE_URL %date
+        try:
+            content = URLUtils.get_content(url)
+        except ContentDownloadError:
+            raise NoCrosswordError('Date: %s; URL: %s' %(date, url))
+        return content
 
     def build_crossword(self, content):
         # replace quick mark-ups
@@ -144,7 +153,7 @@ class xwordinfo(basescraper):
                 clues.append(Clue(number, type, text, solution))
                 text = number = solution = None
             else:
-                match = re.match(xwordinfo.PT_CLUE, content)
+                match = re.match(nytimes.PT_CLUE, content)
                 number = int(match.group(1))
                 text = match.group(2)
         return clues
