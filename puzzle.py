@@ -76,7 +76,7 @@ class Crossword(object):
             + self._puzzle_as_string().encode('utf-8') \
             + EOL + EOL \
             + self._clues_as_string().encode('utf-8') \
-            + EOL + EOL
+            + EOL
         return xd_content
 
     def _meta_data_as_string(self):

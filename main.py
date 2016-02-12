@@ -3,10 +3,12 @@
 import os
 import argparse
 
-from utils import DateUtils
-from utils import ZipUtils
-from errors import *
-
+from utils.puz2xd import puz2xd
+from utils.general import DateUtils
+from utils.general import ZipUtils
+from errors import NoCrosswordError
+from errors import ContentDownloadError
+from errors import ScraperNotImplementedError
 
 
 DEFAULT_CONTENT_TYPE = 'html'
@@ -63,7 +65,11 @@ if __name__ ==  '__main__':
 
         for filename, content in ZipUtils.read(args.infile):
             print 'Processing Raw Crossword - %s' %filename
-            crossword = scraper.build_crossword(content)
+            try:
+                crossword = scraper.build_crossword(content)
+            except ScraperNotImplementedError:
+                print '\tERR: Scraper not implemented; only "RAW" format available'
+                continue
             content = str(crossword)
             filename = filename.replace(format, 'xd')
 
@@ -86,8 +92,17 @@ if __name__ ==  '__main__':
             prefix = scraper.FILENAME_PREFIX or scraper.__name__.replace('Scraper', '').lower()
 
             if args.download_xd:
-                crossword = scraper.build_crossword(content)
-                content = str(crossword)
+                if format == 'puz':
+                    # TODO: Make puz2xd a utility and use it in scrapers
+                    # then remove this hack
+                    content = puz2xd(content)
+                else:
+                    try:
+                        crossword = scraper.build_crossword(content)
+                    except ScraperNotImplementedError:
+                        print '\tERR: Scraper not implemented; only "RAW" format available'
+                        continue
+                    content = str(crossword)
                 format = 'xd'
 
             if content:

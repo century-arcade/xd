@@ -34,7 +34,7 @@ zip ${NYTRAW} *.html && \
 
 for i in *.html ; do
     NYTXD=${i%.html}.xd
-    ${XD}/scrapers/xwi2xd.py $i ${NYTXD} && \
+    ${XD}/utils/xwi2xd.py $i ${NYTXD} && \
         ${S3CP} --acl public-read ${NYTXD} s3://${BUCKET}/crosswords/nytimes/ && \
         rm $i ${NYTXD}
 done
