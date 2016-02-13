@@ -12,7 +12,7 @@ import re
 import sys
 import datetime
 import errors
-from utils import DateUtils, ZipUtils
+from utils.general import DateUtils, ZipUtils
 
 def error(s):
     print s
@@ -98,10 +98,10 @@ def main():
             # append to zip archive
             ZipUtils.append(outzf, xdcontent, pathname, t)
         except:
-            file(filename + ".raw", 'w').write(content)
+#            file(filename + ".raw", 'w').write(content)
             import traceback
             traceback.print_exc()
-            print "\tERROR parsing %s, saved as %s.raw" % (t, filename)
+            print "\tERROR parsing %s" % t # , saved as %s.raw" % (t, filename)
 
     print
 
