@@ -18,9 +18,9 @@ def error(s):
     print s
 
 def parse_fn(fn):
-    m = re.match(r'crosswords-(\w+)/(\d+)/\1-\2-(\d+)-(\d+)', fn)
+    m = re.match(r'crosswords/(\w+)/(\d+)/([a-z\-]+)\2-(\d+)-(\d+)', fn)
     if m:
-        pub, y, mon, d = m.groups()
+        pub, y, shortpub, mon, d = m.groups()
         return pub, datetime.date(int(y), int(mon), int(d))
 
 def main():
@@ -41,7 +41,7 @@ def main():
         return
 
     inzipfn = '%s-%s-raw.zip' % (scrapername, this_year)
-    outzipfn = '%s-%s-xd.zip' % (scrapername, this_year)
+    outzipfn = '%s-%s.zip' % (scrapername, this_year)
    
     sources = { } # [date] -> contents
 
@@ -58,9 +58,9 @@ def main():
     print
 
     if sources:
-        first_date = min(sources.keys())
+        first_date = max(sources.keys())
     else:
-        first_date = DateUtils.today()
+        first_date = datetime.date(this_year, 1, 1)
 
     with zipfile.ZipFile(inzipfn, 'a') as rawzf:
       for date in DateUtils.get_dates_between(first_date, last_date):
@@ -78,8 +78,8 @@ def main():
             continue
 
         if content:
-            filename = '%s-%s.%s' %(scrapername, DateUtils.to_string(date), scraper.RAW_CONTENT_TYPE)
-            pathname = os.path.join('crosswords-%s' % scrapername, str(date.year), filename)
+            filename = '%s%s.%s' %(scrapername[:3], DateUtils.to_string(date), scraper.RAW_CONTENT_TYPE)
+            pathname = os.path.join('crosswords/%s' % scrapername, str(date.year), filename)
             ZipUtils.append(rawzf, content, pathname)
 
             sources[date] = content
@@ -91,12 +91,16 @@ def main():
         print ".",
         content = sources[t]
         filename = '%s-%s.xd' % (scrapername, DateUtils.to_string(t))
-        pathname = os.path.join('crosswords-%s' % scrapername, str(t.year), filename)
+        pathname = os.path.join('crosswords/%s' % scrapername, str(t.year), filename)
         try:
-            xdcontent = str(scraper.build_crossword(content))
+            xword = scraper.build_crossword(content)
+            xdcontent = xword.as_xd()
+            xdcontent = xdcontent.encode("utf-8")
 
             # append to zip archive
             ZipUtils.append(outzf, xdcontent, pathname, t)
+        except errors.ScraperNotImplementedError:
+            print '\tNo parser implemented'
         except:
 #            file(filename + ".raw", 'w').write(content)
             import traceback

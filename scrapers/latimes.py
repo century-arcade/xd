@@ -67,7 +67,7 @@ class latimes(basescraper):
             for clue in clues.xpath('./puzzle:clue', namespaces=ns):
                 word_id = clue.attrib['word']
                 number = int(clue.attrib['number'])
-                text = "".join(clue.itertext()).encode('utf-8').strip()
+                text = "|".join(clue.itertext())
                 solution = self._get_solution(word_id, word_map, puzzle)
                 crossword.add_clue(Clue(number, type, text, solution))
 

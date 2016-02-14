@@ -7,6 +7,8 @@ from puzzle import Clue
 from puzzle import Constants
 from puzzle import Crossword
 from scrapers import basescraper
+from utils.general import DateUtils, URLUtils
+from errors import *
 
 
 class nytimes(object):
