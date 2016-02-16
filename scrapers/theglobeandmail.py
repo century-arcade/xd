@@ -1,3 +1,4 @@
+from urllib import unquote
 from lxml import etree
 
 from puzzle import Clue
@@ -25,13 +26,14 @@ class theglobeandmail(basescraper):
             try:
                 text = root.xpath('//crossword/' + item)[0].attrib['v']
                 if text:
-                    crossword.add_meta_data('%s: %s' %(item, text))
+                    crossword.add_meta_data('%s: %s' %(item, unquote(text)))
             except:
                 pass
 
         # add puzzle
         puzzle = crossword.puzzle
         all_answers = root.xpath('//crossword/AllAnswer')[0].attrib['v']
+        all_answers = all_answers.replace('-', Constants.BLOCK_CHAR)
         y = 0
         index = 0
         while index < len(all_answers):
@@ -46,7 +48,7 @@ class theglobeandmail(basescraper):
         for clue_type in clue_types:
             for clue in root.xpath('//crossword/'+clue_type)[0].getchildren():
                 number = int(clue.attrib['cn'])
-                text = clue.attrib['c'].strip()
+                text = unquote(clue.attrib['c'].strip())
                 type = getattr(Constants, clue_type.upper())
                 solution = clue.attrib['a'].strip()
                 crossword.add_clue(Clue(number, type, text, solution))
