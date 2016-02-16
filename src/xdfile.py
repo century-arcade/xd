@@ -142,7 +142,7 @@ def load_corpus(*pathnames):
             corpus[fullfn] = xd
         except Exception, e:
             print fullfn, str(e)
-            raise
+#            raise
 
     return corpus
 

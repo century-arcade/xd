@@ -9,7 +9,7 @@ from lxml import etree
 import xdfile
 
 # content is unicode()
-def parse(content):
+def parse_ccxml(content):
     content = content.replace("<b>", "{*")
     content = content.replace("</b>", "*}")
     content = content.replace("<i>", "{/")
@@ -94,30 +94,7 @@ def get_solution(word_id, word_map, puzzle):
         word = (puzzle[int(x)-1][int(y)-1])
     return ''.join(word)
 
-def main():
-    import sys
-    import argparse
-
-    parser = argparse.ArgumentParser(description='convert crossword xml to xd')
-    parser.add_argument('path', type=str, nargs='+', help='.xd, .zip, or directories to be converted')
-    parser.add_argument('-o', dest='output', default=None,
-                   help='output directory (default stdout)')
-
-    args = parser.parse_args()
-
-    for fullfn, contents in xdfile.find_files(*args.path):
-        print "\r" + fullfn,
-        _, fn = os.path.split(fullfn)
-        base, ext = os.path.splitext(fn)
-        xd = parse(contents)
-        xdstr = xd.to_unicode().encode("utf-8")
-        if args.output:
-            xdfn = "%s/%s.xd" % (args.output, base)
-            file(xdfn, "w-").write(xdstr)
-        else:
-            print xdstr
-
-    print
-
 if __name__ == "__main__":
-    main()
+    import framework
+
+    framework.main(parse_ccxml)

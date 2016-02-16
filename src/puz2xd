@@ -1,58 +1,30 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
+# -*- coding: utf-8 
 
-import os
-import sys
+# pip install crossword puzpy
+
 import string
-import crossword
 import puz
-
-EOL = os.linesep
+import crossword
+import xdfile
 
 rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
-
-rebus_longhands = {
-        'NINE': '9',
-        'EIGHT': '8',
-        'SEVEN': '7',
-        'SIX': '6',
-        'FIVE': '5',
-        'FOUR': '4',
-        'THREE': '3',
-        'TWO': '2',
-        'ONE': '1',
-        'ZERO': '0',
-        'AUGHT': '0',
-        'AMPERSAND': '&',
-        'AND': '&',
-        'ASTERISK': '*',
-        'PERCENT': '%',
-        'STAR': '*',
-        'AT': '@',
-        'DOLLAR': '$',
-        'PLUS': '+',
-        'CENT': 'c',
-#        'DASH': '-',
-#        'DOT': '●',
-}
 
 def is_block(puz, x, y):
     return x < 0 or y < 0 or x >= puz.width or y >= puz.height or puz[x, y].solution == '.'
 
-def puz2xd(fn):
-    puz_object = puz.load(fn)
+def parse_puz(contents):
+    puz_object = puz.load(contents)
     puzzle = crossword.from_puz(puz_object)
 
     grid_dict = dict(zip(string.uppercase, string.uppercase))
 
-    out = ""
+    xd = xdfile.xdfile()
 
     for k, v in puzzle.meta():
         if v:
             k = k[0].upper() + k[1:].lower()
-            out += "%s: %s" % (k, v.strip()) + EOL
-
-    out += EOL + EOL
+            xd.headers.append((k, v.strip()))
 
     answers = { }
     clue_num = 1
@@ -98,27 +70,18 @@ def puz2xd(fn):
 
                 if new_clue:
                     clue_num += 1
-        out += rowstr + EOL
-
-    out += EOL + EOL
+        xd.grid.append(rowstr)
 
     for number, clue in puzzle.clues.across():
-        out += "A%s. %s ~ %s" % (number, clue, answers["A"+str(number)]) + EOL
-
-    out += EOL
+        xd.clues.append((("A", number), clue, answers["A"+str(number)]))
 
     for number, clue in puzzle.clues.down():
-        out += "D%s. %s ~ %s" % (number, clue, answers["D"+str(number)]) + EOL
+        xd.clues.append((("D", number), clue, answers["D"+str(number)]))
 
-#    out += EOL + EOL
+    return xd
 
-#    out += puzzle.notes
-#
-#    out += EOL + EOL
+if __name__ == "__main__":
+    import framework
 
-    return out.encode('utf-8')
-
-# for fn in sys.argv[1:]:
-    # base, ext = os.path.splitext(fn)
-    # file(base+".xd", 'w').write(puz2xd(fn).encode("utf-8"))
+    framework.main(parse_puz)
 

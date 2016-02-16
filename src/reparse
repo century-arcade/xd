@@ -1,0 +1,19 @@
+#!/usr/bin/python
+
+import sys
+import xdfile
+
+def flatten(s):
+    return "".join(x.strip() for x in s.splitlines()).strip()
+
+for fullfn, contents in xdfile.find_files(*sys.argv[1:]):
+    if not fullfn.endswith(".xd"):
+        continue
+    try:
+        xd = xdfile.xdfile(contents, fullfn)
+
+        if flatten(xd.to_unicode()) != flatten(contents):
+            print "rewriting", fullfn
+            file(fullfn + ".reparse", 'w').write(xd.to_unicode())
+    except Exception, e:
+        print "exception", fullfn, e
