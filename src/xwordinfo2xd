@@ -51,16 +51,16 @@ def parse_xwordinfo(content):
             cell_class = cell.get('class')
             cell_type = ''
             if cell_class == 'bigshade':
-                cell_type = 'GRAY'
+                cell_type = 'shaded'
             elif cell_class == 'bigcircle':
-                cell_type = 'CIRCLE'
+                cell_type = 'circle'
 
             letter = cell.cssselect('div.letter')
-            letter = (len(letter) and letter[0].text) or '.'
+            letter = (len(letter) and letter[0].text) or BLOCK_CHAR
 
             # handle rebuses
-            if letter == '.':
-                subst = cell.cssselect('div.subst')
+            if letter == BLOCK_CHAR:
+                subst = cell.cssselect('div.subst2')
                 subst = (len(subst) and subst[0].text) or ''
                 if not subst:
                     subst = cell.cssselect('div.subst')
@@ -68,7 +68,9 @@ def parse_xwordinfo(content):
                         if title in SPLIT_REBUS_TITLES:
                             subst = "/".join(list(subst[0].text))
                         else:
-                            subs = subst[0].text
+                            subst = subst[0].text
+                    else:
+                        subst = ''
 
                 if subst:
                     if not subst in rebus:
@@ -139,7 +141,5 @@ def _fetch_clues(xd, clueprefix, root, css_identifier, rebus):
             text = match.group(2)
 
 if __name__ == "__main__":
-    import framework
-
-    framework.main(parse_xwordinfo)
+    xdfile.main_parse(parse_xwordinfo)
 

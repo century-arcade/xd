@@ -135,10 +135,22 @@ def find_files(*paths):
     
 corpus = { }
 
+
 def load_corpus(*pathnames):
+    def collapse_whitespace(s):
+        return "".join(x.strip() for x in s.splitlines()).strip()
+
     for fullfn, contents in find_files(*pathnames):
+        if not fullfn.endswith(".xd"):
+            continue
+
         try:
             xd = xdfile(contents, fullfn)
+
+            if collapse_whitespace(xd.to_unicode()) != collapse_whitespace(contents):
+                print fullfn, "differs"
+#                file(fullfn + ".reparse", 'w').write(xd.to_unicode())
+
             corpus[fullfn] = xd
         except Exception, e:
             print fullfn, str(e)
@@ -146,7 +158,7 @@ def load_corpus(*pathnames):
 
     return corpus
 
-def main():
+def main_load():
     global corpus
     corpus = load_corpus(*sys.argv[1:])
 
@@ -158,6 +170,34 @@ def main():
 
     return corpus
 
+def main_parse(parserfunc):
+    import os.path
+    import sys
+    import argparse
+    import xdfile
+
+    parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
+    parser.add_argument('path', type=str, nargs='+', help='files, .zip, or directories to be converted')
+    parser.add_argument('-o', dest='output', default=None,
+                   help='output directory (default stdout)')
+
+    args = parser.parse_args()
+
+    for fullfn, contents in xdfile.find_files(*args.path):
+        print "\r" + fullfn,
+        _, fn = os.path.split(fullfn)
+        base, ext = os.path.splitext(fn)
+        xd = parserfunc(contents)
+        xdstr = xd.to_unicode().encode("utf-8")
+        if args.output:
+            xdfn = "%s/%s.xd" % (args.output, base)
+            file(xdfn, "w-").write(xdstr)
+        else:
+            print xdstr
+
+    print
+
+
 if __name__ == "__main__":
-    main()
+    main_load()
 

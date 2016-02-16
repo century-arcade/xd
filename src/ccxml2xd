@@ -95,6 +95,4 @@ def get_solution(word_id, word_map, puzzle):
     return ''.join(word)
 
 if __name__ == "__main__":
-    import framework
-
-    framework.main(parse_ccxml)
+    xdfile.main_parse(parse_ccxml)

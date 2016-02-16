@@ -81,7 +81,5 @@ def parse_puz(contents):
     return xd
 
 if __name__ == "__main__":
-    import framework
-
-    framework.main(parse_puz)
+    xdfile.main_parse(parse_puz)
 

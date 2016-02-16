@@ -64,6 +64,4 @@ def _get_solution(number, direction, layout, puzzle):
     return text
 
 if __name__ == "__main__":
-    import framework
-
-    framework.main(parse_ujson)
+    xdfile.main_parse(parse_ujson)

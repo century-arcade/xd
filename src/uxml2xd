@@ -46,7 +46,5 @@ def parse_uxml(content):
     return xd
 
 if __name__ == "__main__":
-    import framework
-
-    framework.main(parse_uxml)
+    xdfile.main_parse(parse_uxml)
 
