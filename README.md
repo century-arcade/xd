@@ -183,7 +183,7 @@ The clues should be sorted, with a single newline separating clue groups (Across
 
 Minimal markup is available.  An example clue line:
 
-    A51. //Italic//, **bold**, or __underscore__ ~ MARKUP
+    A51. {/Italic/}, {*bold*}, {_underscore_}, or {-strike-thru-} ~ MARKUP
 
 The clue is separated from the answer by a tilde with spaces on both sides (' ~ ').
 

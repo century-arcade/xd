@@ -19,14 +19,14 @@ class latimes(basescraper):
         ns = {
             'puzzle': 'http://crossword.info/xml/rectangular-puzzle'
         }
-        content = content.replace("<b>", "**")
-        content = content.replace("</b>", "**")
-        content = content.replace("<i>", "//")
-        content = content.replace("</i>", "//")
-        content = content.replace("<em>", "//")
-        content = content.replace("</em>", "//")
-        content = content.replace("<u>", "__")
-        content = content.replace("</u>", "__")
+        content = content.replace("<b>", "{*")
+        content = content.replace("</b>", "*}")
+        content = content.replace("<i>", "{/")
+        content = content.replace("</i>", "/}")
+        content = content.replace("<em>", "{/")
+        content = content.replace("</em>", "/}")
+        content = content.replace("<u>", "{_")
+        content = content.replace("</u>", "_}")
         root = etree.fromstring(content)
 
         # init crossword

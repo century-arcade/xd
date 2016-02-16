@@ -117,11 +117,13 @@ def find_files(*paths):
         if stat.S_ISDIR(os.stat(path).st_mode):
             for thisdir, subdirs, files in os.walk(path):
                 for fn in files:
+                    if fn[0] == ".":
+                        continue
                     for f, c in find_files(os.path.join(thisdir, fn)):
                         yield f, c
         elif path.endswith(".zip"):
             import zipfile
-            with zipfile.ZipFile(fn, 'r') as zf:
+            with zipfile.ZipFile(path, 'r') as zf:
                 for f in zf.infolist():
                     fullfn = path + ":" + f.filename
                     contents = zf.read(f)
