@@ -33,9 +33,9 @@ def parse_puz(contents):
         rowstr = ""
         for c, cell in enumerate(row):
             if puzzle.block is None and cell.solution == '.':
-                rowstr += "#"
+                rowstr += xdfile.BLOCK_CHAR
             elif puzzle.block == cell.solution:
-                rowstr += "#"
+                rowstr += xdfile.BLOCK_CHAR
             elif cell == puzzle.empty:
                 rowstr += "."
             else:

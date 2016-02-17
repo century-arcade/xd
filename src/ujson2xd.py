@@ -5,7 +5,6 @@ import json
 import xdfile
 
 POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright']
-BLOCK_CHAR = '#'
 
 def parse_ujson(content):
     json_data = json.loads(content)
@@ -23,7 +22,7 @@ def parse_ujson(content):
     # add puzzle
     for row in range(1, rows+1):
         line = json_data['Solution']['Line'+str(row)]
-        xd.grid.append("".join(line.replace(' ', BLOCK_CHAR)))
+        xd.grid.append("".join(line.replace(' ', xdfile.BLOCK_CHAR)))
 
     # add clues
     layout = json_data['Layout']
@@ -51,14 +50,14 @@ def _get_solution(number, direction, layout, puzzle):
     text = ''
     if direction == 'A':
         try:
-            x_limit = puzzle[y].index(BLOCK_CHAR, x)
+            x_limit = puzzle[y].index(xdfile.BLOCK_CHAR, x)
         except ValueError:
             x_limit = len(puzzle[y])
         text = ''.join(puzzle[y][x:x_limit])
     elif direction == 'D':
         for row in range(y, len(puzzle)):
             char = puzzle[row][x]
-            if char == BLOCK_CHAR:
+            if char == xdfile.BLOCK_CHAR:
                 break
             text += char
     return text

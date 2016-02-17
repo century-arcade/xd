@@ -56,10 +56,10 @@ def parse_xwordinfo(content):
                 cell_type = 'circle'
 
             letter = cell.cssselect('div.letter')
-            letter = (len(letter) and letter[0].text) or BLOCK_CHAR
+            letter = (len(letter) and letter[0].text) or xdfile.BLOCK_CHAR
 
             # handle rebuses
-            if letter == BLOCK_CHAR:
+            if letter == xdfile.BLOCK_CHAR:
                 subst = cell.cssselect('div.subst2')
                 subst = (len(subst) and subst[0].text) or ''
                 if not subst:

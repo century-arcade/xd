@@ -5,8 +5,6 @@ from lxml import etree
 
 import xdfile
 
-BLOCK_CHAR = '#'
-
 def parse_uxml(content):
     POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright', 'Category']
 
@@ -28,7 +26,7 @@ def parse_uxml(content):
 
     # add puzzle
     all_answers = root.xpath('//crossword/AllAnswer')[0].attrib['v']
-    all_answers = all_answers.replace('-', BLOCK_CHAR)
+    all_answers = all_answers.replace('-', xdfile.BLOCK_CHAR)
     index = 0
     while index < len(all_answers):
         row = all_answers[index:index+cols]

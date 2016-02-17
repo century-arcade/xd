@@ -174,7 +174,6 @@ def main_parse(parserfunc):
     import os.path
     import sys
     import argparse
-    import xdfile
 
     parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
     parser.add_argument('path', type=str, nargs='+', help='files, .zip, or directories to be converted')
@@ -183,7 +182,7 @@ def main_parse(parserfunc):
 
     args = parser.parse_args()
 
-    for fullfn, contents in xdfile.find_files(*args.path):
+    for fullfn, contents in find_files(*args.path):
         print "\r" + fullfn,
         _, fn = os.path.split(fullfn)
         base, ext = os.path.splitext(fn)
@@ -196,7 +195,6 @@ def main_parse(parserfunc):
             print xdstr
 
     print
-
 
 if __name__ == "__main__":
     main_load()
