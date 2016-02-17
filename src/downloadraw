@@ -30,7 +30,6 @@ class PuzzleUrl:
 DAILY_PUZZLE_URLS = [
     PuzzleUrl('xml', 'fcx', 'universal',         'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_universal/source/fcx%y%m%d-data.xml'),
     PuzzleUrl('xml', 'can', 'canadian',  'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_canadian/source/can%y%m%d-data.xml'),
-    PuzzleUrl('json', 'dvp', 'denverpost',       'https://embed.universaluclick.com/c/den/l/U2FsdGVkX1%%2FzdjyNCxD2oIjmBu5RQ2D0u3CYiGzfbDYhqyd3VDCsDPrMqAftBRF3%%0ArR9LLkAVhk4jtszeUlje4aAmlc6Vsu1yjJPHlBqtF0k%%3D/g/fcx/d/%Y-%m-%d/data.json'),
     PuzzleUrl('html', 'nyt', 'nytimes',          'http://www.xwordinfo.com/PS?date=%-m/%-d/%Y'),
     PuzzleUrl('xml', 'lat', 'latimes',           'http://cdn.games.arkadiumhosted.com/latimes/assets/DailyCrossword/la%y%m%d.xml'),
     PuzzleUrl('xml', 'usa', 'usatoday',          'http://www.uclick.com/puzzles/usaon/data/usaon%y%m%d-data.xml'),
@@ -138,19 +137,33 @@ def download_all():
         download_recent(fnzip, u)
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description='download puzzles by date')
+    parser.add_argument('path', type=str, nargs='*', help='.zips to be processed')
+
+    parser.add_argument('--source', dest='source', default=None, help='source mnemonic')
+    parser.add_argument('--from', dest='from_date', default=None, help='date to start after')
+    parser.add_argument('--to', dest='to_date', default=None, help='date to stop after')
+    args = parser.parse_args()
+
     today_date = today()
 
     import sys
 
-    if len(sys.argv) > 1:
-        for fqpnzip in sys.argv[1:]:
+    if args.path:
+        for fqpnzip in args.path:
             pathzip, fnzip = os.path.split(fqpnzip)
             sources = [ u for u in DAILY_PUZZLE_URLS if u.rawzip(today_date) == fnzip ]
             assert len(sources) == 1
             if not download_recent(fqpnzip, sources[0]):
                 sys.exit(1)  # 'error' so that that the file isn't reuploaded by the calling script
     else:
-        download_all()
+        sources = [ u for u in DAILY_PUZZLE_URLS if args.source in ( u.dirname, u.abbr ) ]
+        assert len(sources) == 1
+        u = sources[0]
+        from_date = date_from_string(args.from_date)
+        to_date = date_from_string(args.to_date)
+        download_recent(u.rawzip(to_date), u, from_date, to_date)
 
 
 if __name__ == "__main__":
