@@ -92,7 +92,7 @@ def load_corpus(pathname):
 if __name__ == "__main__":
     import sys
 
-    corpus = xdfile.main()
+    corpus = xdfile.main_load()
 
     print "Duplicates:"
     for xds in get_duplicate_puzzles():

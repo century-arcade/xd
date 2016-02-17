@@ -5,8 +5,7 @@ import os
 import os.path
 import stat
 import string
-
-corpus = None
+import zipfile
 
 BLOCK_CHAR = '#'
 EOL = '\n'
@@ -16,7 +15,7 @@ class xdfile:
         self.filename = filename
         self.headers = [ ]
         self.grid = [ ]
-        self.clues = [ ] # list of (("A", 21), "**Bold**, //italic//, or __underscore__", "MARKUP")
+        self.clues = [ ] # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
         self.notes = ""
 
         if xd_contents:
@@ -100,13 +99,13 @@ class xdfile:
 
         # clues (section 3)
         prevdir = None
-        for pos, clue, answer in sorted(self.clues):
+        for pos, clue, answer in self.clues:
             cluedir, cluenum = pos
             if cluedir != prevdir:
                 r += EOL
             prevdir = cluedir
 
-            r += "%s%s. %s ~ %s" % (cluedir, cluenum, clue, answer)
+            r += "%s%s. %s ~ %s" % (cluedir, cluenum, clue.strip(), answer)
             r += EOL
 
         if self.notes:
@@ -129,7 +128,7 @@ def find_files(*paths):
             import zipfile
             with zipfile.ZipFile(path, 'r') as zf:
                 for f in zf.infolist():
-                    fullfn = path + ":" + f.filename
+                    fullfn = f.filename
                     contents = zf.read(f)
                     yield fullfn, contents
         else:
@@ -152,7 +151,7 @@ def load_corpus(*pathnames):
             xd = xdfile(contents, fullfn)
 
             if collapse_whitespace(xd.to_unicode()) != collapse_whitespace(contents):
-                print fullfn, "differs"
+                print fullfn, "differs when re-emitted"
 #                file(fullfn + ".reparse", 'w').write(xd.to_unicode())
 
             corpus[fullfn] = xd
@@ -181,22 +180,41 @@ def main_parse(parserfunc):
 
     parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
     parser.add_argument('path', type=str, nargs='+', help='files, .zip, or directories to be converted')
-    parser.add_argument('-o', dest='output', default=None,
-                   help='output directory (default stdout)')
+    parser.add_argument('-o', dest='output', default=None, help='output directory (default stdout)')
+    parser.add_argument('-t', dest='toplevel', default=None, help='set toplevel directory of files in .zip')
 
     args = parser.parse_args()
 
+    outf = sys.stdout
+
+    if args.output:
+        outbase, outext = os.path.splitext(args.output)
+        if outext == ".zip":
+            outf = zipfile.ZipFile(args.output, 'w')
+        else:
+            outf = None
+
     for fullfn, contents in find_files(*args.path):
         print "\r" + fullfn,
-        _, fn = os.path.split(fullfn)
-        base, ext = os.path.splitext(fn)
         xd = parserfunc(contents)
         xdstr = xd.to_unicode().encode("utf-8")
-        if args.output:
+        if isinstance(outf, zipfile.ZipFile):
+            if args.toplevel:
+                path, fn = os.path.split(fullfn)
+                base, ext = os.path.splitext(fn)
+                fullfn = "%s/%s/%s.xd" % (args.toplevel, "/".join(path.split("/")[1:]), base)
+
+            zi = zipfile.ZipInfo(fullfn)
+            zi.external_attr = 0444 << 16L
+            zi.compress_type = zipfile.ZIP_DEFLATED
+            outf.writestr(zi, xdstr)
+        elif isinstance(outf, file):
+            outf.write(xdstr)
+        else:
+            _, fn = os.path.split(fullfn)
+            base, ext = os.path.splitext(fn)
             xdfn = "%s/%s.xd" % (args.output, base)
             file(xdfn, "w-").write(xdstr)
-        else:
-            print xdstr
 
     print
 

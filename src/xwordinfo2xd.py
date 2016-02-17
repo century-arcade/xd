@@ -147,11 +147,18 @@ def parse_xwordinfo(content):
     return xd
 
 def _fetch_clues(xd, clueprefix, root, css_identifier, rebus):
-    PT_CLUE = re.compile(r'(\d+)\. (.*) :')
+    PT_CLUE = re.compile(r'(\d+)\. ?(.*)')
     text = number = solution = None
-    for content in root.cssselect(css_identifier)[0].itertext():
+    answer_next = False
+    cluespan = root.cssselect(css_identifier)
+    if not cluespan:
+        return
+    for content in cluespan[0].itertext():
         content = content.strip()
-        if text:
+        if answer_next:
+            assert not solution
+            solution = content
+
             # replace rebuses with appropriate identifiers (numbers)
             for item in rebus:
                 if item in content:
@@ -160,10 +167,22 @@ def _fetch_clues(xd, clueprefix, root, css_identifier, rebus):
             solution = content
             xd.clues.append(((clueprefix, number), text, solution))
             text = number = solution = None
+            answer_next = False
         else:
+            if content[-2:] == " :":
+                answer_next = True
+                content = content[:-2]
+
             match = re.match(PT_CLUE, content)
-            number = int(match.group(1))
-            text = match.group(2)
+            if match:
+                number = int(match.group(1))
+                text = match.group(2)
+            else:
+                if text is None: # a special one
+                    number = content
+                    text = ""
+                else:
+                    text += " " + content
 
 if __name__ == "__main__":
     xdfile.main_parse(parse_xwordinfo)

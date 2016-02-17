@@ -4,6 +4,7 @@ import os
 import re
 import json
 import xdfile
+from urllib import unquote
 
 POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright']
 
@@ -18,7 +19,7 @@ def parse_ujson(content):
     for item in POSSIBLE_META_DATA:
         text = json_data.get(item, None)
         if text:
-            xd.headers.append((item, text))
+            xd.headers.append((item, unquote(text).decode("utf-8")))
 
     # add puzzle
     for row in range(1, rows+1):
@@ -31,7 +32,7 @@ def parse_ujson(content):
         for clue in json_data[clue_type + 'Clue'].split(os.linesep):
             number, text = clue.split('|')
             solution = _get_solution(number, clue_type[0], layout, xd.grid)
-            xd.clues.append(((clue_type[0], int(number)), text, solution))
+            xd.clues.append(((clue_type[0], int(number)), unquote(text).decode("utf-8").strip(), solution))
             assert solution
 
     return xd
