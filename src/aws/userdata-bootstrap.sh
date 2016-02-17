@@ -20,7 +20,7 @@ sudo apt-get update && \
 
 cd /tmp
 
-wget https://raw.githubusercontent.com/century-arcade/xd/${BRANCH}/aws/get-recent-xd.sh
+wget https://raw.githubusercontent.com/century-arcade/xd/${BRANCH}/src/aws/get-recent-xd.sh
 
 /bin/bash -x /tmp/get-recent-xd.sh
 

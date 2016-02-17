@@ -17,7 +17,7 @@ as-create-launch-config \
     ${AUTH} \
   --key $KEY \
   --instance-type t2.nano \
-  --user-data-file aws/userdata-bootstrap.sh \
+  --user-data-file src/aws/userdata-bootstrap.sh \
   --region ${REGION} \
   --image-id $ami_id \
   --launch-config "$launch_config"
@@ -65,7 +65,7 @@ if [ -n "$1" ] ; then
       --key $KEY \
       --instance-type t2.nano \
       --instance-initiated-shutdown-behavior terminate \
-      --user-data-file aws/userdata-bootstrap.sh \
+      --user-data-file src/aws/userdata-bootstrap.sh \
       --iam-profile xd-scraper \
       $ami_id
 fi
