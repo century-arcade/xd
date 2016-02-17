@@ -30,7 +30,7 @@ def parse_ujson(content):
         for clue in json_data[clue_type + 'Clue'].split(os.linesep):
             number, text = clue.split('|')
             solution = _get_solution(number, clue_type[0], layout, xd.grid)
-            xd.clues.append(((clue_type[0], number), text, solution))
+            xd.clues.append(((clue_type[0], int(number)), text, solution))
 
     return xd
 

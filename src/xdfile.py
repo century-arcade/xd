@@ -80,7 +80,8 @@ class xdfile:
 
                 self.clues.append(((cluedir, cluenum), clue.strip(), answer.strip()))
             else: # anything remaining
-                self.notes += line + EOL
+                if line:
+                    self.notes += line + EOL
 
     def to_unicode(self):
         # headers (section 1)
