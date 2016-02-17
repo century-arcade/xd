@@ -109,8 +109,11 @@ class xdfile:
             r += "%s%s. %s ~ %s" % (cluedir, cluenum, clue, answer)
             r += EOL
 
-        r += EOL + EOL
-        r += self.notes
+        if self.notes:
+            r += EOL + EOL
+            r += self.notes
+
+        r += EOL
         return r
 
 def find_files(*paths):

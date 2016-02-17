@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import re
 import json
 import xdfile
 
@@ -31,6 +32,7 @@ def parse_ujson(content):
             number, text = clue.split('|')
             solution = _get_solution(number, clue_type[0], layout, xd.grid)
             xd.clues.append(((clue_type[0], int(number)), text, solution))
+            assert solution
 
     return xd
 
@@ -39,7 +41,8 @@ def _get_solution(number, direction, layout, puzzle):
     for row in range(1, len(puzzle)+1):
         line = layout['Line'+str(row)]
         try:
-            x = line.index(number) / 2
+            pairs = re.findall('..', line)
+            x = pairs.index(number)
             y = row - 1
             break;
         except ValueError:
