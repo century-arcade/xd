@@ -11,15 +11,6 @@ import xdfile
 
 SPLIT_REBUS_TITLES = "CRYPTOCROSSWORD TIC-TAC-TOE".split()
 
-REBUS_LONG_HANDS = {
-    'NINE': '9', 'EIGHT': '8', 'SEVEN': '7', 'SIX': '6', 'FIVE': '5', 'FOUR': '4', 'THREE': '3',
-    'TWO': '2', 'ONE': '1', 'ZERO': '0', 'AUGHT': '0', 'AMPERSAND': '&', 'AND': '&', 'ASTERISK': '*',
-    'PERCENT': '%', 'STAR': '*', 'AT': '@', 'DOLLAR': '$', 'PLUS': '+', 'CENT': 'c',
-#    'DASH': '-',
-#    'DOT': '●',
-}
-
-REBUS_SHORT_HANDS = list(u'♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321')
 
 def stringify_children(node):
     s = node.text
@@ -31,6 +22,16 @@ def stringify_children(node):
 
 # content is unicode()
 def parse_xwordinfo(content):
+    REBUS_LONG_HANDS = {
+    'NINE': '9', 'EIGHT': '8', 'SEVEN': '7', 'SIX': '6', 'FIVE': '5', 'FOUR': '4', 'THREE': '3',
+    'TWO': '2', 'ONE': '1', 'ZERO': '0', 'AUGHT': '0', 'AMPERSAND': '&', 'AND': '&', 'ASTERISK': '*',
+    'PERCENT': '%', 'STAR': '*', 'AT': '@', 'DOLLAR': '$', 'PLUS': '+', 'CENT': 'c',
+#    'DASH': '-',
+#    'DOT': '●',
+    }
+
+    REBUS_SHORT_HANDS = list(u'♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321')
+
     content = content.replace("<b>", "{*")
     content = content.replace("</b>", "*}")
     content = content.replace("<i>", "{/")
