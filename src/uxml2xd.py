@@ -10,7 +10,10 @@ def parse_uxml(content):
     content = content.replace("''", '&quot;')
     POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright', 'Category']
 
-    root = etree.fromstring(content.decode("iso-8859-1"))
+    try:
+        root = etree.fromstring(content.decode("utf-8"))
+    except:
+        root = etree.fromstring(content.decode("iso-8859-1"))
 
     # init crossword
     rows = int(root.xpath('//crossword/Height')[0].attrib['v'])

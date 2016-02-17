@@ -196,13 +196,21 @@ def main_parse(parserfunc):
 
     for fullfn, contents in find_files(*args.path):
         print "\r" + fullfn,
-        xd = parserfunc(contents)
-        xdstr = xd.to_unicode().encode("utf-8")
+        try:
+            xd = parserfunc(contents)
+            xdstr = xd.to_unicode().encode("utf-8")
+        except Exception, e:
+            print str(e)
+            continue
+            
         if isinstance(outf, zipfile.ZipFile):
             if args.toplevel:
                 path, fn = os.path.split(fullfn)
                 base, ext = os.path.splitext(fn)
                 fullfn = "%s/%s/%s.xd" % (args.toplevel, "/".join(path.split("/")[1:]), base)
+            else:
+                base, ext = os.path.splitext(fullfn)
+                fullfn = base + ".xd"
 
             zi = zipfile.ZipInfo(fullfn)
             zi.external_attr = 0444 << 16L

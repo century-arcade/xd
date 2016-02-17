@@ -97,7 +97,7 @@ if __name__ == "__main__":
     print "Duplicates:"
     for xds in get_duplicate_puzzles():
         if len(xds) > 1:
-            print " ".join(xd.filename for xd in xds)
+            print " ".join(sorted(xd.filename for xd in xds))
     print
 
     all_words = get_all_words()
