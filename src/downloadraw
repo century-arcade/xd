@@ -5,6 +5,7 @@ import datetime
 import zipfile
 import urllib2
 
+
 class PuzzleUrl:
     def __init__(self, rawext, abbr, dirname, urlfmt):
         self.ext = rawext
@@ -38,6 +39,16 @@ DAILY_PUZZLE_URLS = [
     PuzzleUrl('pdf', 'wsj', 'wsj',               'http://www.wsj.com/public/resources/documents/puzzle%Y%m%d.pdf'),
     PuzzleUrl('pdf', 'new', 'newsday',           'http://www.brainsonly.com/servlets-newsday-crossword/newsdaycrosswordPDF?pm=pdf&data=%%3CNAME%%3E' + '%y%m%d' + '%%3C%%2FNAME%%3E%%3CTYPE%%3E2%%3C%%2FTYPE%%3E'),
 ]
+
+def today():
+    d = datetime.datetime.today()
+    return datetime.date(d.year, d.month, d.day)
+
+def date_from_string(s):
+    return datetime.datetime.strptime(s, "%Y-%m-%d")
+
+def date_to_string(date):
+    return date.strftime("%Y-%m-%d")
 
 def parse_date_from_filename(fn):
     import re
@@ -120,17 +131,14 @@ def download_recent(zipfn, u, first_date=None, last_date=None):
     return nsaved
 
 def download_all():
-    d = datetime.datetime.today()
-    today_date = datetime.date(d.year, d.month, d.day)
+    today_date = today()
 
     for u in DAILY_PUZZLE_URLS:
         fnzip = u.rawzip(today_date)
         download_recent(fnzip, u)
 
-
 def main():
-    d = datetime.datetime.today()
-    today_date = datetime.date(d.year, d.month, d.day)
+    today_date = today()
 
     import sys
 

@@ -21,6 +21,14 @@ REBUS_LONG_HANDS = {
 
 REBUS_SHORT_HANDS = list(u'♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321')
 
+def stringify_children(node):
+    s = node.text
+    if s is None:
+        s = ''
+    for child in node:
+        s += etree.tostring(child, encoding='unicode')
+    return s
+
 # content is unicode()
 def parse_xwordinfo(content):
     content = content.replace("<b>", "{*")
@@ -34,15 +42,44 @@ def parse_xwordinfo(content):
     content = content.replace("<strike>", "{-")
     content = content.replace("</strike>", "-}")
 
+    if "CPHContent_" in content:
+        xwiprefix = '#CPHContent_'
+    else:
+        xwiprefix = '#'
+
     root = html.fromstring(content)
 
     special_type = ''
     rebus = {}
     rebus_order = []
+
     xd = xdfile.xdfile()
 
-    puzzle_table = root.cssselect('#CPHContent_PuzTable tr') or \
-        root.cssselect('#PuzTable tr')
+    # get crossword info
+    title = root.cssselect(xwiprefix + 'TitleLabel')[0].text.strip()
+    try:
+        subtitle = root.cssselect(xwiprefix + 'SubTitleLabel')[0].text.strip()
+        subtitle = ' [%s]' %subtitle
+    except:
+        subtitle = ""
+
+    author = root.cssselect(xwiprefix + 'AuthorLabel')[0].text.strip()
+    editor = root.cssselect(xwiprefix + 'EditorLabel')[0].text.strip()
+    try:
+        xd.notes = stringify_children(root.cssselect(xwiprefix + 'NotepadDiv')[0])
+    except:
+        pass
+
+    xd.headers.append(("Title", '%s%s' %(title, subtitle)))
+    xd.headers.append(("Author", root.cssselect(xwiprefix + 'AuthorLabel')[0].text.strip()))
+    xd.headers.append(("Editor", root.cssselect(xwiprefix + 'EditorLabel')[0].text.strip()))
+
+    xd.notes = xd.notes.replace("<br/>", "\n")
+    xd.notes = xd.notes.replace("<b>Notepad:</b>", "\n")
+    xd.notes = xd.notes.replace("&#13;", "\n")
+    xd.notes = xd.notes.strip()
+
+    puzzle_table = root.cssselect(xwiprefix + 'PuzTable tr') or root.cssselect('#PuzTable tr')
 
     for row in puzzle_table:
         row_data = u""
@@ -96,19 +133,6 @@ def parse_xwordinfo(content):
             row_data += letter
         xd.grid.append(row_data)
 
-    # add meta data
-    title = root.cssselect('#CPHContent_TitleLabel')[0].text.strip()
-    subtitle = ''
-    try:
-        subtitle = root.cssselect('#CPHContent_SubTitleLabel')[0].text.strip()
-        subtitle = ' [%s]' %subtitle
-    except:
-        pass
-
-    xd.headers.append(("Title", '%s%s' %(title, subtitle)))
-    xd.headers.append(("Author", root.cssselect('#CPHContent_AuthorLabel')[0].text.strip()))
-    xd.headers.append(("Editor", root.cssselect('#CPHContent_EditorLabel')[0].text.strip()))
-
     if len(rebus):
         rebus = ["%s=%s" %(rebus[x], x.upper()) for x in rebus_order]
         xd.headers.append(("Rebus", ','.join(rebus)))
@@ -116,8 +140,8 @@ def parse_xwordinfo(content):
         xd.headers.append(("Special", special_type))
 
     # add clues
-    across_clues = _fetch_clues(xd, 'A', root, '#CPHContent_AcrossClues', rebus)
-    down_clues = _fetch_clues(xd, 'D', root, '#CPHContent_DownClues', rebus)
+    across_clues = _fetch_clues(xd, 'A', root, xwiprefix + 'AcrossClues', rebus)
+    down_clues = _fetch_clues(xd, 'D', root, xwiprefix + 'DownClues', rebus)
 
     return xd
 

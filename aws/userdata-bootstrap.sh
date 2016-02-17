@@ -16,7 +16,7 @@ exec > >(tee ${LOGFILE}|logger -t user-data -s 2>/dev/console) 2>&1
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update && \
     sudo apt-get install --yes zip awscli python-lxml python-pip && \
-    sudo pip install cssselect
+    sudo pip install cssselect crossword puzpy
 
 cd /tmp
 
