@@ -21,6 +21,12 @@ class xdfile:
         if xd_contents:
             self.parse_xd(xd_contents)
 
+    def get_header(self, fieldname):
+        vals = [ v for k, v in self.headers if k == fieldname ]
+        if vals:
+            assert len(vals) == 1, vals
+            return vals[0]
+
     def parse_xd(self, xd_contents):
         # placeholders, actual numbering starts at 1
         section = 0
@@ -85,7 +91,7 @@ class xdfile:
     def to_unicode(self):
         # headers (section 1)
 
-        r = "" 
+        r = u"" 
         for k, v in self.headers:
             if v:
                 r += "%s: %s" % (k or "Header", v)
@@ -105,7 +111,7 @@ class xdfile:
                 r += EOL
             prevdir = cluedir
 
-            r += "%s%s. %s ~ %s" % (cluedir, cluenum, clue.strip(), answer)
+            r += u"%s%s. %s ~ %s" % (cluedir, cluenum, clue.strip(), answer)
             r += EOL
 
         if self.notes:
@@ -201,6 +207,7 @@ def main_parse(parserfunc):
             xdstr = xd.to_unicode().encode("utf-8")
         except Exception, e:
             print str(e)
+#            raise
             continue
             
         if isinstance(outf, zipfile.ZipFile):

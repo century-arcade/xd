@@ -1,19 +1,43 @@
 #!/usr/bin/env python
 
+import re
 from urllib import unquote
 from lxml import etree
 
 import xdfile
 
+def udecode(s):
+    t = unquote(s)
+    try:
+        return unicode(t.decode("utf-8"))
+    except:
+        return unicode(t)
+
 def parse_uxml(content):
-    content = content.replace(" & ", " &amp; ")
+    content = content.replace("&", "&amp;")
+    content = content.replace('"<"', '"&lt;"')
     content = content.replace("''", '&quot;')
+    content = content.replace("\x12", "'")  # ^R seems to be '
+    content = content.replace("\x05", "'")  # ^E seems to be junk
+
+    content = re.sub(r'=""(\S)', r'="&quot;\1', content) # one case has c=""foo"".  sheesh
+    content = re.sub(r'(\.)""', r'\1&quot;"', content)
+
     POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright', 'Category']
 
     try:
-        root = etree.fromstring(content.decode("utf-8"))
+        content = content.decode("cp1252")
     except:
-        root = etree.fromstring(content.decode("iso-8859-1"))
+        try:
+            content = content.decode("utf-8")
+        except:
+            pass # last ditch effort, just try the original string
+
+    try:
+        root = etree.fromstring(content)
+    except:
+        xml = re.search(r"<(\w+).*?</\1>", content, flags=re.DOTALL).group()
+        root = etree.fromstring(xml)
 
     # init crossword
     rows = int(root.xpath('//crossword/Height')[0].attrib['v'])
@@ -42,7 +66,7 @@ def parse_uxml(content):
     for clue_type in ('across', 'down'):
         for clue in root.xpath('//crossword/'+clue_type)[0].getchildren():
             number = int(clue.attrib['cn'])
-            text = unquote(clue.attrib['c'].strip())
+            text = udecode(clue.attrib['c'].strip())
             solution = clue.attrib['a'].strip()
             xd.clues.append(((clue_type[0].upper(), number), text, solution))
 

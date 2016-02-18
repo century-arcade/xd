@@ -98,6 +98,9 @@ if __name__ == "__main__":
     for xds in get_duplicate_puzzles():
         if len(xds) > 1:
             print " ".join(sorted(xd.filename for xd in xds))
+            authors = [ xd.get_header("Author") or "???" for xd in xds ]
+            if len(set(authors)) > 1:
+                print "\tdifferent authors: " + " ".join(authors)
     print
 
     all_words = get_all_words()
