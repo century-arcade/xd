@@ -26,10 +26,10 @@ def parse_uxml(content):
     POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright', 'Category']
 
     try:
-        content = content.decode("cp1252")
+        content = content.decode("utf-8")
     except:
         try:
-            content = content.decode("utf-8")
+            content = content.decode("cp1252")
         except:
             pass # last ditch effort, just try the original string
 

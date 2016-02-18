@@ -7,7 +7,8 @@ import urllib2
 
 
 class PuzzleUrl:
-    def __init__(self, rawext, abbr, dirname, urlfmt):
+    def __init__(self, ndays, rawext, abbr, dirname, urlfmt):
+        self.every_n_days = ndays
         self.ext = rawext
         self.abbr = abbr
         self.dirname = dirname
@@ -28,15 +29,15 @@ class PuzzleUrl:
 
 
 DAILY_PUZZLE_URLS = [
-    PuzzleUrl('xml', 'fcx', 'universal',         'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_universal/source/fcx%y%m%d-data.xml'),
-    PuzzleUrl('xml', 'can', 'canadian',  'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_canadian/source/can%y%m%d-data.xml'),
-    PuzzleUrl('html', 'nyt', 'nytimes',          'http://www.xwordinfo.com/PS?date=%-m/%-d/%Y'),
-    PuzzleUrl('xml', 'lat', 'latimes',           'http://cdn.games.arkadiumhosted.com/latimes/assets/DailyCrossword/la%y%m%d.xml'),
-    PuzzleUrl('xml', 'usa', 'usatoday',          'http://www.uclick.com/puzzles/usaon/data/usaon%y%m%d-data.xml'),
-    PuzzleUrl('puz', 'chr', 'chronicle',         'http://chronicle.com/items/biz/puzzles/%Y%m%d.puz'),
-    PuzzleUrl('xml', 'wap', 'wapost',            'https://washingtonpost.as.arkadiumhosted.com/clients/washingtonpost-content/SundayCrossword/ebirnholz_%y%m%d.xml'),
-    PuzzleUrl('pdf', 'wsj', 'wsj',               'http://www.wsj.com/public/resources/documents/puzzle%Y%m%d.pdf'),
-    PuzzleUrl('pdf', 'new', 'newsday',           'http://www.brainsonly.com/servlets-newsday-crossword/newsdaycrosswordPDF?pm=pdf&data=%%3CNAME%%3E' + '%y%m%d' + '%%3C%%2FNAME%%3E%%3CTYPE%%3E2%%3C%%2FTYPE%%3E'),
+    PuzzleUrl(7, 'xml', 'can', 'canadian',  'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_canadian/source/can%y%m%d-data.xml'),
+    PuzzleUrl(7, 'puz', 'chr', 'chronicle', 'http://chronicle.com/items/biz/puzzles/%Y%m%d.puz'),
+    PuzzleUrl(7, 'xml', 'wap', 'wapost',    'https://washingtonpost.as.arkadiumhosted.com/clients/washingtonpost-content/SundayCrossword/ebirnholz_%y%m%d.xml'),
+    PuzzleUrl(1, 'xml', 'fcx', 'universal', 'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_universal/source/fcx%y%m%d-data.xml'),
+    PuzzleUrl(1, 'html', 'nyt', 'nytimes',  'http://www.xwordinfo.com/PS?date=%-m/%-d/%Y'),
+    PuzzleUrl(1, 'xml', 'lat', 'latimes',   'http://cdn.games.arkadiumhosted.com/latimes/assets/DailyCrossword/la%y%m%d.xml'),
+    PuzzleUrl(1, 'xml', 'usa', 'usatoday',  'http://www.uclick.com/puzzles/usaon/data/usaon%y%m%d-data.xml'),
+    PuzzleUrl(1, 'pdf', 'wsj', 'wsj',       'http://www.wsj.com/public/resources/documents/puzzle%Y%m%d.pdf'),
+    PuzzleUrl(1, 'pdf', 'new', 'newsday',   'http://www.brainsonly.com/servlets-newsday-crossword/newsdaycrosswordPDF?pm=pdf&data=%%3CNAME%%3E' + '%y%m%d' + '%%3C%%2FNAME%%3E%%3CTYPE%%3E2%%3C%%2FTYPE%%3E'),
 ]
 
 def today():
@@ -167,7 +168,7 @@ def main():
         u = sources[0]
         from_date = date_from_string(args.from_date)
         to_date = date_from_string(args.to_date)
-        ndays = int(args.ndays or 1)
+        ndays = int(args.ndays or u.every_n_days)
         download_recent(u.rawzip(to_date), u, from_date, to_date, ndays)
 
 
