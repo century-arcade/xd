@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/bash -x
 
-source config
+# source config
 ami_id=ami-5189a661 #Ubuntu Server 14.04 LTS (HVM)
 
 autoscale_group=xd-as-group
@@ -65,7 +65,7 @@ if [ -n "$1" ] ; then
       --key $KEY \
       --instance-type t2.nano \
       --instance-initiated-shutdown-behavior terminate \
-      --user-data-file src/aws/userdata-bootstrap.sh \
       --iam-profile xd-scraper \
+      --user-data-file src/aws/userdata-bootstrap.sh \
       $ami_id
 fi

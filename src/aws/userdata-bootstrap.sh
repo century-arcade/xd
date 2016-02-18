@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 # This script is passed as userdata to the launch-config, which the base AMI
 # executes at the end of initialization.  These configuration parameters
@@ -9,9 +9,9 @@ export BRANCH=master
 export BUCKET=xd.workmuch.com
 export EMAIL=xd@workmuch.com
 
-export LOGFILE=/var/log/`date +"%Y-%m-%d"`.log
+export LOGFILE=/tmp/`date +"%Y-%m-%d"`.log
 
-exec > >(tee ${LOGFILE}|logger -t user-data -s 2>/dev/console) 2>&1
+exec > >(tee -i ${LOGFILE}) 2>&1
 
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update && \
