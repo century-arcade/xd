@@ -7,8 +7,7 @@
   * `xdfile.py` has a simple parser for .xd files with example code that
 answers some simple queries, like "what is the most used grid in this .zip of .xd files?"
 
-  * `puz2xd.py` will convert Across-Lite .puz format to .xd.  Scripts to
-convert other formats would be welcome.
+  * `puz2xd.py` will convert Across-Lite .puz format to .xd.  Scripts to convert other formats are also in `src/`.
 
 ## Full Example
 
@@ -135,7 +134,8 @@ This is the oldest rebus crossword from the New York Times (found by `grep -r Re
 
 The .xd format is a simple UTF-8 text file, and can often be 7-bit ASCII clean.
 
-Sections are delineated by two or more consecutive newlines (0x0A).  Subsections are delineated by one blank line.
+Sections are delineated by two or more blank lines (3 consecutive newlines
+(0x0A)).  Subsections are delineated by a single blank line.
 
 ### Headers (Section 1)
 

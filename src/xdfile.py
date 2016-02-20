@@ -7,6 +7,8 @@ import stat
 import string
 import zipfile
 
+flDebug = True # exceptions exit with stack trace
+
 BLOCK_CHAR = '#'
 EOL = '\n'
 
@@ -17,9 +19,10 @@ class xdfile:
         self.grid = [ ]
         self.clues = [ ] # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
         self.notes = ""
+        self.orig_contents = xd_contents
 
         if xd_contents:
-            self.parse_xd(xd_contents)
+            self.parse_xd(xd_contents.decode("utf-8"))
 
     def get_header(self, fieldname):
         vals = [ v for k, v in self.headers if k == fieldname ]
@@ -76,12 +79,12 @@ class xdfile:
                 pos = clue[:clue_idx].strip()
                 clue = clue[clue_idx+1:]
 
-                if pos[0] in string.digits:
-                    cluedir = ""
-                    cluenum = int(pos)
-                else:
+                if pos[0] in string.uppercase:
                     cluedir = pos[0]
-                    cluenum = int(pos[1:])
+                    cluenum = pos[1:]
+                else:
+                    cluedir = ""
+                    cluenum = pos
 
                 self.clues.append(((cluedir, cluenum), clue.strip(), answer.strip()))
             else: # anything remaining
@@ -119,6 +122,16 @@ class xdfile:
             r += self.notes
 
         r += EOL
+
+        # some Postscript CE encodings can be caught here
+        r = r.replace(u'\x92', "'")
+        r = r.replace(u'\x93', '"')
+        r = r.replace(u'\x94', '"')
+        r = r.replace(u'\x85', '...')
+
+        # these are always supposed to be double-quotes
+        r = r.replace("''", '"')
+
         return r
 
 def find_files(*paths):
@@ -146,9 +159,6 @@ corpus = { }
 
 
 def load_corpus(*pathnames):
-    def collapse_whitespace(s):
-        return "".join(x.strip() for x in s.splitlines()).strip()
-
     for fullfn, contents in find_files(*pathnames):
         if not fullfn.endswith(".xd"):
             continue
@@ -156,14 +166,12 @@ def load_corpus(*pathnames):
         try:
             xd = xdfile(contents, fullfn)
 
-            if collapse_whitespace(xd.to_unicode()) != collapse_whitespace(contents):
-                print fullfn, "differs when re-emitted"
-#                file(fullfn + ".reparse", 'w').write(xd.to_unicode())
-
             corpus[fullfn] = xd
         except Exception, e:
-            print fullfn, str(e)
-#            raise
+            x = unicode(e)
+            print fullfn, x
+            if flDebug:
+                raise
 
     return corpus
 
@@ -206,9 +214,11 @@ def main_parse(parserfunc):
             xd = parserfunc(contents)
             xdstr = xd.to_unicode().encode("utf-8")
         except Exception, e:
-            print str(e)
-#            raise
-            continue
+            if flDebug:
+                raise
+            else:
+                print str(e)
+                continue
             
         if isinstance(outf, zipfile.ZipFile):
             if args.toplevel:

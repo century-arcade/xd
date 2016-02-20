@@ -10,6 +10,13 @@ import xdfile
 
 rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
 
+def decode(s):
+    s = s.replace(u'\x92', "'")
+    s = s.replace(u'\x93', '"')
+    s = s.replace(u'\x94', '"')
+    s = s.replace(u'\x85', '...')
+    return s
+
 def is_block(puz, x, y):
     return x < 0 or y < 0 or x >= puz.width or y >= puz.height or puz[x, y].solution == '.'
 
@@ -24,7 +31,7 @@ def parse_puz(contents):
     for k, v in puzzle.meta():
         if v:
             k = k[0].upper() + k[1:].lower()
-            xd.headers.append((k, v.strip()))
+            xd.headers.append((k, decode(v.strip())))
 
     answers = { }
     clue_num = 1
@@ -73,10 +80,10 @@ def parse_puz(contents):
         xd.grid.append(rowstr)
 
     for number, clue in puzzle.clues.across():
-        xd.clues.append((("A", number), clue, answers["A"+str(number)]))
+        xd.clues.append((("A", number), decode(clue), answers["A"+str(number)]))
 
     for number, clue in puzzle.clues.down():
-        xd.clues.append((("D", number), clue, answers["D"+str(number)]))
+        xd.clues.append((("D", number), decode(clue), answers["D"+str(number)]))
 
     return xd
 

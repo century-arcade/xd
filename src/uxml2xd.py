@@ -14,15 +14,6 @@ def udecode(s):
         return unicode(t)
 
 def parse_uxml(content):
-    content = content.replace("&", "&amp;")
-    content = content.replace('"<"', '"&lt;"')
-    content = content.replace("''", '&quot;')
-    content = content.replace("\x12", "'")  # ^R seems to be '
-    content = content.replace("\x05", "'")  # ^E seems to be junk
-
-    content = re.sub(r'=""(\S)', r'="&quot;\1', content) # one case has c=""foo"".  sheesh
-    content = re.sub(r'(\.)""', r'\1&quot;"', content)
-
     POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright', 'Category']
 
     try:
@@ -32,6 +23,15 @@ def parse_uxml(content):
             content = content.decode("cp1252")
         except:
             pass # last ditch effort, just try the original string
+
+    content = content.replace("&", "&amp;")
+    content = content.replace('"<"', '"&lt;"')
+    content = content.replace("''", '&quot;')
+    content = content.replace("\x12", "'")  # ^R seems to be '
+    content = content.replace("\x05", "'")  # ^E seems to be junk
+
+    content = re.sub(r'=""(\S)', r'="&quot;\1', content) # one case has c=""foo"".  sheesh
+    content = re.sub(r'(\.)""', r'\1&quot;"', content)
 
     try:
         root = etree.fromstring(content)
