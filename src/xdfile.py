@@ -24,6 +24,9 @@ class xdfile:
         if xd_contents:
             self.parse_xd(xd_contents.decode("utf-8"))
 
+    def __str__(self):
+        return self.filename
+
     def get_header(self, fieldname):
         vals = [ v for k, v in self.headers if k == fieldname ]
         if vals:
@@ -155,28 +158,25 @@ def find_files(*paths):
             contents = file(path).read()
             yield fullfn, contents
     
-corpus = { }
-
-
 def load_corpus(*pathnames):
+    ret = { }
     for fullfn, contents in find_files(*pathnames):
         if not fullfn.endswith(".xd"):
             continue
 
         try:
+            print >>sys.stderr, "\r", fullfn,
             xd = xdfile(contents, fullfn)
 
-            corpus[fullfn] = xd
+            ret[fullfn] = xd
         except Exception, e:
-            x = unicode(e)
-            print fullfn, x
+            print >>sys.stderr, unicode(e)
             if flDebug:
                 raise
 
-    return corpus
+    return ret
 
 def main_load():
-    global corpus
     corpus = load_corpus(*sys.argv[1:])
 
     if len(corpus) == 1:
@@ -209,7 +209,7 @@ def main_parse(parserfunc):
             outf = None
 
     for fullfn, contents in find_files(*args.path):
-        print "\r" + fullfn,
+        print >>sys.stderr, "\r" + fullfn,
         try:
             xd = parserfunc(contents)
             xdstr = xd.to_unicode().encode("utf-8")
@@ -217,7 +217,7 @@ def main_parse(parserfunc):
             if flDebug:
                 raise
             else:
-                print str(e)
+                print >>sys.stderr, str(e)
                 continue
             
         if isinstance(outf, zipfile.ZipFile):
@@ -241,7 +241,7 @@ def main_parse(parserfunc):
             xdfn = "%s/%s.xd" % (args.output, base)
             file(xdfn, "w-").write(xdstr)
 
-    print
+    print >>sys.stderr, ""
 
 if __name__ == "__main__":
     main_load()
