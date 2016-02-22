@@ -52,10 +52,15 @@ def date_to_string(date):
 
 def parse_date_from_filename(fn):
     import re
-    m = re.search("(2\d{3})-(\d{2})-(\d{2})", fn)
+    m = re.search("(\w{3})([12]\d{3})-(\d{2})-(\d{2})", fn)
     if m:
-        y, mon, d = m.groups()
-        return datetime.date(int(y), int(mon), int(d))
+        abbr, y, mon, d = m.groups()
+        return abbr, datetime.date(int(y), int(mon), int(d))
+
+def get_source(abbr):
+    for p in DAILY_PUZZLE_URLS:
+        if abbr == p.abbr:
+            return p
 
 # not including the from_date
 def get_dates_between(from_date, to_date, days_to_advance=None):
@@ -79,7 +84,7 @@ def latest_date_in_zip(zipfn):
         existing_dates = [ ]
         with zipfile.ZipFile(zipfn, 'r') as rawzf:
             for zi in rawzf.infolist():
-                d = parse_date_from_filename(zi.filename)
+                abbr, d = parse_date_from_filename(zi.filename)
                 if d:
                     existing_dates.append(d)
 

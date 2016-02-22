@@ -127,6 +127,7 @@ class xdfile:
         r += EOL
 
         # some Postscript CE encodings can be caught here
+        r = r.replace(u'\x91', "'")
         r = r.replace(u'\x92', "'")
         r = r.replace(u'\x93', '"')
         r = r.replace(u'\x94', '"')
@@ -173,6 +174,8 @@ def load_corpus(*pathnames):
             print >>sys.stderr, unicode(e)
             if flDebug:
                 raise
+
+    print >>sys.stderr, ""
 
     return ret
 

@@ -4,7 +4,9 @@ import sys
 import xdfile
 import itertools
 
-def grid_similarity(a, b):  # inverse of hamming distance
+# inverse of hamming distance
+# optimized version
+def fast_grid_similarity(a, b):
     if len(a.grid) != len(b.grid) or len(a.grid[0]) != len(b.grid[0]):
         return 0
 
@@ -15,6 +17,21 @@ def grid_similarity(a, b):  # inverse of hamming distance
                 r += 1
 
     return r
+
+def grid_similarity(a, b):
+    if len(a.grid) != len(b.grid) or len(a.grid[0]) != len(b.grid[0]):
+        return 0
+
+    r = 0
+    tot = 0
+    for row1, row2 in itertools.izip(a.grid, b.grid):
+        for i in xrange(len(row1)):
+            if row1[i] != '#':
+                tot += 1
+                if row1[i] == row2[i]:
+                    r += 1
+
+    return r / float(tot)
 
 def same_answers(a, b):
     ans1 = set(sol for pos, clue, sol in a.clues)
@@ -27,7 +44,7 @@ def find_similar_to(needle, haystack):
     for xd in haystack:
         if xd.filename == needle.filename: continue
         try:
-            pct = grid_similarity(needle, xd) / float(nsquares)
+            pct = fast_grid_similarity(needle, xd) / float(nsquares)
         except Exception, e:
             pct = 0
 
