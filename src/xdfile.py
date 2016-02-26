@@ -138,6 +138,13 @@ class xdfile:
 
         return r
 
+def get_base_filename(fn):
+    path, b = os.path.split(fn)
+    b, ext = os.path.splitext(b)
+
+    return "".join(b.split("-"))
+
+
 def find_files(*paths):
     for path in paths:
         if stat.S_ISDIR(os.stat(path).st_mode):
@@ -166,10 +173,11 @@ def load_corpus(*pathnames):
             continue
 
         try:
-            print >>sys.stderr, "\r", fullfn,
+            basefn = get_base_filename(fullfn)
+            print >>sys.stderr, "\r", basefn,
             xd = xdfile(contents, fullfn)
 
-            ret[fullfn] = xd
+            ret[basefn] = xd
         except Exception, e:
             print >>sys.stderr, unicode(e)
             if flDebug:
