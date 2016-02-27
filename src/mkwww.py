@@ -9,8 +9,6 @@ import xdfile
 import downloadraw
 import findsimilar
 
-import diff_match_patch
-
 OUTPUT_DIR = "www/diffs/"
 
 html_header = """
@@ -55,13 +53,9 @@ The earlier puzzle is always on the left side.
 
 html_footer = """
   <hr style="clear:both;"/>
-      <a href="mailto:xd&#x40;saul.pw">
-  <div class="row">
-      <div class="center">
-          <small>xd@saul.pw</small>
-      </div>
-  </div>
-  </a>
+      <a href="http://saul.pw">
+          <small>saul.pw</small>
+    </a>
 </div>
 
 <script type="text/javascript">
@@ -130,12 +124,12 @@ if __name__ == "__main__":
         fn1, fn2 = line.strip().split()
         print fn1, fn2
 
-        try:
+        if True:
             abbr, d1 = downloadraw.parse_date_from_filename(fn1)
             abbr, d2 = downloadraw.parse_date_from_filename(fn2)
             if d2 < d1:
                 fn1, fn2 = fn2, fn1 # always older on left
-        except:
+        else:
             pass # no date in filename
 
         if (fn1, fn2) in index_list:
@@ -161,19 +155,35 @@ if __name__ == "__main__":
         aut2 = xd2.get_header("Author")
 
         if aut1 != aut2:
-            index_line += ' %s | %s' % (aut1, aut2)
+            index_line += ' <b>%s | %s</b>' % (aut1, aut2)
+        else:
+            index_line += ' %s' % aut1
 
-        index_list[(fn1, fn2)] = (pct, index_line)
+        index_list[(fn1, fn2)] = (pct, index_line, b1, b2)
 
     index_html = file("%s/index.html" % OUTPUT_DIR, 'w')
 
     index_html.write(index_html_header)
 
-    index_html.write('<ul>')
-    for pct, L in sorted(index_list.values(), reverse=True):
-        index_html.write('\n<li>' + L + '</li>')
-    index_html.write('</ul>')
+    matches = sorted((b2, L) for pct, L, b1, b2 in index_list.values() if pct >= 75)
+    partials = sorted((b2, L) for pct, L, b1, b2 in index_list.values() if pct >= 50 and pct < 75)
+    themes = sorted((b2, L) for pct, L, b1, b2 in index_list.values() if pct >= 25 and pct < 50)
 
+    index_html.write('<ul>')
+
+    index_html.write("\n<h3>Matches (%d)</h3>" % len(matches))
+    for b1, L in sorted(matches):
+        index_html.write('\n<li>' + L + '</li>')
+
+    index_html.write("\n<h3>Partial matches (%d)</h3>" % len(partials))
+    for b1, L in sorted(partials):
+        index_html.write('\n<li>' + L + '</li>')
+
+    index_html.write("\n<h3>Possible theme reuse (%d)</h3>" % len(themes))
+    for b1, L in sorted(themes):
+        index_html.write('\n<li>' + L + '</li>')
+
+    index_html.write('</ul>')
     
-    index_html.write("</div></body>")
+    index_html.write(html_footer)
 

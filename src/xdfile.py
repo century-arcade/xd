@@ -7,7 +7,7 @@ import stat
 import string
 import zipfile
 
-flDebug = True # exceptions exit with stack trace
+flDebug = False # exceptions exit with stack trace
 
 BLOCK_CHAR = '#'
 EOL = '\n'

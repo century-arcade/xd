@@ -46,7 +46,7 @@ def same_answers(a, b):
     ans2 = set(sol for pos, clue, sol in b.clues)
     return ans1 & ans2
 
-def find_similar_to(needle, haystack, num_answers=0):
+def find_similar_to(needle, haystack, min_pct=0.3, num_answers=0):
     ret = [ ]
     nsquares = len(needle.grid) * len(needle.grid[0])
     for xd in haystack:
@@ -56,7 +56,7 @@ def find_similar_to(needle, haystack, num_answers=0):
         except Exception, e:
             pct = 0
 
-        if pct >= 0: #0.3:
+        if pct >= min_pct:
             s = same_answers(needle, xd)
             if len(s) >= num_answers:
                 ret.append((pct, needle, xd, s))

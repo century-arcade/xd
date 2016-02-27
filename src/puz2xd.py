@@ -8,13 +8,25 @@ import puz
 import crossword
 import xdfile
 
+hdr_renames = { "creator": "author", "rights": "copyright" }
+
+hdr_order = [ "title", "author", "editor", "copyright", "publisher", "category", "description", "date" ]
+
 rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
+
+import urllib
+
+def reparse_date(s):
+    import time
+    tm = time.strptime(s, "%B %d, %Y")
+    return time.strftime("%Y-%m-%d", tm)
 
 def decode(s):
     s = s.replace(u'\x92', "'")
     s = s.replace(u'\x93', '"')
     s = s.replace(u'\x94', '"')
     s = s.replace(u'\x85', '...')
+    s = urllib.unquote(s)
     return s
 
 def is_block(puz, x, y):
@@ -28,10 +40,41 @@ def parse_puz(contents):
 
     xd = xdfile.xdfile()
 
-    for k, v in puzzle.meta():
+    md = dict([ (hdr_renames.get(k.lower(), k), v) for k, v in puzzle.meta() if v ])
+    if " / " in md.get("author", ""):
+        author, editor = md.get("author").split(" / ")
+        editor = editor.strip()
+        author = author.strip()
+        author = author.lstrip("By ")
+        editor = editor.lstrip("Edited by ")
+        md["author"] = author
+        md["editor"] = editor
+
+    if "Washington Post" in md.get("copyright", ""):
+        a = md["author"]
+        if " - " in a:
+            datestr, rest = a.split(" - ")
+            md["date"] = reparse_date(datestr)
+            if "By " in rest:
+                md["title"], rest = rest.split(" By ")
+            else:
+                md["title"], rest = rest.split(" by ", 1)
+
+            if "Edited by " in rest:
+                md["author"], md["editor"] = rest.split(", Edited by ")
+            elif "edited by " in rest:
+                md["author"], md["editor"] = rest.split(", edited by ")
+            else:
+                md["author"] = rest
+
+        md["copyright"] = md["copyright"].lstrip("Copyright")
+
+    for k, v in sorted(md.items(), key=lambda x: hdr_order.index(x[0])):
         if v:
             k = k[0].upper() + k[1:].lower()
-            xd.headers.append((k, decode(v.strip())))
+            v = decode(v.strip())
+            v = v.replace(u"© ", "")
+            xd.headers.append((k, v))
 
     answers = { }
     clue_num = 1
