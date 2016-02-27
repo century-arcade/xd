@@ -168,13 +168,16 @@ def find_files(*paths):
     
 def load_corpus(*pathnames):
     ret = { }
+
+    n = 0
     for fullfn, contents in find_files(*pathnames):
         if not fullfn.endswith(".xd"):
             continue
 
         try:
             basefn = get_base_filename(fullfn)
-            print >>sys.stderr, "\r", basefn,
+            n += 1
+            print >>sys.stderr, "\r% 6d %s" % (n, basefn),
             xd = xdfile(contents, fullfn)
 
             ret[basefn] = xd
