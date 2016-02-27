@@ -9,8 +9,6 @@ import xdfile
 import downloadraw
 import findsimilar
 
-OUTPUT_DIR = "www/diffs/"
-
 html_header = """
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
           "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -21,7 +19,7 @@ html_header = """
     <meta http-equiv="Content-Type"
           content="text/html; charset=ISO-8859-1" />
     <title>{title}</title>
-    <LINK href="../style.css" rel="stylesheet" type="text/css">
+    <LINK href="style.css" rel="stylesheet" type="text/css">
   </HEAD>
 </head>
 
@@ -29,34 +27,9 @@ html_header = """
 <h2>{title}</h2>
 """
 
-index_html_header = """
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
-<html>
-
-<head>
-    <meta http-equiv="Content-Type"
-          content="text/html; charset=ISO-8859-1" />
-    <title>Published crosswords by similarity</title>
-    <LINK href="../style.css" rel="stylesheet" type="text/css">
-  </HEAD>
-</head>
-    <body id="index">
-    <div>
-    <h2>Published crosswords by similarity</h2>
-
-The earlier puzzle is always on the left side.
-<br/>
-    """
-
-
 html_footer = """
   <hr style="clear:both;"/>
-      <a href="http://saul.pw">
-          <small>saul.pw</small>
-    </a>
-</div>
+  <div><a href="http://saul.pw"><small>saul.pw</small></a></div>
 
 <script type="text/javascript">
   var _gaq = _gaq || [];
@@ -83,12 +56,12 @@ def gendiff(xd1, xd2):
     try:
         desc1 = '<a href="%s">%s</a>' % (get_url(xd1), xd1.filename)
     except:
-        desc1 = xd1.filename
+        desc1 = '<a href="">%s</a>' % xd1.filename
 
     try:
         desc2 = '<a href="%s">%s</a>' % (get_url(xd2), xd2.filename)
     except:
-        desc2 = xd2.filename
+        desc2 = '<a href="">%s</a>' % xd2.filename
 
 
     pct = findsimilar.grid_similarity(xd1, xd2) * 100
@@ -116,27 +89,41 @@ def gendiff(xd1, xd2):
 
 if __name__ == "__main__":
 
+    pubid = sys.argv[1]
+    if len(sys.argv) > 2:
+        inputfn = sys.argv[2]
+    else:
+        inputfn = "crosswords/%s/similar.txt" % pubid
+
+    OUTPUT_DIR = "www/xdiffs/" + pubid
+
+    pubxd = xdfile.xdfile(file("crosswords/%s/meta.txt" % pubid).read()) # just to parse some cached metadata
+
     index_list =  { } # [(olderfn, newerfn)] -> (pct, index_line)
 
-    for inputfn in sys.argv[1:]:
-      for line in file(inputfn).read().splitlines():
+    for line in file(inputfn).read().splitlines():
         if not line: continue
         fn1, fn2 = line.strip().split()
         print fn1, fn2
 
-        if True:
+        try:
             abbr, d1 = downloadraw.parse_date_from_filename(fn1)
             abbr, d2 = downloadraw.parse_date_from_filename(fn2)
             if d2 < d1:
                 fn1, fn2 = fn2, fn1 # always older on left
-        else:
+        except:
             pass # no date in filename
 
         if (fn1, fn2) in index_list:
             continue
 
-        xd1 = xdfile.xdfile(file(fn1).read(), fn1)
-        xd2 = xdfile.xdfile(file(fn2).read(), fn2)
+        try:
+            xd1 = xdfile.xdfile(file(fn1).read(), fn1)
+            xd2 = xdfile.xdfile(file(fn2).read(), fn2)
+        except Exception, e:
+            print str(e)
+            continue
+            
 
         ret, pct = gendiff(xd1, xd2)
 
@@ -151,8 +138,12 @@ if __name__ == "__main__":
         file(OUTPUT_DIR + "/" + outfn, 'w').write(ret.encode("utf-8"))
 
         index_line = '%d%% <a href="%s">%s - %s</a>' % (pct, outfn, b1, b2)
-        aut1 = xd1.get_header("Author")
-        aut2 = xd2.get_header("Author")
+        aut1 = (xd1.get_header("Author") or xd1.get_header("Creator") or "")
+        aut2 = (xd2.get_header("Author") or xd2.get_header("Creator") or "")
+        if aut1.startswith("By "):
+            aut1 = aut1[3:]
+        if aut2.startswith("By "):
+            aut2 = aut2[3:]
 
         if aut1 != aut2:
             index_line += ' <b>%s | %s</b>' % (aut1, aut2)
@@ -161,29 +152,41 @@ if __name__ == "__main__":
 
         index_list[(fn1, fn2)] = (pct, index_line, b1, b2)
 
-    index_html = file("%s/index.html" % OUTPUT_DIR, 'w')
+    out = html_header.format(title="%s crossword similarity" % pubid)
 
-    index_html.write(index_html_header)
+    out += "The left side is always the earlier published puzzle.  Each group is sorted by the right-side publisher and then date.  <b>Bold</b> highlights that the authors are different for the two puzzles.<br/>"
 
-    matches = sorted((b2, L) for pct, L, b1, b2 in index_list.values() if pct >= 75)
-    partials = sorted((b2, L) for pct, L, b1, b2 in index_list.values() if pct >= 50 and pct < 75)
-    themes = sorted((b2, L) for pct, L, b1, b2 in index_list.values() if pct >= 25 and pct < 50)
+    out += "<br/>%s has %s crosswords from %s" % (pubid, pubxd.get_header("num_xd"), pubxd.get_header("years"))
 
-    index_html.write('<ul>')
 
-    index_html.write("\n<h3>Matches (%d)</h3>" % len(matches))
+    matches = sorted((b2, L) for pct, L, b1, b2 in index_list.values() if pct >= 80)
+    partials = sorted((b2, L) for pct, L, b1, b2 in index_list.values() if pct >= 50 and pct < 80)
+    themes = sorted((b2, L) for pct, L, b1, b2 in index_list.values() if pct >= 20 and pct < 50)
+
+    out += '<ul>'
+
+    out += "\n<h3>%d puzzles match 80-100%% of another grid</h3>" % len(matches)
     for b1, L in sorted(matches):
-        index_html.write('\n<li>' + L + '</li>')
+        out += '\n<li>' + L + '</li>'
 
-    index_html.write("\n<h3>Partial matches (%d)</h3>" % len(partials))
+    out += "\n<h3>%d puzzles partially match 50-80%% of another grid</h3>" % len(partials)
     for b1, L in sorted(partials):
-        index_html.write('\n<li>' + L + '</li>')
+        out += '\n<li>' + L + '</li>'
 
-    index_html.write("\n<h3>Possible theme reuse (%d)</h3>" % len(themes))
+    out += '<hr/>'
+    out += "\n<h3>%d puzzles may reuse theme entries, matching 20-50%% of another grid</h3>" % len(themes)
     for b1, L in sorted(themes):
-        index_html.write('\n<li>' + L + '</li>')
+        out += '\n<li>' + L + '</li>'
 
-    index_html.write('</ul>')
+    if len(matches) + len(partials) + len(themes) < 3:
+        out += "\n<h3>some dregs (<20%)</h3>"
+        dregs = sorted(((pct, L) for pct, L, b1, b2 in index_list.values() if pct < 20), reverse = True)
+        for pct, L in sorted(dregs):
+            out += '\n<li>' + L + '</li>'
+
+    out += '</ul>'
     
-    index_html.write(html_footer)
+    out += html_footer
+    file("%s/index.html" % OUTPUT_DIR, 'w').write(out)
+
 

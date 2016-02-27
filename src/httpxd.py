@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+
+# apt-get install python-cherrypy3
+
 import cherrypy
 import string
 import urllib
@@ -22,7 +25,6 @@ class httpxd(object):
     def __init__(self):
         self.corpus = xdfile.main_load()
         self.example_grid = '<div class="fixed">%s</div>' % "<br/>".join(self.corpus.values()[0].grid)
-#        self.example_grid = '\n'.join(self.corpus.values()[0].grid)
 
     @cherrypy.expose
     def index(self):

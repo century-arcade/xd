@@ -39,7 +39,7 @@ class xdfile:
         subsection = 0
 
         # fake blank line at top to allow leading actual blank lines before headers
-        nblanklines = 1
+        nblanklines = 2
 
         for line in xd_contents.splitlines():
             # leading whitespace is decorative
@@ -50,9 +50,12 @@ class xdfile:
                 nblanklines += 1
                 continue
             else:
-                if nblanklines > 0:
+                if nblanklines >= 2:
                     section += 1
                     subsection = 1
+                    nblanklines = 0
+                elif nblanklines == 1:
+                    subsection += 1
                     nblanklines = 0
 
             if section == 1:
@@ -67,7 +70,7 @@ class xdfile:
             elif section == 2:
                 # grid second
                 self.grid.append(line)
-            elif section == 3 or section == 4:
+            elif section == 3:
                 # across or down clues
                 answer_idx = line.rfind("~")
                 if answer_idx > 0:
