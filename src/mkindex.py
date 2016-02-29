@@ -22,9 +22,11 @@ for metafn in sys.argv[1:]:
         })))
 
 out = mkwww.html_header.format(title="xd corpus grid similarity results")
-out += "xd corpus has %d crosswords total:" % total_xd
+out += "The xd corpus has %d crosswords total:" % total_xd
+out += "<ul>"
 out += "\n".join(L for n, L in sorted(outlines, reverse=True))
-
+out += "</ul>"
+out += '<a href="xd-xdiffs.zip">xd-xdiffs.zip</a> (7MB) has raw data for all puzzles that are at least 25% similar.  Source code for using <a href="https://github.com/century-arcade/xd">the .xd format is available on Github.</a><br/>'
 out += mkwww.html_footer
 
 print out

@@ -29,7 +29,7 @@ html_header = """
 
 html_footer = """
   <hr style="clear:both;"/>
-  <div><a href="http://saul.pw"><small>saul.pw</small></a></div>
+  <a href="http://saul.pw"><small>saul.pw</small></a>
 
 <script type="text/javascript">
   var _gaq = _gaq || [];

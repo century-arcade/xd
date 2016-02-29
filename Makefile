@@ -10,12 +10,14 @@ META_TXT=$(wildcard crosswords/*/meta.txt)
 
 PUBLISHERS=chicago chronicle universal latimes wapost usatoday nysun crossroads nytimes wsj onion newsday
 
-diffs:
+diffs: top-index
 	for pubid in `cat publishers.txt` ; do \
 		rm -rf ${WWWDIR}/$$pubid ; \
 		${SRCDIR}/mkwww.py ${WWWDIR}/$$pubid ${SIMILAR_TXT} ; \
 		cp ${SRCDIR}/style.css ${WWWDIR}/$$pubid ; \
 	done
+
+top-index:
 	$(SRCDIR)/mkindex.py ${META_TXT} > ${WWWDIR}/index.html
 	cp ${SRCDIR}/style.css ${WWWDIR}/
 
@@ -27,7 +29,7 @@ sync-corpus: xd-corpus.tar.xz xd-corpus.zip
 	s3cmd ${S3CFG} put -P $^ s3://${BUCKET}/
 
 
-deploy:
+deploy: xd-xdiffs.zip
 	s3cmd $(S3CFG) put -P www/index.html s3://$(BUCKET)/
 	s3cmd $(S3CFG) put -P www/style.css s3://$(BUCKET)/
 
@@ -37,8 +39,9 @@ xd-corpus.tar.xz:
 xd-corpus.zip:
 	find crosswords -name '*.xd' -print | sort | zip xd-corpus.zip -@
 
-xd-similar.zip:
+xd-xdiffs.zip:
 	zip $@ $(SIMILAR_TXT) `./src/zipsimilar.py $(SIMILAR_TXT)`
+	cp $@ 
 
 .PHONY: always
 
