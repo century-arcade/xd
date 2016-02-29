@@ -70,7 +70,7 @@ def main():
         print >>sys.stderr, "\r% 3d/%d %s" % (i, len(needles), needle),
         dups = find_similar_to(needle, corpus.values())
         for pct, a, b, answers in sorted(dups):
-            print a, b
+            print a, b, int(pct*100), len(answers)
 
 if __name__ == "__main__":
     main()

@@ -145,7 +145,7 @@ def get_base_filename(fn):
     path, b = os.path.split(fn)
     b, ext = os.path.splitext(b)
 
-    return "".join(b.split("-"))
+    return b
 
 
 def find_files(*paths):
