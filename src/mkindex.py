@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import time
 import sys
 import os.path
 import mkwww
@@ -21,7 +22,7 @@ for metafn in sys.argv[1:]:
         "years": years
         })))
 
-out = mkwww.html_header.format(title="xd corpus grid similarity results")
+out = mkwww.html_header.format(title=time.strftime("xd corpus grid similarity results [%Y-%m-%d]"))
 out += "The xd corpus has %d crosswords total:" % total_xd
 out += "<ul>"
 out += "\n".join(L for n, L in sorted(outlines, reverse=True))
