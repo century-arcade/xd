@@ -1,10 +1,17 @@
 # .xd futureproof crossword format
 
-.xd is a corpus-oriented format, modeled after the simplicity and intuitiveness
-of the markdown format.  It is intended to be convenient for bulk analysis for
-crosswords by both humans and machines, from either the present or the future.
+.xd is a corpus-oriented format, modeled after the simplicity and intuitiveness of the markdown format.  It supports 99.99% of published crosswords, and is intended to be convenient for bulk analysis of crosswords by both humans and machines, from the present and into the future.
+
+## xdfile.py
+
+  * `xdfile.py` has a simple parser for .xd files with example code that
+answers some simple queries, like "what is the most used grid in this .zip of .xd files?"
+
+  * `puz2xd.py` will convert Across-Lite .puz format to .xd.  Scripts to convert other formats are also in `src/`.
 
 ## Full Example
+
+This is the oldest rebus crossword from the New York Times (found by `grep -r Rebus crosswords/nytimes | sort`), available thanks to the huge effort of the [Pre-Shortzian Puzzle Project](http://www.preshortzianpuzzleproject.com/):
 
     Title: New York Times, Saturday, January 1, 1955
     Creator: Anthony Morse
@@ -127,7 +134,8 @@ crosswords by both humans and machines, from either the present or the future.
 
 The .xd format is a simple UTF-8 text file, and can often be 7-bit ASCII clean.
 
-Sections are delineated by two or more consecutive newlines (0x0A).  Subsections are delineated by one blank line.
+Sections are delineated by two or more blank lines (3 consecutive newlines
+(0x0A)).  Subsections are delineated by a single blank line.
 
 ### Headers (Section 1)
 
@@ -142,7 +150,8 @@ second level is Machine, the third level is Internal.
 
 ### Grid (Section 2)
 
-Optional leading whitespace and trailing whitespace.  Never any whitespace in the grid itself.
+Optional leading whitespace and trailing whitespace on each line.  Never any
+whitespace between characters in a grid line.
 
 One line per row.  One UTF-8 character per cell.
 
@@ -174,7 +183,7 @@ The clues should be sorted, with a single newline separating clue groups (Across
 
 Minimal markup is available.  An example clue line:
 
-    A51. //Italic//, **bold**, and __underscore__ ~ MARKUP
+    A51. {/Italic/}, {*bold*}, {_underscore_}, or {-strike-thru-} ~ MARKUP
 
 The clue is separated from the answer by a tilde with spaces on both sides (' ~ ').
 
@@ -184,6 +193,6 @@ The backslash ('\\') is used as a line separator in the rare case of a multi-lin
 
 ### Notes (Section 4)
 
-The free-formatted final section can contain any amount of notes.
+The free-format final section can contain any amount of notes.
 
 
