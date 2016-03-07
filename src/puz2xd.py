@@ -8,11 +8,7 @@ import puz
 import crossword
 import xdfile
 
-hdr_renames = { "creator": "author", "rights": "copyright" }
-
-hdr_order = [ "title", "author", "editor", "copyright", "publisher", "category", "description", "date" ]
-
-rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
+hdr_order = [ "title", "creator", "editor", "rights", "publisher", "category", "description", "date" ]
 
 import urllib
 
@@ -32,7 +28,11 @@ def decode(s):
 def is_block(puz, x, y):
     return x < 0 or y < 0 or x >= puz.width or y >= puz.height or puz[x, y].solution == '.'
 
-def parse_puz(contents):
+def parse_puz(contents, filename):
+    rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
+
+    if not filename.lower().endswith('.puz'):
+        return
     puz_object = puz.load(contents)
     puzzle = crossword.from_puz(puz_object)
 
@@ -40,40 +40,46 @@ def parse_puz(contents):
 
     xd = xdfile.xdfile()
 
-    md = dict([ (hdr_renames.get(k.lower(), k), v) for k, v in puzzle.meta() if v ])
-    if " / " in md.get("author", ""):
-        author, editor = md.get("author").split(" / ")
-        editor = editor.strip()
-        author = author.strip()
-        author = author.lstrip("By ")
-        editor = editor.lstrip("Edited by ")
-        md["author"] = author
-        md["editor"] = editor
+    md = dict([ (k.lower(), v) for k, v in puzzle.meta() if v ])
+    author = md.get("creator", "")
+    if " / " in author:
+        author, editor = author.split(" / ")
+    else:
+        editor = ""
 
-    if "Washington Post" in md.get("copyright", ""):
-        a = md["author"]
-        if " - " in a:
-            datestr, rest = a.split(" - ")
-            md["date"] = reparse_date(datestr)
-            if "By " in rest:
-                md["title"], rest = rest.split(" By ")
-            else:
-                md["title"], rest = rest.split(" by ", 1)
+    author = author.strip()
+    editor = editor.strip()
 
-            if "Edited by " in rest:
-                md["author"], md["editor"] = rest.split(", Edited by ")
-            elif "edited by " in rest:
-                md["author"], md["editor"] = rest.split(", edited by ")
-            else:
-                md["author"] = rest
+    for editsep in [ "edited by ", "ed. " ]:
+      try:
+        i = author.lower().index(editsep)
+        if i == 0:
+            editor = author[len(editsep):]
+            author = editor.split(",")[1]
+        elif i > 0:
+            assert not editor
+            editor = author[i+len(editsep):]
+            author = author[:i]
+      except:
+        pass
 
-        md["copyright"] = md["copyright"].lstrip("Copyright")
+    author = author.strip()
+    editor = editor.strip()
+
+    while author.lower().startswith("by "):
+        author = author[3:]
+
+    if author and author[-1] in ",.":
+        author = author[:-1]
+
+    md["creator"] = author
+    md["editor"] = editor
 
     for k, v in sorted(md.items(), key=lambda x: hdr_order.index(x[0])):
         if v:
             k = k[0].upper() + k[1:].lower()
             v = decode(v.strip())
-            v = v.replace(u"© ", "")
+            v = v.replace(u"©", "(c)")
             xd.headers.append((k, v))
 
     answers = { }

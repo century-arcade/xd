@@ -66,8 +66,6 @@ def gendiff(xd1, xd2):
 
     pct = findsimilar.grid_similarity(xd1, xd2) * 100
 
-    nsquares = len(xd1.grid) * len(xd1.grid[0])
-
     shared = findsimilar.same_answers(xd1, xd2)
    
     ret = html_header.format(title="%d%% similar grids, %d/%d shared answers" % (pct, len(shared), len(xd2.clues)))

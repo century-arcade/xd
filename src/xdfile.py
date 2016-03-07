@@ -7,10 +7,58 @@ import stat
 import string
 import zipfile
 
-flDebug = False # exceptions exit with stack trace
-
 BLOCK_CHAR = '#'
 EOL = '\n'
+
+publishers = {
+    'unk': 'unknown',
+    'che': 'chronicle',
+    'ch': 'chicago',
+    'cs': 'crossynergy',
+    'pp': 'wapost',
+    'wsj': 'wsj',
+    'rnr': 'rocknroll',
+    'nw': 'newsday',
+    'nyt': 'nytimes',
+    'tech': 'nytimes',
+    'tm': "time",
+    'nfl': "cbs",
+    'cn': "crosswordnation",
+    'vwl': 'nytimes',
+    'nyk': 'nytimes',
+    'la': 'latimes',
+    'nys': 'nysun',
+    'pzz': 'puzzazz',
+    'nyh': 'nyherald',
+    'lt': 'london',
+    'pa': 'nytimes',
+    'pk': 'king',
+    'nym': 'nymag',
+    'db': 'dailybeast',
+    'awm': 'threeacross',
+    'rp': 'rexparker',
+    'wp': 'wapost',
+    'nl': 'lampoon',
+    'tmdcr': 'tribune',
+    'kc': 'kcstar',
+    'mg': 'mygen',
+    'atc': 'crossroads',
+    'onion': 'onion',
+    'mm': 'aarp',
+    'ue': 'universal',
+    'ut': 'universal',
+    'up': 'universal',
+    'us': 'universal',
+    'um': 'universal',
+    'ub': 'universal',
+    'ss': 'simonschuster',
+    'sl': 'slate',
+    'ana': 'nytimes',
+}
+
+unknownpubs = { }
+all_files = { }
+
 
 class xdfile:
     def __init__(self, xd_contents=None, filename=None):
@@ -186,12 +234,35 @@ def load_corpus(*pathnames):
             ret[basefn] = xd
         except Exception, e:
             print >>sys.stderr, unicode(e)
-            if flDebug:
+            if args.debug:
                 raise
 
     print >>sys.stderr, ""
 
     return ret
+
+def parse_filename(fn):
+    import re
+    m = re.search("([A-z]*)[_\s]?(\d{2,4})-?(\d{2})-?(\d{2})(.*)\.", fn)
+    if m:
+        abbr, yearstr, monstr, daystr, rest = m.groups()
+        year, mon, day = int(yearstr), int(monstr), int(daystr)
+        if len(yearstr) == 2:
+            if year > 1900:
+                pass
+            elif year > 18:
+                year += 1900
+            else:
+                year += 2000
+        assert len(abbr) <= 5, fn
+        assert year > 1920 and year < 2017, "bad year %s" % yearstr
+        assert mon >= 1 and mon <= 12, "bad month %s" % monstr
+        assert day >= 1 and day <= 31, "bad day %s" % daystr
+#        print "%s %d-%02d-%02d" % (abbr, year, mon, day)
+        return abbr, year, mon, day, "".join(rest.split())[:3]
+
+def xd_filename(pubid, pubabbr, year, mon, day, unique=""):
+    return "crosswords/%s/%s/%s%s-%02d-%02d%s.xd" % (pubid, year, pubabbr, year, mon, day, unique)
 
 def main_load():
     corpus = load_corpus(*sys.argv[1:])
@@ -213,6 +284,7 @@ def main_parse(parserfunc):
     parser.add_argument('path', type=str, nargs='+', help='files, .zip, or directories to be converted')
     parser.add_argument('-o', dest='output', default=None, help='output directory (default stdout)')
     parser.add_argument('-t', dest='toplevel', default=None, help='set toplevel directory of files in .zip')
+    parser.add_argument('-d', dest='debug', action='store_true', default=False, help='abort on exception')
 
     args = parser.parse_args()
 
@@ -225,28 +297,68 @@ def main_parse(parserfunc):
         else:
             outf = None
 
-    for fullfn, contents in find_files(*args.path):
+    for fullfn, contents in sorted(find_files(*args.path)):
         print >>sys.stderr, "\r" + fullfn,
+        path, fn = os.path.split(fullfn)
+        base, ext = os.path.splitext(fn)
         try:
-            xd = parserfunc(contents)
+            xd = parserfunc(contents, fullfn)
+            if not xd:
+                print >>sys.stderr, ""
+                continue
+            xd.headers.append(("", ""))
+            try:
+                abbr, year, month, day, rest = parse_filename(fullfn.lower())
+                xd.headers.append(("Date", "%d-%02d-%02d" % (year, month, day)))
+                if abbr:
+                    base = "%s%s-%02d-%02d%s" % (abbr, year, month, day, rest)
+                    outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day, rest)
+                else:
+                    base = "%s-%02d-%02d%s" % (year, month, day, rest)
+            except Exception, e:
+                abbr = ""
+                year, month, day = 1980, 1, 1
+                outfn = "crosswords/unknown/%s.xd" % base
+
+            xd.headers.append(("Identifier", base + ".xd"))
+
+            xd.headers.append(("", ""))
+            xd.headers.append(("Source", fullfn))
+
+
             xdstr = xd.to_unicode().encode("utf-8")
         except Exception, e:
-            if flDebug:
+            if args.debug:
                 raise
             else:
-                print >>sys.stderr, str(e)
+                print >>sys.stderr, "error:", str(e), type(e)
                 continue
             
         if isinstance(outf, zipfile.ZipFile):
             if args.toplevel:
-                path, fn = os.path.split(fullfn)
-                base, ext = os.path.splitext(fn)
                 fullfn = "%s/%s/%s.xd" % (args.toplevel, "/".join(path.split("/")[1:]), base)
             else:
                 base, ext = os.path.splitext(fullfn)
                 fullfn = base + ".xd"
 
-            zi = zipfile.ZipInfo(fullfn)
+            if abbr and abbr not in publishers:
+                rights = xd.get_header("Rights")
+                if rights:
+                    publishers[abbr] = abbr
+                    if abbr not in unknownpubs:
+                        unknownpubs[abbr] = set()
+                    unknownpubs[abbr].add(rights.strip())
+
+            if outfn in all_files:
+                if all_files[outfn] != xdstr:
+                    print >>sys.stderr, "different versions", outfn
+                    outfn += ".2"
+            
+            all_files[outfn] = xdstr
+
+            if year < 1980:
+                year = 1980
+            zi = zipfile.ZipInfo(outfn, (year, month, day, 9, 0, 0))
             zi.external_attr = 0444 << 16L
             zi.compress_type = zipfile.ZIP_DEFLATED
             outf.writestr(zi, xdstr)
@@ -258,7 +370,9 @@ def main_parse(parserfunc):
             xdfn = "%s/%s.xd" % (args.output, base)
             file(xdfn, "w-").write(xdstr)
 
-    print >>sys.stderr, ""
+    print >>sys.stderr, "Done"
+    for k, v in unknownpubs.items():
+        print k, "\n".join(v)
 
 if __name__ == "__main__":
     main_load()
