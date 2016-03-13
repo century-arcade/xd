@@ -128,8 +128,10 @@ if __name__ == "__main__":
         similar_txts = sys.argv[2:]
     else:
         similar_txts = [ "crosswords/%s/similar.txt" % pubid ]
-
-    os.makedirs(OUTPUT_DIR)
+    try:
+        os.makedirs(OUTPUT_DIR)
+    except Exception, e:
+        print e
 
     pubxd = xdfile.xdfile(file("crosswords/%s/meta.txt" % pubid).read()) # just to parse some cached metadata
 

@@ -234,8 +234,8 @@ def load_corpus(*pathnames):
             ret[basefn] = xd
         except Exception, e:
             print >>sys.stderr, unicode(e)
-            if args.debug:
-                raise
+            #if args.debug:
+            #    raise
 
     print >>sys.stderr, ""
 

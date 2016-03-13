@@ -13,7 +13,7 @@ def udecode(s):
     except:
         return unicode(t)
 
-def parse_uxml(content):
+def parse_uxml(content, filename):
     POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright', 'Category']
 
     try:

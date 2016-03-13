@@ -25,7 +25,7 @@ as-update-auto-scaling-group \
 
 as-delete-auto-scaling-group \
     ${AUTH} \
-  --force-delete \
+  --force \
   --auto-scaling-group "$autoscale_group"
 
 as-delete-launch-config \
@@ -33,3 +33,5 @@ as-delete-launch-config \
   --force \
   --launch-config "$launch_config"
 
+aws iam remove-role-from-instance-profile --instance-profile-name xd-scraper --role-name xd-scraper
+aws iam delete-instance-profile --instance-profile-name xd-scraper

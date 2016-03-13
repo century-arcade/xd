@@ -1,5 +1,5 @@
 export KEY=
-export REGION=
+export EC2_REGION=
 export BUCKET=
 export BRANCH=master
 export AWS_ACCESS_KEY=

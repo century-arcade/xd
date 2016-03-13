@@ -8,7 +8,7 @@ WWWDIR= www/xdiffs
 SIMILAR_TXT=$(wildcard crosswords/*/similar.txt)
 META_TXT=$(wildcard crosswords/*/meta.txt)
 
-PUBLISHERS=chicago chronicle universal latimes wapost usatoday nysun crossroads nytimes wsj onion newsday
+PUBLISHERS=chicago chronicle universal latimes wapost usatoday nysun crossroads nytimes wsj onion newsday crossynergy
 
 diffs: top-index
 	for pubid in `cat publishers.txt` ; do \

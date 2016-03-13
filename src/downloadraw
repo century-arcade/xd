@@ -32,7 +32,7 @@ DAILY_PUZZLE_URLS = [
     PuzzleUrl(7, 'xml', 'can', 'canadian',  'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_canadian/source/can%y%m%d-data.xml'),
     PuzzleUrl(7, 'puz', 'chr', 'chronicle', 'http://chronicle.com/items/biz/puzzles/%Y%m%d.puz'),
     PuzzleUrl(7, 'xml', 'wap', 'wapost',    'https://washingtonpost.as.arkadiumhosted.com/clients/washingtonpost-content/SundayCrossword/ebirnholz_%y%m%d.xml'),
-    PuzzleUrl(1, 'xml', 'up', 'universal', 'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_universal/source/fcx%y%m%d-data.xml'),
+    PuzzleUrl(1, 'xml', 'up', 'universal', 'http://picayune.uclick.com/comics/fcx/data/fcx%y%m%d-data.xml'),
     PuzzleUrl(1, 'html', 'nyt', 'nytimes',  'http://www.xwordinfo.com/PS?date=%-m/%-d/%Y'),
     PuzzleUrl(1, 'xml', 'lat', 'latimes',   'http://cdn.games.arkadiumhosted.com/latimes/assets/DailyCrossword/la%y%m%d.xml'),
     PuzzleUrl(1, 'xml', 'usa', 'usatoday',  'http://www.uclick.com/puzzles/usaon/data/usaon%y%m%d-data.xml'),
