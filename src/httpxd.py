@@ -69,30 +69,24 @@ class httpxd(object):
         r = mkwww.html_header.format(title="Crossword Search Results")
         r += "<ul>"
 
-        matches = [ L for pct, L in sorted(index_list, reverse=True) if pct > 80 ]
-        partial = [ L for pct, L in sorted(index_list, reverse=True) if pct > 50 and pct <= 80 ]
-        theme = [ L for pct, L in sorted(index_list, reverse=True) if pct > 25 and pct <= 50 ]
-        unlikely = [ L for pct, L in sorted(index_list, reverse=True) if pct < 25 ]
+        fmt = '<li>%s</li>'
+        sorted_list = sorted(index_list, reverse=True)
+        matches = '\n'.join(fmt % L for pct, L in sorted_list if pct > 80 )
+        partial = '\n'.join(fmt % L for pct, L in sorted_list if 50 < pct <= 80 )
+        theme = '\n'.join(fmt % L for pct, L in sorted_list if 25 < pct <= 50 )
+        unlikely = '\n'.join(fmt % L for pct, L in sorted_list if pct <= 25 )
 
         if matches:
-            r += '\n<h3>Very similar</h3>'
-            for L in matches:
-                r += '\n<li>' + L + '</li>'
+            r += '\n<h3>Very similar</h3>\n' + matches
 
         if partial:
-            r += '\n<h3>Partially similar</h3>'
-            for L in partial:
-                r += '\n<li>' + L + '</li>'
+            r += '\n<h3>Partially similar</h3>\n' + partial
 
         if theme:
-            r += '\n<h3>Possibly similar</h3>'
-            for L in theme:
-                r += '\n<li>' + L + '</li>'
+            r += '\n<h3>Possibly similar</h3>\n' + theme
 
         if not matches and not partial and not theme:
-            r += "\n<h3>Nothing matched, but here's some dregs</h3>"
-            for L in unlikely[:10]:
-                r += '\n<li>' + L + '</li>'
+            r += "\n<h3>Nothing matched, but here's some dregs</h3>\n" + unlikely[:10]
 
         r += '</ul>'
 
@@ -117,4 +111,3 @@ cherrypy.config.update({'server.socket_host': '0.0.0.0',
                         'server.socket_port': 80,
                        })
 cherrypy.quickstart(httpxd())
-
