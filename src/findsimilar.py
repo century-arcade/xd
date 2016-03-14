@@ -59,18 +59,26 @@ def find_similar_to(needle, haystack, min_pct=0.3, num_answers=0):
         if pct >= min_pct:
             s = same_answers(needle, xd)
             if len(s) >= num_answers:
-                ret.append((pct, needle, xd, s))
+                ret.append((grid_similarity(needle, xd), needle, xd, s))
     return ret
 
 def main():
     corpus = xdfile.load_corpus(sys.argv[1])
     needles = xdfile.load_corpus(*sys.argv[2:]) 
 
-    for i, needle in enumerate(needles.values()):
+    for i, needle_pair in enumerate((sorted(needles.items()))):
+        name, needle = needle_pair
         print >>sys.stderr, "\r% 3d/%d %s" % (i, len(needles), needle),
         dups = find_similar_to(needle, corpus.values())
+        print needle,
         for pct, a, b, answers in sorted(dups):
-            print a, b, int(pct*100), len(answers)
+            if needle == a:
+                print b,
+            else:
+                print a,
+        print
+
+    print >>sys.stderr, "done\n"
 
 if __name__ == "__main__":
     main()

@@ -63,8 +63,8 @@ all_files = { }
 class xdfile:
     def __init__(self, xd_contents=None, filename=None):
         self.filename = filename
-        self.headers = [ ]
-        self.grid = [ ]
+        self.headers = [ ] # list of [ key, value ]
+        self.grid = [ ] # list of string rows
         self.clues = [ ] # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
         self.notes = ""
         self.orig_contents = xd_contents
@@ -306,10 +306,11 @@ def main_parse(parserfunc):
             if not xd:
                 print >>sys.stderr, ""
                 continue
-            xd.headers.append(("", ""))
             try:
                 abbr, year, month, day, rest = parse_filename(fullfn.lower())
-                xd.headers.append(("Date", "%d-%02d-%02d" % (year, month, day)))
+                if not xd.get_header("Date"):
+                    xd.headers.append(("Date", "%d-%02d-%02d" % (year, month, day)))
+
                 if abbr:
                     base = "%s%s-%02d-%02d%s" % (abbr, year, month, day, rest)
                     outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day, rest)
@@ -320,9 +321,6 @@ def main_parse(parserfunc):
                 year, month, day = 1980, 1, 1
                 outfn = "crosswords/unknown/%s.xd" % base
 
-            xd.headers.append(("Identifier", base + ".xd"))
-
-            xd.headers.append(("", ""))
             xd.headers.append(("Source", fullfn))
 
 

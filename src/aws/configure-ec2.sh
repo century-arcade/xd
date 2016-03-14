@@ -52,15 +52,3 @@ as-put-scheduled-update-group-action \
   --max-size 0 \
   --recurrence "55 01 * * *"
 
-# launch now if any script parameters
-if [ -n "$1" ] ; then
-    #  created via IAM console: role/xd-scraper
-    ec2-run-instances \
-      --group ssh-only \
-      --key $KEY \
-      --instance-type t2.small \
-      --instance-initiated-shutdown-behavior terminate \
-      --iam-profile xd-scraper \
-      --user-data-file src/aws/userdata-bootstrap.sh \
-      $ami_id
-fi
