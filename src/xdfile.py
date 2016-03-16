@@ -9,6 +9,9 @@ import zipfile
 
 BLOCK_CHAR = '#'
 EOL = '\n'
+SECTION_SEP = EOL + EOL
+HEADER_ORDER = [ 'title', 'author', 'editor', 'copyright', 'category']
+
 
 publishers = {
     'unk': 'unknown',
@@ -59,11 +62,20 @@ publishers = {
 unknownpubs = { }
 all_files = { }
 
+def cleanup_headers(xd):
+    aut = xd.get_header("Author")
+    if aut:
+        xd.set_header("Creator", aut)
+        xd.del_header("Author")
+    
+    aut = xd.get_header("Creator")
+    if aut.startswith("By "):
+        xd.set_header("Creator", aut[3:])
 
 class xdfile:
     def __init__(self, xd_contents=None, filename=None):
         self.filename = filename
-        self.headers = [ ] # list of [ key, value ]
+        self.headers = { } # [key] -> value or list of values 
         self.grid = [ ] # list of string rows
         self.clues = [ ] # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
         self.notes = ""
@@ -76,10 +88,22 @@ class xdfile:
         return self.filename
 
     def get_header(self, fieldname):
-        vals = [ v for k, v in self.headers if k == fieldname ]
-        if vals:
-            assert len(vals) == 1, vals
-            return vals[0]
+        v = self.headers.get(fieldname)
+        assert isinstance(v, basestring)
+        return v
+
+    def set_header(self, fieldname, value):
+        if fieldname in self.headers:
+            assert self.headers[fieldname] == value, (self.headers[fieldname], value)
+        else:
+            self.headers[fieldname] = value
+
+    def add_header(self, fieldname, value):
+        if fieldname in self.headers:
+            assert type(self.headers[fieldname]) == list
+            self.headers[fieldname].append(value)
+        else:
+            self.headers[fieldname] = [ value ]
 
     def parse_xd(self, xd_contents):
         # placeholders, actual numbering starts at 1
@@ -112,9 +136,10 @@ class xdfile:
                     k, v = line.split(":", 1)
                     k, v = k.strip(), v.strip()
 
-                    self.headers.append((k, v))
+                    self.add_header(k, v)
                 else:
-                    self.headers.append(("", line))  # be permissive
+                    self.notes += line + "\n"
+
             elif section == 2:
                 # grid second
                 self.grid.append(line)
@@ -149,12 +174,11 @@ class xdfile:
         # headers (section 1)
 
         r = u"" 
-        for k, v in self.headers:
-            if v:
-                r += "%s: %s" % (k or "Header", v)
+        for k, v in sorted(self.headers.items(), key=lambda k, v: HEADER_ORDER.index(k.lower())):
+            r += "%s: %s" % (k, v)
             r += EOL
 
-        r += EOL + EOL
+        r += SECTION_SEP
 
         # grid (section 2)
         r += EOL.join(self.grid)
@@ -309,7 +333,7 @@ def main_parse(parserfunc):
             try:
                 abbr, year, month, day, rest = parse_filename(fullfn.lower())
                 if not xd.get_header("Date"):
-                    xd.headers.append(("Date", "%d-%02d-%02d" % (year, month, day)))
+                    xd.set_header("Date", "%d-%02d-%02d" % (year, month, day))
 
                 if abbr:
                     base = "%s%s-%02d-%02d%s" % (abbr, year, month, day, rest)
@@ -321,7 +345,7 @@ def main_parse(parserfunc):
                 year, month, day = 1980, 1, 1
                 outfn = "crosswords/unknown/%s.xd" % base
 
-            xd.headers.append(("Source", fullfn))
+            xd.add_header("Source", fullfn)
 
 
             xdstr = xd.to_unicode().encode("utf-8")

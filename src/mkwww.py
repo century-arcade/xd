@@ -120,25 +120,28 @@ def get_index_html(pubid, pubxd, index_list, gridrel):
     return out
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='convert recent puzzles to .xd')
 
-    OUTPUT_DIR = sys.argv[1]
-    pubid = OUTPUT_DIR.split("/")[-1]
+    parser.add_argument('-c', '--corpus', dest='corpus_dir', default="crosswords", help='corpus directory')
+    parser.add_argument('-o', '--output', dest='output_dir', default=todaystr + "-raw.zip", help='output directory')
+    parser.add_argument('-p', '--publisher', dest='publisher', default=None, help='only do one publisher')
 
-    if len(sys.argv) > 2:
-        similar_txts = sys.argv[2:]
-    else:
-        similar_txts = [ "crosswords/%s/similar.txt" % pubid ]
+    parser.add_argument('similar_txts', nargs='+', default=None, help='input from findsimilar')
+    parser.add_argument('-o', '--output', nargs='+', default=None, help='output directory')
+    args = parser.parse_args()
+
     try:
-        os.makedirs(OUTPUT_DIR)
+        os.makedirs(args.output_dir)
     except Exception, e:
         print e
 
-    pubxd = xdfile.xdfile(file("crosswords/%s/meta.txt" % pubid).read()) # just to parse some cached metadata
+    pubxd = xdfile.xdfile(file("crosswords/%s/meta.txt" % args.publisher).read()) # just to parse some cached metadata
 
     left_index_list =  { } # [(olderfn, newerfn)] -> (pct, index_line)
     right_index_list =  { } # [(olderfn, newerfn)] -> (pct, index_line)
 
-    for inputfn in similar_txts:
+    for inputfn in args.similar_txts:
       for line in file(inputfn).read().splitlines():
         if not line: continue
         parts = line.strip().split(' ', 2)
@@ -150,8 +153,10 @@ if __name__ == "__main__":
             print "ERROR in %s: %s" % (inputfn, line)
             continue
 
-        if pubid not in fn1 and pubid not in fn2:
-            continue
+        if args.publisher:
+            pubid = args.publisher
+            if pubid not in fn1 and pubid not in fn2:
+                continue
 
         try:
             abbr, d1 = downloadraw.parse_date_from_filename(fn1)
@@ -185,12 +190,10 @@ if __name__ == "__main__":
 
         index_txt = " ".join([ fn1, fn2, str(int(pct))])
 
-        aut1 = (xd1.get_header("Author") or xd1.get_header("Creator") or "")
-        aut2 = (xd2.get_header("Author") or xd2.get_header("Creator") or "")
-        if aut1.startswith("By "):
-            aut1 = aut1[3:]
-        if aut2.startswith("By "):
-            aut2 = aut2[3:]
+        xd1.cleanup_headers()
+        xd2.cleanup_headers()
+        aut1 = xd1.get_header("Creator")
+        aut2 = xd2.get_header("Creator")
 
         if aut1 != aut2:
             index_line += ' <b>%s | %s</b>' % (aut1, aut2)
@@ -208,13 +211,13 @@ if __name__ == "__main__":
             added = True
     
         if added:
-            file(OUTPUT_DIR + "/" + outfn, 'w').write(ret.encode("utf-8"))
+            file(args.output_dir + "/" + outfn, 'w').write(ret.encode("utf-8"))
 
 
 
-    file("%s/index.html" % OUTPUT_DIR, 'w').write(get_index_html(pubid, pubxd, right_index_list, "earlier"))
-    file("%s/from.html" % OUTPUT_DIR, 'w').write(get_index_html(pubid, pubxd, left_index_list, "later"))
-    with file("%s/index.txt" % OUTPUT_DIR, 'w') as f:
+    file("%s/index.html" % args.output_dir, 'w').write(get_index_html(pubid, pubxd, right_index_list, "earlier"))
+    file("%s/from.html" % args.output_dir, 'w').write(get_index_html(pubid, pubxd, left_index_list, "later"))
+    with file("%s/index.txt" % args.output_dir, 'w') as f:
         for pct, L, Ltxt, b1, b2 in sorted(left_index_list.values(), reverse=True):
             if pct < 25:
                 break
