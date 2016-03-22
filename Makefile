@@ -33,11 +33,11 @@ deploy: xd-xdiffs.zip
 	s3cmd $(S3CFG) put -P www/index.html s3://$(BUCKET)/
 	s3cmd $(S3CFG) put -P www/style.css s3://$(BUCKET)/
 
-xd-corpus.tar.xz:
+gxd.tar.xz:
 	find crosswords -name '*.xd' -print | sort | tar Jcf $@ --owner 0 --group 0 --no-recursion -T -
 
-xd-corpus.zip:
-	find crosswords -name '*.xd' -print | sort | zip xd-corpus.zip -@
+gxd.zip:
+	find crosswords -name '*.xd' -print | sort | zip $@ -@
 
 xd-xdiffs.zip:
 	zip $@ $(SIMILAR_TXT) `./src/zipsimilar.py $(SIMILAR_TXT)`

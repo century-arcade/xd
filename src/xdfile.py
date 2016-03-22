@@ -2,6 +2,8 @@
 
 import sys
 import os
+import re
+import datetime
 import os.path
 import stat
 import string
@@ -9,6 +11,9 @@ import zipfile
 
 BLOCK_CHAR = '#'
 EOL = '\n'
+SECTION_SEP = EOL + EOL
+HEADER_ORDER = [ 'title', 'author', 'editor', 'rights', 'date', 'special', 'rebus', 'cluegroup', 'description' ]
+
 
 publishers = {
     'unk': 'unknown',
@@ -59,12 +64,74 @@ publishers = {
 unknownpubs = { }
 all_files = { }
 
+RENAME_HEADERS = [ ("Creator", "Author"),  ("Rights", "Copyright"), ("Issued", "Date"), ("Acquired", None), ("Source", None) ]
 
+def clean_headers(xd):
+    for old, new in RENAME_HEADERS:
+        v = xd.get_header(old)
+        if v:
+            if new:
+                xd.set_header(new, v)
+            xd.del_header(old)
+
+    aut = xd.get_header("Author")
+
+    if aut:
+        m = re.search(r'(?i)(?:(?:By )*(.+)(?:[;,-]|and) *)?(?:edited|Editor|(?<!\w)Ed[.])(?: By )*(.*)', aut)
+        if m:
+            newaut, editor = m.groups()
+            xd.set_header("Editor", editor.strip())
+            if newaut:
+                xd.set_header("Author", newaut.strip())
+            else:
+                xd.del_header("Author")
+
+    editor = xd.get_header("Editor")
+    if editor and editor.lower().startswith("by "):
+        xd.set_header("Editor", editor[3:])
+
+    while (xd.get_header("Author") or "").lower().startswith("by "):
+        aut = xd.get_header("Author")
+        xd.set_header("Author", aut[3:])
+
+    # title is only between the double-quotes (some USAToday)
+#    """
+    title = xd.get_header("Title")
+    if title and title[-1] == '"':
+        newtitle = title[title.index('"')+1:-1]
+        if newtitle[-1] == ",":
+            newtitle = newtitle[:-1]
+    elif title and title[0] == '"':
+        newtitle = title[1:title.rindex('"')]
+    else:
+        newtitle = title
+
+    xd.set_header("Title", newtitle)
+#    """
+
+    if not xd.get_header("Date"):
+            abbrid, d = parse_date_from_filename(xd.filename)
+            if d:
+                xd.set_header("Date", d.strftime("%Y-%m-%d"))
+
+def parse_date_from_filename(fn):
+    m = re.search("(\w*)([12]\d{3})-(\d{2})-(\d{2})", fn)
+    if m:
+        abbr, y, mon, d = m.groups()
+        try:
+            dt = datetime.date(int(y), int(mon), int(d))
+        except:
+            dt = None
+
+        return abbr.lower(), dt
+    else:
+        return fn[:3].lower(), None
+        
 class xdfile:
     def __init__(self, xd_contents=None, filename=None):
         self.filename = filename
-        self.headers = [ ]
-        self.grid = [ ]
+        self.headers = { } # [key] -> value or list of values 
+        self.grid = [ ] # list of string rows
         self.clues = [ ] # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
         self.notes = ""
         self.orig_contents = xd_contents
@@ -76,10 +143,25 @@ class xdfile:
         return self.filename
 
     def get_header(self, fieldname):
-        vals = [ v for k, v in self.headers if k == fieldname ]
-        if vals:
-            assert len(vals) == 1, vals
-            return vals[0]
+        v = self.headers.get(fieldname)
+        assert v is None or isinstance(v, basestring), v
+        return (v or "").strip()
+
+    def set_header(self, fieldname, value):
+        if fieldname in self.headers:
+            assert value in self.headers[fieldname], (self.headers[fieldname], value)
+
+        self.headers[fieldname] = value
+
+    def del_header(self, fieldname):
+        del self.headers[fieldname]
+
+    def add_header(self, fieldname, value):
+        if fieldname in self.headers:
+            assert type(self.headers[fieldname]) == list
+            self.headers[fieldname].append(value)
+        else:
+            self.headers[fieldname] = [ value ]
 
     def parse_xd(self, xd_contents):
         # placeholders, actual numbering starts at 1
@@ -111,10 +193,17 @@ class xdfile:
                 if ":" in line:
                     k, v = line.split(":", 1)
                     k, v = k.strip(), v.strip()
-
-                    self.headers.append((k, v))
+                    
+                    if k in self.headers:
+                        if isinstance(self.headers[k], basestring):
+                            self.headers[k] = [ self.headers[k], v ]
+                        else:
+                            self.headers[k].append(v)
+                    else:
+                        self.set_header(k, v)
                 else:
-                    self.headers.append(("", line))  # be permissive
+                    self.notes += line + "\n"
+
             elif section == 2:
                 # grid second
                 self.grid.append(line)
@@ -148,13 +237,18 @@ class xdfile:
     def to_unicode(self):
         # headers (section 1)
 
-        r = u"" 
-        for k, v in self.headers:
-            if v:
-                r += "%s: %s" % (k or "Header", v)
-            r += EOL
+        r = u""
+        for k, v in sorted([ (x, y) for x,y in self.headers.items() ] , key=lambda i: HEADER_ORDER.index(i[0].lower())):
+            if not isinstance(v, list):
+                values = [ v ]
+            else:
+                values = v
+               
+            for i in values:
+                r += "%s: %s" % (k, i)
+                r += EOL
 
-        r += EOL + EOL
+        r += SECTION_SEP
 
         # grid (section 2)
         r += EOL.join(self.grid)
@@ -271,7 +365,7 @@ def main_load():
         xd = corpus.values()[0]
         print xd.to_unicode().encode("utf-8")
     else:
-        print "%s puzzles" % len(corpus)
+        print >>sys.stderr, "%s puzzles" % len(corpus)
 
     return corpus
 
@@ -306,10 +400,11 @@ def main_parse(parserfunc):
             if not xd:
                 print >>sys.stderr, ""
                 continue
-            xd.headers.append(("", ""))
             try:
                 abbr, year, month, day, rest = parse_filename(fullfn.lower())
-                xd.headers.append(("Date", "%d-%02d-%02d" % (year, month, day)))
+                if not xd.get_header("Date"):
+                    xd.set_header("Date", "%d-%02d-%02d" % (year, month, day))
+
                 if abbr:
                     base = "%s%s-%02d-%02d%s" % (abbr, year, month, day, rest)
                     outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day, rest)
@@ -320,10 +415,7 @@ def main_parse(parserfunc):
                 year, month, day = 1980, 1, 1
                 outfn = "crosswords/unknown/%s.xd" % base
 
-            xd.headers.append(("Identifier", base + ".xd"))
-
-            xd.headers.append(("", ""))
-            xd.headers.append(("Source", fullfn))
+            xd.add_header("Source", fullfn)
 
 
             xdstr = xd.to_unicode().encode("utf-8")
@@ -342,7 +434,7 @@ def main_parse(parserfunc):
                 fullfn = base + ".xd"
 
             if abbr and abbr not in publishers:
-                rights = xd.get_header("Rights")
+                rights = xd.get_header("Copyright")
                 if rights:
                     publishers[abbr] = abbr
                     if abbr not in unknownpubs:
@@ -376,4 +468,3 @@ def main_parse(parserfunc):
 
 if __name__ == "__main__":
     main_load()
-

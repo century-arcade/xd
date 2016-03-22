@@ -8,7 +8,7 @@ import puz
 import crossword
 import xdfile
 
-hdr_order = [ "title", "creator", "editor", "rights", "publisher", "category", "description", "date" ]
+hdr_order = [ "title", "author", "editor", "copyright", "publisher", "date", "category", "special", "rebus", "cluegroup", "description" ]
 
 import urllib
 
@@ -41,7 +41,7 @@ def parse_puz(contents, filename):
     xd = xdfile.xdfile()
 
     md = dict([ (k.lower(), v) for k, v in puzzle.meta() if v ])
-    author = md.get("creator", "")
+    author = md.get("author", "")
     if " / " in author:
         author, editor = author.split(" / ")
     else:
@@ -63,8 +63,8 @@ def parse_puz(contents, filename):
       except:
         pass
 
-    author = author.strip()
-    editor = editor.strip()
+    author = author.lstrip()
+    editor = editor.lstrip()
 
     while author.lower().startswith("by "):
         author = author[3:]
@@ -72,7 +72,7 @@ def parse_puz(contents, filename):
     if author and author[-1] in ",.":
         author = author[:-1]
 
-    md["creator"] = author
+    md["author"] = author
     md["editor"] = editor
 
     for k, v in sorted(md.items(), key=lambda x: hdr_order.index(x[0])):
@@ -80,7 +80,7 @@ def parse_puz(contents, filename):
             k = k[0].upper() + k[1:].lower()
             v = decode(v.strip())
             v = v.replace(u"©", "(c)")
-            xd.headers.append((k, v))
+            xd.set_header(k, v)
 
     answers = { }
     clue_num = 1

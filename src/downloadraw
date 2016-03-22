@@ -47,17 +47,8 @@ def today():
 def date_from_string(s):
     return datetime.datetime.strptime(s, "%Y-%m-%d")
 
-def date_to_string(date):
-    return date.strftime("%Y-%m-%d")
-
-def parse_date_from_filename(fn):
-    import re
-    m = re.search("(\w*)([12]\d{3})-(\d{2})-(\d{2})", fn)
-    if m:
-        abbr, y, mon, d = m.groups()
-        return abbr, datetime.date(int(y), int(mon), int(d))
-    else:
-        print "no match", fn
+def date_to_string(d):
+    return d.strftime("%Y-%m-%d")
 
 def get_source(abbr):
     for p in DAILY_PUZZLE_URLS:
@@ -86,7 +77,7 @@ def latest_date_in_zip(zipfn):
         existing_dates = [ ]
         with zipfile.ZipFile(zipfn, 'r') as rawzf:
             for zi in rawzf.infolist():
-                abbr, d = parse_date_from_filename(zi.filename)
+                abbr, d = xdfile.parse_date_from_filename(zi.filename)
                 if d:
                     existing_dates.append(d)
 

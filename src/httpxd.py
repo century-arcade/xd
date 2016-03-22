@@ -37,11 +37,11 @@ class httpxd(object):
     @cherrypy.expose
     def style_css(self):
         cherrypy.response.headers['Content-Type']= 'text/css'
-        return file("www/style.css").read()
+        return file("src/style.css").read()
 
     @staticmethod
     def xd_from_grid(grid):
-        return xdfile.xdfile("Creator: %s\n\n\n%s" % (cherrypy.request.remote.ip, grid))
+        return xdfile.xdfile("Author: %s\n\n\n%s" % (cherrypy.request.remote.ip, grid))
 
     def error(self, errmsg):
         return mkwww.html_header.format(title="Crossword Grid Search") + body_html + '<div class="error">Error: %s</div>' % errmsg + mkwww.html_footer

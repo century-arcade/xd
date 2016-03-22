@@ -19,7 +19,7 @@ html_header = """
     <meta http-equiv="Content-Type"
           content="text/html; charset=ISO-8859-1" />
     <title>{title}</title>
-    <LINK href="style.css" rel="stylesheet" type="text/css">
+    <LINK href="/style.css" rel="stylesheet" type="text/css">
   </HEAD>
 </head>
 
@@ -48,7 +48,7 @@ html_footer = """
 """
 
 def get_url(xd):
-    abbr, d = downloadraw.parse_date_from_filename(xd.filename)
+    abbr, d = xdfile.parse_date_from_filename(xd.filename)
 
     return downloadraw.get_source(abbr).url(d)
 
@@ -185,12 +185,8 @@ if __name__ == "__main__":
 
         index_txt = " ".join([ fn1, fn2, str(int(pct))])
 
-        aut1 = (xd1.get_header("Author") or xd1.get_header("Creator") or "")
-        aut2 = (xd2.get_header("Author") or xd2.get_header("Creator") or "")
-        if aut1.startswith("By "):
-            aut1 = aut1[3:]
-        if aut2.startswith("By "):
-            aut2 = aut2[3:]
+        aut1 = xd1.get_header("Author")
+        aut2 = xd2.get_header("Author")
 
         if aut1 != aut2:
             index_line += ' <b>%s | %s</b>' % (aut1, aut2)

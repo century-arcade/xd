@@ -7,7 +7,9 @@ def collapse_whitespace(s):
     return u"".join(x.strip() for x in s.splitlines()).strip()
 
 def rewrite_corpus(corpus):
-    for fullfn, xd in corpus.items():
+    for fn, xd in sorted(corpus.items()):
+        xdfile.clean_headers(xd)
+        fullfn = xd.filename
         inxd = file(fullfn).read().decode("utf-8")
         outxd = xd.to_unicode()
         if collapse_whitespace(outxd) != collapse_whitespace(inxd):
