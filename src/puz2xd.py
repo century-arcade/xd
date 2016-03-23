@@ -8,8 +8,6 @@ import puz
 import crossword
 import xdfile
 
-hdr_order = [ "title", "author", "editor", "copyright", "publisher", "date", "category", "special", "rebus", "cluegroup", "description" ]
-
 import urllib
 
 def reparse_date(s):
@@ -33,57 +31,34 @@ def parse_puz(contents, filename):
 
     if not filename.lower().endswith('.puz'):
         return
-    puz_object = puz.load(contents)
-    puzzle = crossword.from_puz(puz_object)
+
+    puzobj = puz.load(contents)
+
+    puzzle = crossword.from_puz(puzobj)
 
     grid_dict = dict(zip(string.uppercase, string.uppercase))
 
     xd = xdfile.xdfile()
 
-    md = dict([ (k.lower(), v) for k, v in puzzle.meta() if v ])
-    author = md.get("author", "")
-    if " / " in author:
-        author, editor = author.split(" / ")
-    else:
-        editor = ""
+    xd.set_header("Author", puzobj.author)
+    xd.set_header("Copyright", puzobj.copyright)
+    xd.set_header("Notes", puzobj.notes)
+    xd.set_header("Postscript", puzobj.postscript)
+    xd.set_header("Preamble", puzobj.preamble)
 
-    author = author.strip()
-    editor = editor.strip()
+    xd.set_header("Title", puzobj.title)
 
-    for editsep in [ "edited by ", "ed. " ]:
-      try:
-        i = author.lower().index(editsep)
-        if i == 0:
-            editor = author[len(editsep):]
-            author = editor.split(",")[1]
-        elif i > 0:
-            assert not editor
-            editor = author[i+len(editsep):]
-            author = author[:i]
-      except:
-        pass
+    rebus = { }
+    r = puzobj.rebus()
+    if r.has_rebus():
+        for pair in puzobj.extensions["RTBL"].split(";"):
+            pair = pair.strip()
+            if not pair: continue
+            k, v = pair.split(":")
+            rebus[k] = v
 
-    author = author.lstrip()
-    editor = editor.lstrip()
-
-    while author.lower().startswith("by "):
-        author = author[3:]
-
-    if author and author[-1] in ",.":
-        author = author[:-1]
-
-    md["author"] = author
-    md["editor"] = editor
-
-    for k, v in sorted(md.items(), key=lambda x: hdr_order.index(x[0])):
-        if v:
-            k = k[0].upper() + k[1:].lower()
-            v = decode(v.strip())
-            v = v.replace(u"©", "(c)")
-            xd.set_header(k, v)
-
-    answers = { }
-    clue_num = 1
+        rebustr = " ".join([("%s=%s" % (k, v)) for k, v in sorted(rebus.items())])
+        xd.set_header("Rebus", rebustr)
 
     for r, row in enumerate(puzzle):
         rowstr = ""
@@ -95,11 +70,30 @@ def parse_puz(contents, filename):
             elif cell == puzzle.empty:
                 rowstr += "."
             else:
-                if cell.solution not in grid_dict:
-                    grid_dict[cell.solution] = rebus_shorthands.pop()
+                n = r * puzobj.width + c
+                reb = puzobj.rebus()
+                if reb.has_rebus() and n in reb.get_rebus_squares():
+                    c = str(reb.table[n] - 1)
+                    rowstr += c
+                    cell.solution = rebus[c]
+                else:
+                    if cell.solution not in grid_dict:
+#                        grid_dict[cell.solution] = rebus_shorthands.pop()
+                        print " odd character '%s'" % cell.solution
+                        rowstr += cell.solution
+                    else:
+                        rowstr += grid_dict[cell.solution]
 
-                rowstr += grid_dict[cell.solution]
+        xd.grid.append(rowstr)
 
+
+    # clues
+
+    answers = { }
+    clue_num = 1
+
+    for r, row in enumerate(xd.grid):
+        for c, cell in enumerate(row):
                 # compute number shown in box
                 new_clue = False
                 if is_block(puzzle, c-1, r):  # across clue start
@@ -126,7 +120,6 @@ def parse_puz(contents, filename):
 
                 if new_clue:
                     clue_num += 1
-        xd.grid.append(rowstr)
 
     for number, clue in puzzle.clues.across():
         xd.clues.append((("A", number), decode(clue), answers["A"+str(number)]))

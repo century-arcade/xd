@@ -12,7 +12,7 @@ for filename, xd in sorted(corpus.items()):
 
     abbrid, d = xdfile.parse_date_from_filename(filename)
     pubid = xd.filename.split("/")[1]
-    pub = xd.get_header("Publisher") or xd.get_header("Rights")
+    pub = xd.get_header("Publisher") or xd.get_header("Copyright")
   
     if abbrid not in publishers:
         v = {
@@ -28,7 +28,7 @@ for filename, xd in sorted(corpus.items()):
         v = publishers[abbrid]
 
     
-    v["rights"].add(xd.get_header("Rights"))
+    v["rights"].add(xd.get_header("Copyright"))
     v["editors"].add(xd.get_header("Editor"))
     v["authors"].add(xd.get_header("Author"))
     v["num"].add(xd.filename)

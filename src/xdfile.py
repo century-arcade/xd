@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8
 
 import sys
 import os
@@ -9,10 +10,15 @@ import stat
 import string
 import zipfile
 
+def log(s):
+    sys.stdout.flush()
+    sys.stderr.flush()
+    print >>sys.stderr, " " + s
+
 BLOCK_CHAR = '#'
 EOL = '\n'
 SECTION_SEP = EOL + EOL
-HEADER_ORDER = [ 'title', 'author', 'editor', 'rights', 'date', 'special', 'rebus', 'cluegroup', 'description' ]
+HEADER_ORDER = [ 'title', 'author', 'editor', 'copyright', 'date', 'special', 'rebus', 'cluegroup', 'description' ]
 
 
 publishers = {
@@ -64,38 +70,52 @@ publishers = {
 unknownpubs = { }
 all_files = { }
 
-RENAME_HEADERS = [ ("Creator", "Author"),  ("Rights", "Copyright"), ("Issued", "Date"), ("Acquired", None), ("Source", None) ]
-
 def clean_headers(xd):
-    for old, new in RENAME_HEADERS:
-        v = xd.get_header(old)
-        if v:
-            if new:
-                xd.set_header(new, v)
-            xd.del_header(old)
+    for hdr in xd.headers.keys():
+        assert hdr in "Title Author Editor Copyright Date Rebus Notes".split(), hdr
 
-    aut = xd.get_header("Author")
+    title = xd.get_header("Title") or ""
+    author = xd.get_header("Author") or ""
+    editor = xd.get_header("Editor") or ""
+    rights = xd.get_header("Copyright") or ""
 
-    if aut:
-        m = re.search(r'(?i)(?:(?:By )*(.+)(?:[;,-]|and) *)?(?:edited|Editor|(?<!\w)Ed[.])(?: By )*(.*)', aut)
+    if author:
+        m = re.search(r'(?i)(?:(?:By )*(.+)(?:[;/,-]|and) *)?(?:edited|Editor|(?<!\w)Ed[.])(?: By)*(.*)', author)
         if m:
-            newaut, editor = m.groups()
-            xd.set_header("Editor", editor.strip())
-            if newaut:
-                xd.set_header("Author", newaut.strip())
-            else:
-                xd.del_header("Author")
+            author, editor = m.groups()
 
-    editor = xd.get_header("Editor")
-    if editor and editor.lower().startswith("by "):
-        xd.set_header("Editor", editor[3:])
+        if author:
+            while author.lower().startswith("by "):
+                author = author[3:]
 
-    while (xd.get_header("Author") or "").lower().startswith("by "):
-        aut = xd.get_header("Author")
-        xd.set_header("Author", aut[3:])
+            while author[-1] in ",.":
+                author = author[:-1]
+        else:
+            author = ""
+
+        if " / " in author:
+            assert not editor
+            author, editor = author.split(" / ")
+
+    if editor:
+        while editor.lower().startswith("by "):
+            editor = editor[3:]
+
+        while editor[-1] in ",.":
+            editor = editor[:-1]
+
+    author = author.strip()
+    editor = editor.strip()
+
+#    rights = rights.replace(u"©", "(c)")
+
+    xd.set_header("Title", title)
+    xd.set_header("Author", author)
+    xd.set_header("Editor", editor)
+    xd.set_header("Copyright", rights)
 
     # title is only between the double-quotes (some USAToday)
-#    """
+    """
     title = xd.get_header("Title")
     if title and title[-1] == '"':
         newtitle = title[title.index('"')+1:-1]
@@ -107,12 +127,12 @@ def clean_headers(xd):
         newtitle = title
 
     xd.set_header("Title", newtitle)
-#    """
+    """
 
     if not xd.get_header("Date"):
-            abbrid, d = parse_date_from_filename(xd.filename)
-            if d:
-                xd.set_header("Date", d.strftime("%Y-%m-%d"))
+        abbrid, d = parse_date_from_filename(xd.filename)
+        if d:
+            xd.set_header("Date", d.strftime("%Y-%m-%d"))
 
 def parse_date_from_filename(fn):
     m = re.search("(\w*)([12]\d{3})-(\d{2})-(\d{2})", fn)
@@ -147,14 +167,18 @@ class xdfile:
         assert v is None or isinstance(v, basestring), v
         return (v or "").strip()
 
-    def set_header(self, fieldname, value):
-        if fieldname in self.headers:
-            assert value in self.headers[fieldname], (self.headers[fieldname], value)
+    def set_header(self, fieldname, newvalue=None):
+        newvalue = unicode(newvalue).strip()
 
-        self.headers[fieldname] = value
+#        if fieldname in self.headers:
+#            if newvalue != self.headers.get(fieldname, None):
+#                log("%s[%s] '%s' -> '%s'" % (self.filename, fieldname, self.headers[fieldname], newvalue))
 
-    def del_header(self, fieldname):
-        del self.headers[fieldname]
+        if newvalue:
+            self.headers[fieldname] = newvalue
+        else:
+            if fieldname in self.headers:
+                del self.headers[fieldname]
 
     def add_header(self, fieldname, value):
         if fieldname in self.headers:
@@ -238,7 +262,7 @@ class xdfile:
         # headers (section 1)
 
         r = u""
-        for k, v in sorted([ (x, y) for x,y in self.headers.items() ] , key=lambda i: HEADER_ORDER.index(i[0].lower())):
+        for k, v in sorted([ (x, y) for x,y in self.headers.items() ] , key=lambda i: i[0].lower() in HEADER_ORDER and HEADER_ORDER.index(i[0].lower() or 1000)):
             if not isinstance(v, list):
                 values = [ v ]
             else:
@@ -322,12 +346,12 @@ def load_corpus(*pathnames):
         try:
             basefn = get_base_filename(fullfn)
             n += 1
-            print >>sys.stderr, "\r% 6d %s" % (n, basefn),
+            print "\r% 6d %s" % (n, basefn),
             xd = xdfile(contents, fullfn)
 
             ret[basefn] = xd
         except Exception, e:
-            print >>sys.stderr, unicode(e)
+            print unicode(e)
             #if args.debug:
             #    raise
 
@@ -365,7 +389,7 @@ def main_load():
         xd = corpus.values()[0]
         print xd.to_unicode().encode("utf-8")
     else:
-        print >>sys.stderr, "%s puzzles" % len(corpus)
+        log("%s puzzles" % len(corpus))
 
     return corpus
 
@@ -392,13 +416,16 @@ def main_parse(parserfunc):
             outf = None
 
     for fullfn, contents in sorted(find_files(*args.path)):
-        print >>sys.stderr, "\r" + fullfn,
+        print "\r" + fullfn,
         path, fn = os.path.split(fullfn)
-        base, ext = os.path.splitext(fn)
+        base_orig, ext = os.path.splitext(fn)
+        base = "".join([ c for c in base_orig.lower() if c in string.lowercase or c in string.digits ])
+        if base != base_orig:
+            print base_orig, base
         try:
             xd = parserfunc(contents, fullfn)
             if not xd:
-                print >>sys.stderr, ""
+                print
                 continue
             try:
                 abbr, year, month, day, rest = parse_filename(fullfn.lower())
@@ -413,41 +440,43 @@ def main_parse(parserfunc):
             except Exception, e:
                 abbr = ""
                 year, month, day = 1980, 1, 1
-                outfn = "crosswords/unknown/%s.xd" % base
+                outfn = "crosswords/misc/%s.xd" % base
 
-            xd.add_header("Source", fullfn)
-
-
-            xdstr = xd.to_unicode().encode("utf-8")
         except Exception, e:
             if args.debug:
                 raise
             else:
-                print >>sys.stderr, "error:", str(e), type(e)
+                log("error: %s: %s" % (str(e), type(e)))
                 continue
             
+        if args.toplevel:
+            fullfn = "%s/%s/%s.xd" % (args.toplevel, "/".join(path.split("/")[1:]), base)
+        else:
+            base, ext = os.path.splitext(fullfn)
+            fullfn = base + ".xd"
+
+        xd.filename = fullfn
+        clean_headers(xd)
+
+        xdstr = xd.to_unicode().encode("utf-8")
+
+        if abbr and abbr not in publishers:
+            rights = xd.get_header("Copyright")
+            if rights:
+                publishers[abbr] = abbr
+                if abbr not in unknownpubs:
+                    unknownpubs[abbr] = set()
+                unknownpubs[abbr].add(rights.strip())
+
+
+        while outfn in all_files:
+            if all_files[outfn] != xdstr:
+                log("different versions: '%s'" % outfn)
+                outfn += ".2"
+
+        all_files[outfn] = xdstr
+
         if isinstance(outf, zipfile.ZipFile):
-            if args.toplevel:
-                fullfn = "%s/%s/%s.xd" % (args.toplevel, "/".join(path.split("/")[1:]), base)
-            else:
-                base, ext = os.path.splitext(fullfn)
-                fullfn = base + ".xd"
-
-            if abbr and abbr not in publishers:
-                rights = xd.get_header("Copyright")
-                if rights:
-                    publishers[abbr] = abbr
-                    if abbr not in unknownpubs:
-                        unknownpubs[abbr] = set()
-                    unknownpubs[abbr].add(rights.strip())
-
-            if outfn in all_files:
-                if all_files[outfn] != xdstr:
-                    print >>sys.stderr, "different versions", outfn
-                    outfn += ".2"
-            
-            all_files[outfn] = xdstr
-
             if year < 1980:
                 year = 1980
             zi = zipfile.ZipInfo(outfn, (year, month, day, 9, 0, 0))
@@ -457,12 +486,13 @@ def main_parse(parserfunc):
         elif isinstance(outf, file):
             outf.write(xdstr)
         else:
-            _, fn = os.path.split(fullfn)
-            base, ext = os.path.splitext(fn)
-            xdfn = "%s/%s.xd" % (args.output, base)
-            file(xdfn, "w-").write(xdstr)
+            try:
+                basedirs, fn = os.path.split(outfn)
+                os.makedirs(basedirs)
+            except:
+                pass
+            file(outfn, "w-").write(xdstr)
 
-    print >>sys.stderr, "Done"
     for k, v in unknownpubs.items():
         print k, "\n".join(v)
 
