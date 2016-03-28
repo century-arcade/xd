@@ -11,3 +11,6 @@ To execute tests, run tox or 'python setup.py test'
 
 [ style ]
 Line length: 90-ish is OK, flake8 is set to 95.
+
+[ setup ]
+Test the setup with a dry run: 'python setup.py install -n'
