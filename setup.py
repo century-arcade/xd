@@ -13,11 +13,10 @@ with open('README.md') as readme:
     long_description = readme.read()
 
 with open('VERSION') as version_file:
-    print package_root
     version = version_file.read().strip()
 
 setup(
-    name='xd',
+    name='xdfile',
 
     # TODO: figure out a spot for a single version string for everything.
     # Versions should comply with PEP440.  For a discussion on single-sourcing
