@@ -1,0 +1,13 @@
+This is the CONTRIBUTING file.
+
+Notes:
+
+[ tox ]
+This creates a virtualenv and runs tests against the package.
+- tox requires MANIFEST.in to locate files to copy into the virtualenv test environments.
+
+[ tests ]
+To execute tests, run tox or 'python setup.py test'
+
+[ style ]
+Line length: 90-ish is OK, flake8 is set to 95.
