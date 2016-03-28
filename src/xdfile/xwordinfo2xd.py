@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import string
-import os.path
+# import string
+# import os.path
 import re
 
 from lxml import html
@@ -16,21 +16,38 @@ def stringify_children(node):
     s = node.text
     if s is None:
         s = ''
-    for child in node:
-        s += etree.tostring(child, encoding='unicode')
+    # for child in node:
+    #     s += etree.tostring(child, encoding='unicode')
     return s
+
 
 # content is unicode()
 def parse_xwordinfo(content):
-    REBUS_LONG_HANDS = {
-    'NINE': '9', 'EIGHT': '8', 'SEVEN': '7', 'SIX': '6', 'FIVE': '5', 'FOUR': '4', 'THREE': '3',
-    'TWO': '2', 'ONE': '1', 'ZERO': '0', 'AUGHT': '0', 'AMPERSAND': '&', 'AND': '&', 'ASTERISK': '*',
-    'PERCENT': '%', 'STAR': '*', 'AT': '@', 'DOLLAR': '$', 'PLUS': '+', 'CENT': 'c',
-#    'DASH': '-',
-#    'DOT': '●',
-    }
-
-    REBUS_SHORT_HANDS = list(u'♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321')
+    REBUS_LONG_HANDS = {'NINE': '9',
+                        'EIGHT': '8',
+                        'SEVEN': '7',
+                        'SIX': '6',
+                        'FIVE': '5',
+                        'FOUR': '4',
+                        'THREE': '3',
+                        'TWO': '2',
+                        'ONE': '1',
+                        'ZERO': '0',
+                        'AUGHT': '0',
+                        'AMPERSAND': '&',
+                        'AND': '&',
+                        'ASTERISK': '*',
+                        'PERCENT': '%',
+                        'STAR': '*',
+                        'AT': '@',
+                        'DOLLAR': '$',
+                        'PLUS': '+',
+                        'CENT': 'c',
+                        # 'DASH': '-',
+                        # 'DOT': '●'
+                        }
+    rsh = u'♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321'
+    REBUS_SHORT_HANDS = list(rsh)
 
     content = content.replace("<b>", "{*")
     content = content.replace("</b>", "*}")
@@ -60,18 +77,18 @@ def parse_xwordinfo(content):
     title = root.cssselect(xwiprefix + 'TitleLabel')[0].text.strip()
     try:
         subtitle = root.cssselect(xwiprefix + 'SubTitleLabel')[0].text.strip()
-        subtitle = ' [%s]' %subtitle
+        subtitle = ' [%s]' % subtitle
     except:
         subtitle = ""
 
-    author = root.cssselect(xwiprefix + 'AuthorLabel')[0].text.strip()
-    editor = root.cssselect(xwiprefix + 'EditorLabel')[0].text.strip()
+    # author = root.cssselect(xwiprefix + 'AuthorLabel')[0].text.strip()
+    # editor = root.cssselect(xwiprefix + 'EditorLabel')[0].text.strip()
     try:
         xd.notes = stringify_children(root.cssselect(xwiprefix + 'NotepadDiv')[0])
     except:
         pass
 
-    xd.headers.append(("Title", '%s%s' %(title, subtitle)))
+    xd.headers.append(("Title", '%s%s' % (title, subtitle)))
     xd.headers.append(("Author", root.cssselect(xwiprefix + 'AuthorLabel')[0].text.strip()))
     xd.headers.append(("Editor", root.cssselect(xwiprefix + 'EditorLabel')[0].text.strip()))
 
@@ -111,7 +128,7 @@ def parse_xwordinfo(content):
                         subst = ''
 
                 if subst:
-                    if not subst in rebus:
+                    if subst not in rebus:
                         if subst in REBUS_LONG_HANDS:
                             rebus_val = REBUS_LONG_HANDS[subst]
                             if rebus_val in REBUS_SHORT_HANDS:
@@ -135,16 +152,17 @@ def parse_xwordinfo(content):
         xd.grid.append(row_data)
 
     if len(rebus):
-        rebus = ["%s=%s" %(rebus[x], x.upper()) for x in rebus_order]
+        rebus = ["%s=%s" % (rebus[x], x.upper()) for x in rebus_order]
         xd.headers.append(("Rebus", ','.join(rebus)))
     if special_type:
         xd.headers.append(("Special", special_type))
 
     # add clues
-    across_clues = _fetch_clues(xd, 'A', root, xwiprefix + 'AcrossClues', rebus)
-    down_clues = _fetch_clues(xd, 'D', root, xwiprefix + 'DownClues', rebus)
+    # across_clues = _fetch_clues(xd, 'A', root, xwiprefix + 'AcrossClues', rebus)
+    # down_clues = _fetch_clues(xd, 'D', root, xwiprefix + 'DownClues', rebus)
 
     return xd
+
 
 def _fetch_clues(xd, clueprefix, root, css_identifier, rebus):
     PT_CLUE = re.compile(r'(\d+)\. ?(.*)')
@@ -162,7 +180,9 @@ def _fetch_clues(xd, clueprefix, root, css_identifier, rebus):
             # replace rebuses with appropriate identifiers (numbers)
             for item in rebus:
                 if item in content:
-                    content = content.replace(item, str(index+1))
+                    pass
+                    # TODO: where is 'index'???
+                    # content = content.replace(item, str(index + 1))
 
             solution = content
             xd.clues.append(((clueprefix, number), text, solution))
@@ -178,7 +198,7 @@ def _fetch_clues(xd, clueprefix, root, css_identifier, rebus):
                 number = int(match.group(1))
                 text = match.group(2)
             else:
-                if text is None: # a special one
+                if text is None:  # a special one
                     number = content
                     text = ""
                 else:
@@ -186,4 +206,3 @@ def _fetch_clues(xd, clueprefix, root, css_identifier, rebus):
 
 if __name__ == "__main__":
     xdfile.main_parse(parse_xwordinfo)
-

@@ -2,11 +2,11 @@
 
 import time
 import sys
-import os.path
+# import os.path
 import mkwww
 import xdfile
 
-outlines = [ ]
+outlines = []
 total_xd = 0
 for metafn in sys.argv[1:]:
     pubxd = xdfile.xdfile(file(metafn).read(), metafn)
@@ -17,10 +17,10 @@ for metafn in sys.argv[1:]:
     pubid = metafn.split("/")[-2]
 
     outlines.append((num_xd, '<li><a href="{pubid}"><b>{pubid}</b></a>: {num_xd} crosswords from {years}</li>'.format(**{
-        'pubid': pubid,
-        "num_xd": num_xd,
-        "years": years
-        })))
+                    'pubid': pubid,
+                    "num_xd": num_xd,
+                    "years": years
+                    })))
 
 out = mkwww.html_header.format(title=time.strftime("xd corpus grid similarity results [%Y-%m-%d]"))
 out += "The xd corpus has %d crosswords total:" % total_xd

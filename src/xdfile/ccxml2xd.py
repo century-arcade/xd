@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
 import string
-import os.path
 import re
-
 from lxml import etree
 
 import xdfile
+
 
 # content is unicode()
 def parse_ccxml(content):
@@ -42,9 +41,9 @@ def parse_ccxml(content):
             xd.headers.append((title, text))
 
     # add puzzle
-    puzzle = [ ]
+    puzzle = []
     for i in range(rows):
-        puzzle.append([ " " ] * cols)
+        puzzle.append([" "] * cols)
 
     for cell in grid.xpath('./puzzle:cell', namespaces=ns):
         x = int(cell.attrib['x']) - 1
@@ -55,7 +54,7 @@ def parse_ccxml(content):
             value = xdfile.BLOCK_CHAR
         puzzle[y][x] = value
 
-    xd.grid = [ "".join(row) for row in puzzle ]
+    xd.grid = ["".join(row) for row in puzzle]
 
     # add clues
     word_map = {}
@@ -76,22 +75,23 @@ def parse_ccxml(content):
 
     return xd
 
+
 def get_solution(word_id, word_map, puzzle):
     def get_numbers_in_range(range_as_string, separator):
         start, end = (int(num) for num in range_as_string.split(separator))
         # reduce 1 to stick to a 0-based index list
         start = start - 1
         end = end - 1
-        return range(start, end+1)
+        return range(start, end + 1)
 
     x, y = word_map[word_id]
     word = ''
     if '-' in x:
-        word = (puzzle[int(y)-1][i] for i in get_numbers_in_range(x, '-'))
+        word = (puzzle[int(y) - 1][i] for i in get_numbers_in_range(x, '-'))
     elif '-' in y:
-        word = (puzzle[i][int(x)-1] for i in get_numbers_in_range(y, '-'))
+        word = (puzzle[i][int(x) - 1] for i in get_numbers_in_range(y, '-'))
     else:
-        word = (puzzle[int(x)-1][int(y)-1])
+        word = (puzzle[int(x) - 1][int(y) - 1])
     return ''.join(word)
 
 if __name__ == "__main__":

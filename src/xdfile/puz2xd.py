@@ -1,19 +1,22 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 
+# -*- coding: utf-8
 
 # pip install crossword puzpy
 
 import string
 import puz
 import crossword
+import urllib
+import time
+
 import xdfile
 
-import urllib
 
 def reparse_date(s):
-    import time
+
     tm = time.strptime(s, "%B %d, %Y")
     return time.strftime("%Y-%m-%d", tm)
+
 
 def decode(s):
     s = s.replace(u'\x92', "'")
@@ -23,8 +26,10 @@ def decode(s):
     s = urllib.unquote(s)
     return s
 
+
 def is_block(puz, x, y):
     return x < 0 or y < 0 or x >= puz.width or y >= puz.height or puz[x, y].solution == '.'
+
 
 def parse_puz(contents, filename):
     rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
@@ -49,12 +54,13 @@ def parse_puz(contents, filename):
 
     xd.set_header("Title", puzobj.title)
 
-    rebus = { }
+    rebus = {}
     r = puzobj.rebus()
     if r.has_rebus():
         for pair in puzobj.extensions["RTBL"].split(";"):
             pair = pair.strip()
-            if not pair: continue
+            if not pair:
+                continue
             k, v = pair.split(":")
             rebus[k] = v
 
@@ -79,7 +85,7 @@ def parse_puz(contents, filename):
                     cell.solution = rebus[c]
                 else:
                     if cell.solution not in grid_dict:
-#                        grid_dict[cell.solution] = rebus_shorthands.pop()
+                        # grid_dict[cell.solution] = rebus_shorthands.pop()
                         print " odd character '%s'" % cell.solution
                         rowstr += cell.solution
                     else:
@@ -87,49 +93,46 @@ def parse_puz(contents, filename):
 
         xd.grid.append(rowstr)
 
-
     # clues
-
-    answers = { }
+    answers = {}
     clue_num = 1
 
     for r, row in enumerate(xd.grid):
         for c, cell in enumerate(row):
                 # compute number shown in box
                 new_clue = False
-                if is_block(puzzle, c-1, r):  # across clue start
+                if is_block(puzzle, c - 1, r):  # across clue start
                     j = 0
                     answer = ""
-                    while not is_block(puzzle, c+j, r):
-                        answer += puzzle[c+j, r].solution
+                    while not is_block(puzzle, c + j, r):
+                        answer += puzzle[c + j, r].solution
                         j += 1
 
                     if len(answer) > 1:
                         new_clue = True
-                        answers["A"+str(clue_num)] = answer
+                        answers["A" + str(clue_num)] = answer
 
-                if is_block(puzzle, c, r-1):  # down clue start
+                if is_block(puzzle, c, r - 1):  # down clue start
                     j = 0
                     answer = ""
-                    while not is_block(puzzle, c, r+j):
-                        answer += puzzle[c, r+j].solution
+                    while not is_block(puzzle, c, r + j):
+                        answer += puzzle[c, r + j].solution
                         j += 1
 
                     if len(answer) > 1:
                         new_clue = True
-                        answers["D"+str(clue_num)] = answer
+                        answers["D" + str(clue_num)] = answer
 
                 if new_clue:
                     clue_num += 1
 
     for number, clue in puzzle.clues.across():
-        xd.clues.append((("A", number), decode(clue), answers["A"+str(number)]))
+        xd.clues.append((("A", number), decode(clue), answers["A" + str(number)]))
 
     for number, clue in puzzle.clues.down():
-        xd.clues.append((("D", number), decode(clue), answers["D"+str(number)]))
+        xd.clues.append((("D", number), decode(clue), answers["D" + str(number)]))
 
     return xd
 
 if __name__ == "__main__":
     xdfile.main_parse(parse_puz)
-

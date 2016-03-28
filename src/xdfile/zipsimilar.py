@@ -11,6 +11,7 @@ for filename in sys.argv[1:]:
                 all_files.add(fn1)
                 all_files.add(fn2)
             except IndexError:
-                print "ERROR in %s: %s" % (inputfn, line)
+                print "TODO: need to fix this line!"
+                # print "ERROR in %s: %s" % (inputfn, line)
 
 print " ".join(sorted(all_files))

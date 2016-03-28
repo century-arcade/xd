@@ -3,10 +3,12 @@
 import os
 import re
 import json
-import xdfile
 from urllib import unquote
 
+import xdfile
+
 POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright']
+
 
 def parse_ujson(content):
     json_data = json.loads(content)
@@ -22,8 +24,8 @@ def parse_ujson(content):
             xd.headers.append((item, unquote(text).decode("utf-8")))
 
     # add puzzle
-    for row in range(1, rows+1):
-        line = json_data['Solution']['Line'+str(row)]
+    for row in range(1, rows + 1):
+        line = json_data['Solution']['Line' + str(row)]
         xd.grid.append("".join(line.replace(' ', xdfile.BLOCK_CHAR)))
 
     # add clues
@@ -32,20 +34,24 @@ def parse_ujson(content):
         for clue in json_data[clue_type + 'Clue'].split(os.linesep):
             number, text = clue.split('|')
             solution = _get_solution(number, clue_type[0], layout, xd.grid)
-            xd.clues.append(((clue_type[0], int(number)), unquote(text).decode("utf-8").strip(), solution))
+            xd.clues.append(((clue_type[0],
+                            int(number)),
+                            unquote(text).decode("utf-8").strip(),
+                            solution))
             assert solution
 
     return xd
 
+
 def _get_solution(number, direction, layout, puzzle):
     x, y = (-1, -1)
-    for row in range(1, len(puzzle)+1):
-        line = layout['Line'+str(row)]
+    for row in range(1, len(puzzle) + 1):
+        line = layout['Line' + str(row)]
         try:
             pairs = re.findall('..', line)
             x = pairs.index(number)
             y = row - 1
-            break;
+            break
         except ValueError:
             pass
 
