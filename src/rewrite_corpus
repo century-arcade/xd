@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import xdfile
+import flipgrid
 import os
 
 def collapse_whitespace(s):
@@ -8,16 +9,25 @@ def collapse_whitespace(s):
 
 def rewrite_corpus(corpus):
     for fn, xd in sorted(corpus.items()):
-        xdfile.clean_headers(xd)
+        if not xd.grid:
+            continue
+        
+#        xdfile.clean_headers(xd)
         fullfn = xd.filename
-        inxd = file(fullfn).read().decode("utf-8")
-        outxd = xd.to_unicode()
-        if collapse_whitespace(outxd) != collapse_whitespace(inxd):
-            print fullfn, "differs when re-emitted"
+#        outxd = xd.to_unicode(emit_clues=False)
+        outxd = flipgrid.flipgrid(xd)
+        outxd.filename = "transposed/" + xd.filename
+#        if collapse_whitespace(outxd) != collapse_whitespace(inxd):
+#            print fullfn, "differs when re-emitted"
+        try:
+            basedir, _fn = os.path.split(outxd.filename)
             try:
-                file(fullfn, 'w').write(outxd.encode("utf-8"))
-            except Exception, e:
-                print str(e)
+                os.makedirs(basedir)
+            except:
+                pass
+            file(outxd.filename, 'w').write(outxd.to_unicode().encode("utf-8"))
+        except Exception, e:
+            print str(e)
 
 
             

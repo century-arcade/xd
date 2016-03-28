@@ -23,6 +23,7 @@ def flipgrid(xd):
 
         flipxd.clues.append(((posdir, n), clue, answer))
 
+    flipxd.clues = sorted(flipxd.clues)
     return flipxd
 
 if __name__ == "__main__":
