@@ -9,6 +9,7 @@ import os.path
 import stat
 import string
 import zipfile
+import utils
 
 def log(s):
     sys.stdout.flush()
@@ -19,7 +20,6 @@ BLOCK_CHAR = '#'
 EOL = '\n'
 SECTION_SEP = EOL + EOL
 HEADER_ORDER = [ 'title', 'author', 'editor', 'copyright', 'date', 'special', 'rebus', 'cluegroup', 'description' ]
-
 
 publishers = {
     'unk': 'unknown',
@@ -187,6 +187,18 @@ class xdfile:
         else:
             self.headers[fieldname] = [ value ]
 
+    def get_clue(self, clueid):
+        for pos, clue, answer in self.clues:
+            posdir, n = pos
+            if clueid == posdir + str(n):
+                return clue
+
+    def get_answer(self, clueid):
+        for pos, clue, answer in self.clues:
+            posdir, n = pos
+            if clueid == posdir + str(n):
+                return answer
+
     def parse_xd(self, xd_contents):
         # placeholders, actual numbering starts at 1
         section = 0
@@ -229,6 +241,7 @@ class xdfile:
                     self.notes += line + "\n"
 
             elif section == 2:
+                assert self.headers, "no headers"
                 # grid second
                 self.grid.append(line)
             elif section == 3:
@@ -258,7 +271,7 @@ class xdfile:
                 if line:
                     self.notes += line + EOL
 
-    def to_unicode(self):
+    def to_unicode(self, emit_clues=True):
         # headers (section 1)
 
         r = u""
@@ -279,19 +292,20 @@ class xdfile:
         r += EOL + EOL
 
         # clues (section 3)
-        prevdir = None
-        for pos, clue, answer in self.clues:
-            cluedir, cluenum = pos
-            if cluedir != prevdir:
+        if emit_clues:
+            prevdir = None
+            for pos, clue, answer in self.clues:
+                cluedir, cluenum = pos
+                if cluedir != prevdir:
+                    r += EOL
+                prevdir = cluedir
+
+                r += u"%s%s. %s ~ %s" % (cluedir, cluenum, clue.strip(), answer)
                 r += EOL
-            prevdir = cluedir
 
-            r += u"%s%s. %s ~ %s" % (cluedir, cluenum, clue.strip(), answer)
-            r += EOL
-
-        if self.notes:
-            r += EOL + EOL
-            r += self.notes
+            if self.notes:
+                r += EOL + EOL
+                r += self.notes
 
         r += EOL
 
@@ -313,40 +327,28 @@ def get_base_filename(fn):
 
     return b
 
+g_corpus = None
 
-def find_files(*paths):
-    for path in paths:
-        if stat.S_ISDIR(os.stat(path).st_mode):
-            for thisdir, subdirs, files in os.walk(path):
-                for fn in files:
-                    if fn[0] == ".":
-                        continue
-                    for f, c in find_files(os.path.join(thisdir, fn)):
-                        yield f, c
-        elif path.endswith(".zip"):
-            import zipfile
-            with zipfile.ZipFile(path, 'r') as zf:
-                for f in zf.infolist():
-                    fullfn = f.filename
-                    contents = zf.read(f)
-                    yield fullfn, contents
-        else:
-            fullfn = path
-            contents = file(path).read()
-            yield fullfn, contents
+def corpus():
+    global g_corpus
+    if g_corpus is None:
+        g_corpus = load_corpus("crosswords")# "xd-grids-2016.xdz")
+
+    return sorted(g_corpus.values(), key=lambda xd: xd.filename)
     
 def load_corpus(*pathnames):
     ret = { }
 
     n = 0
-    for fullfn, contents in find_files(*pathnames):
+    for fullfn, contents in utils.find_files(*pathnames):
         if not fullfn.endswith(".xd"):
             continue
 
         try:
             basefn = get_base_filename(fullfn)
             n += 1
-            print "\r% 6d %s" % (n, basefn),
+            if n % 100 == 0:
+                print "\r% 6d %s" % (n, basefn),
             xd = xdfile(contents, fullfn)
 
             ret[basefn] = xd
@@ -358,6 +360,34 @@ def load_corpus(*pathnames):
     print >>sys.stderr, ""
 
     return ret
+
+SEP = "\t"
+
+def metadata_header():
+    return SEP.join([ 
+        "pubid",
+        "pubvol",
+        "Date",
+        "Title",
+        "Author",
+        "Editor",
+    ])
+
+def metadata_line(xd):
+    abbrid, d = parse_date_from_filename(xd.filename)
+    pubid = xd.filename.split("/")[1]
+
+    fields = [
+        pubid,
+        abbrid + str(d.year),
+        xd.get_header("Date") or d.strftime("%Y-%m-%d"),
+        xd.get_header("Title") or "",
+        xd.get_header("Author") or "",
+        xd.get_header("Editor") or "",
+    ]
+
+    assert SEP not in "".join(fields), fields
+    return SEP.join(fields).encode("utf-8")
 
 def parse_filename(fn):
     import re
@@ -393,6 +423,58 @@ def main_load():
 
     return corpus
 
+def save_file(xd):
+    try:
+        abbr, year, month, day, rest = parse_filename(xd.filename.lower())
+        if not xd.get_header("Date"):
+            xd.set_header("Date", "%d-%02d-%02d" % (year, month, day))
+
+        if abbr:
+            base = "%s%s-%02d-%02d%s" % (abbr, year, month, day, rest)
+            outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day, rest)
+        else:
+            base = "%s-%02d-%02d%s" % (year, month, day, rest)
+    except Exception, e:
+        abbr = ""
+        year, month, day = 1980, 1, 1
+        outfn = "crosswords/misc/%s.xd" % base
+
+        
+    if args.toplevel:
+        fullfn = "%s/%s/%s.xd" % (args.toplevel, "/".join(path.split("/")[1:]), base)
+    else:
+        base, ext = os.path.splitext(fullfn)
+        fullfn = base + ".xd"
+
+    xd.filename = fullfn
+    clean_headers(xd)
+
+    xdstr = xd.to_unicode().encode("utf-8")
+
+    while outfn in all_files:
+        if all_files[outfn] != xdstr:
+            log("different versions: '%s'" % outfn)
+            outfn += ".2"
+
+    all_files[outfn] = xdstr
+
+    if isinstance(outf, zipfile.ZipFile):
+        if year < 1980:
+            year = 1980
+        zi = zipfile.ZipInfo(outfn, (year, month, day, 9, 0, 0))
+        zi.external_attr = 0444 << 16L
+        zi.compress_type = zipfile.ZIP_DEFLATED
+        outf.writestr(zi, xdstr)
+    elif isinstance(outf, file):
+        outf.write(xdstr)
+    else:
+        try:
+            basedirs, fn = os.path.split(outfn)
+            os.makedirs(basedirs)
+        except:
+            pass
+        file(outfn, "w-").write(xdstr)
+
 def main_parse(parserfunc):
     import os.path
     import sys
@@ -403,6 +485,7 @@ def main_parse(parserfunc):
     parser.add_argument('-o', dest='output', default=None, help='output directory (default stdout)')
     parser.add_argument('-t', dest='toplevel', default=None, help='set toplevel directory of files in .zip')
     parser.add_argument('-d', dest='debug', action='store_true', default=False, help='abort on exception')
+    parser.add_argument('-m', dest='metadata_only', action='store_true', default=False, help='output metadata.tsv only')
 
     args = parser.parse_args()
 
@@ -415,7 +498,7 @@ def main_parse(parserfunc):
         else:
             outf = None
 
-    for fullfn, contents in sorted(find_files(*args.path)):
+    for fullfn, contents in sorted(utils.find_files(*args.path)):
         print "\r" + fullfn,
         path, fn = os.path.split(fullfn)
         base_orig, ext = os.path.splitext(fn)
@@ -424,41 +507,22 @@ def main_parse(parserfunc):
             print base_orig, base
         try:
             xd = parserfunc(contents, fullfn)
+
             if not xd:
                 print
                 continue
-            try:
-                abbr, year, month, day, rest = parse_filename(fullfn.lower())
-                if not xd.get_header("Date"):
-                    xd.set_header("Date", "%d-%02d-%02d" % (year, month, day))
 
-                if abbr:
-                    base = "%s%s-%02d-%02d%s" % (abbr, year, month, day, rest)
-                    outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day, rest)
-                else:
-                    base = "%s-%02d-%02d%s" % (year, month, day, rest)
-            except Exception, e:
-                abbr = ""
-                year, month, day = 1980, 1, 1
-                outfn = "crosswords/misc/%s.xd" % base
-
+            if args.metadata_only:
+                print metadata_row(xd)
+            else:
+                save_file(xd)
         except Exception, e:
             if args.debug:
                 raise
             else:
                 log("error: %s: %s" % (str(e), type(e)))
                 continue
-            
-        if args.toplevel:
-            fullfn = "%s/%s/%s.xd" % (args.toplevel, "/".join(path.split("/")[1:]), base)
-        else:
-            base, ext = os.path.splitext(fullfn)
-            fullfn = base + ".xd"
 
-        xd.filename = fullfn
-        clean_headers(xd)
-
-        xdstr = xd.to_unicode().encode("utf-8")
 
         if abbr and abbr not in publishers:
             rights = xd.get_header("Copyright")
@@ -468,30 +532,6 @@ def main_parse(parserfunc):
                     unknownpubs[abbr] = set()
                 unknownpubs[abbr].add(rights.strip())
 
-
-        while outfn in all_files:
-            if all_files[outfn] != xdstr:
-                log("different versions: '%s'" % outfn)
-                outfn += ".2"
-
-        all_files[outfn] = xdstr
-
-        if isinstance(outf, zipfile.ZipFile):
-            if year < 1980:
-                year = 1980
-            zi = zipfile.ZipInfo(outfn, (year, month, day, 9, 0, 0))
-            zi.external_attr = 0444 << 16L
-            zi.compress_type = zipfile.ZIP_DEFLATED
-            outf.writestr(zi, xdstr)
-        elif isinstance(outf, file):
-            outf.write(xdstr)
-        else:
-            try:
-                basedirs, fn = os.path.split(outfn)
-                os.makedirs(basedirs)
-            except:
-                pass
-            file(outfn, "w-").write(xdstr)
 
     for k, v in unknownpubs.items():
         print k, "\n".join(v)

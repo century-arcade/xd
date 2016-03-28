@@ -58,7 +58,7 @@ def find_similar_to(needle, haystack, min_pct=0.3, num_answers=0):
 
         if pct >= min_pct:
             s = same_answers(needle, xd)
-            if len(s) >= num_answers:
+            if not num_answers or len(s) >= num_answers:
                 ret.append((pct, needle, xd, s))
     return ret
 
