@@ -21,6 +21,7 @@ Paste the grid here in text format (use '#' as block):
 <button type="submit">Find similar</button>
 </form>"""
 
+
 class httpxd(object):
     def __init__(self):
         self.corpus = xdfile.main_load()
@@ -36,7 +37,7 @@ class httpxd(object):
 
     @cherrypy.expose
     def style_css(self):
-        cherrypy.response.headers['Content-Type']= 'text/css'
+        cherrypy.response.headers['Content-Type'] = 'text/css'
         return file("src/style.css").read()
 
     @staticmethod
@@ -45,13 +46,12 @@ class httpxd(object):
 
     def error(self, errmsg):
         return mkwww.html_header.format(title="Crossword Grid Search") + body_html + '<div class="error">Error: %s</div>' % errmsg + mkwww.html_footer
-    
 
     @cherrypy.expose
     def find(self, grid="", xd=""):
         xdobj = self.corpus.get(xd) or httpxd.xd_from_grid(grid)
         gridstr = "".join(filter(lambda x: x in string.uppercase, "".join(xdobj.grid).upper()))
-        if len(gridstr) < 15: # one row, wouldn't really consider less than this a match anyway
+        if len(gridstr) < 15:  # one row, wouldn't really consider less than this a match anyway
             return self.error('please specify a more specific grid than "%s".  Example: <br/>%s' % (gridstr, self.example_grid))
 
         index_list = []
@@ -59,9 +59,9 @@ class httpxd(object):
         for pct, needle, other, same_answers in sorted(dups):
             pct *= 100
             if xd:
-                parms = { "left": xdfile.get_base_filename(other.filename), "right": xd }
+                parms = {"left": xdfile.get_base_filename(other.filename), "right": xd}
             else:
-                parms = { "left": xdfile.get_base_filename(other.filename), "right": grid }
+                parms = {"left": xdfile.get_base_filename(other.filename), "right": grid}
             index_line = '%d%% <a href="/diff/?%s">%s</a> %s' % (pct, urllib.urlencode(parms), xdfile.get_base_filename(other.filename), other.get_header("Author") or "")
 
             index_list.append((pct, index_line))
@@ -71,10 +71,10 @@ class httpxd(object):
 
         fmt = '<li>%s</li>'
         sorted_list = sorted(index_list, reverse=True)
-        matches = '\n'.join(fmt % L for pct, L in sorted_list if pct > 80 )
-        partial = '\n'.join(fmt % L for pct, L in sorted_list if 50 < pct <= 80 )
-        theme = '\n'.join(fmt % L for pct, L in sorted_list if 25 < pct <= 50 )
-        unlikely = '\n'.join(fmt % L for pct, L in sorted_list if pct <= 25 )
+        matches = '\n'.join(fmt % L for pct, L in sorted_list if pct > 80)
+        partial = '\n'.join(fmt % L for pct, L in sorted_list if 50 < pct <= 80)
+        theme = '\n'.join(fmt % L for pct, L in sorted_list if 25 < pct <= 50)
+        unlikely = '\n'.join(fmt % L for pct, L in sorted_list if pct <= 25)
 
         if matches:
             r += '\n<h3>Very similar</h3>\n' + matches
@@ -108,6 +108,5 @@ class httpxd(object):
             return self.error("Need two grids to diff")
 
 cherrypy.config.update({'server.socket_host': '0.0.0.0',
-                        'server.socket_port': 80,
-                       })
+                        'server.socket_port': 80})
 cherrypy.quickstart(httpxd())

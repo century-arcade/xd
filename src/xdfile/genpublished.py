@@ -6,14 +6,8 @@ import downloadraw
 
 SEP = "\t"
 
-print SEP.join([ 
-        "pubid",
-        "pubvol",
-        "Date",
-        "Title",
-        "Author",
-        "Editor",
-    ])
+print SEP.join(["pubid", "pubvol", "Date",
+                "Title", "Author", "Editor",])
 
 corpus = xdfile.main_load()
 
@@ -22,7 +16,7 @@ for filename, xd in sorted(corpus.items()):
     abbrid, d = downloadraw.parse_date_from_filename(xd.filename)
     pubid = xd.filename.split("/")[1]
 
-    fields = [ 
+    fields = [
         pubid,
         abbrid + str(d.year),
         xd.get_header("Date") or d.strftime("%Y-%m-%d"),
@@ -34,7 +28,6 @@ for filename, xd in sorted(corpus.items()):
     assert SEP not in "".join(fields)
     try:
         print SEP.join(fields).encode("utf-8")
-    except Exception, e:
+    except Exception:
         print >>sys.stderr, filename
         raise
-
