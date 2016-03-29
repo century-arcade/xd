@@ -7,21 +7,19 @@ def get_col(g, n):
 
 def flipgrid(xd):
     flipxd = xdfile.xdfile()
+    flipxd.filename = "transposed/" + xd.filename
     flipxd.headers = xd.headers.copy()
     g = [ ]
     for i in xrange(len(xd.grid[0])):
-        g.append(get_col(xd.grid, i))
+        try:
+            g.append(get_col(xd.grid, i))
+        except:
+            print xd
 
     flipxd.grid = g
-    
-    for pos, clue, answer in xd.clues:
-        posdir, n = pos
-        if posdir == 'A':
-            posdir = 'D'
-        elif posdir == 'D':
-            posdir = 'A'
-
-        flipxd.clues.append(((posdir, n), clue, answer))
+   
+    for posdir, posnum, answer in flipxd.iteranswers():
+        flipxd.clues.append(((posdir, posnum), xd.get_clue_for_answer(answer), answer))
 
     flipxd.clues = sorted(flipxd.clues)
     return flipxd
@@ -30,4 +28,8 @@ if __name__ == "__main__":
     import sys
     import utils
     for fn, contents in utils.find_files(sys.argv[1]):
-        print flipgrid(xdfile.xdfile(contents, fn)).to_unicode().encode("utf-8")
+        flipped = flipgrid(xdfile.xdfile(contents, fn)).to_unicode().encode("utf-8")
+        print flipped
+        unflipped = flipgrid(xdfile.xdfile(flipped, fn)).to_unicode().encode("utf-8")
+        print unflipped
+        assert unflipped == contents

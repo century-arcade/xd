@@ -16,7 +16,6 @@ def rewrite_corpus(corpus):
         fullfn = xd.filename
 #        outxd = xd.to_unicode(emit_clues=False)
         outxd = flipgrid.flipgrid(xd)
-        outxd.filename = "transposed/" + xd.filename
 #        if collapse_whitespace(outxd) != collapse_whitespace(inxd):
 #            print fullfn, "differs when re-emitted"
         try:

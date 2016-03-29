@@ -8,6 +8,10 @@ import difflib
 import xdfile
 import downloadraw
 import findsimilar
+import flipgrid
+
+flOnePublisher = False
+flTranspose = True
 
 html_header = """
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
@@ -19,7 +23,7 @@ html_header = """
     <meta http-equiv="Content-Type"
           content="text/html; charset=ISO-8859-1" />
     <title>{title}</title>
-    <LINK href="/style.css" rel="stylesheet" type="text/css">
+    <LINK href="style.css" rel="stylesheet" type="text/css">
   </HEAD>
 </head>
 
@@ -65,6 +69,9 @@ def gendiff(xd1, xd2):
 
 
     pct = findsimilar.grid_similarity(xd1, xd2) * 100
+    pcttrans = findsimilar.grid_similarity(xd1, flipgrid.flipgrid(xd2)) * 100
+    if pcttrans > pct:
+        return "", pct
 
     shared = findsimilar.same_answers(xd1, xd2)
    
@@ -75,10 +82,12 @@ def gendiff(xd1, xd2):
 
     hd = difflib.HtmlDiff(linejunk=lambda x: False)
     diff_html = hd.make_table(s1.splitlines(), s2.splitlines(), fromdesc=desc1, todesc=desc2, numlines=False)
+    bothtrans_diff_html = hd.make_table(flipgrid.flipgrid(xd1).to_unicode().splitlines(), flipgrid.flipgrid(xd2).to_unicode().splitlines(), fromdesc=desc1, todesc=desc2, numlines=False)
 
     ret += '<div class="answers"><br/>Shared answers:<br/> %s</div>' % " ".join(shared)
 
     ret += diff_html
+    ret += bothtrans_diff_html
 
     ret += html_footer
 
@@ -105,7 +114,7 @@ def get_index_html(pubid, pubxd, index_list, gridrel):
 
     if gridrel == "earlier":
         out += '<a href="from.html">show similarities to later puzzles instead</a>'
-    else:
+    elif gridrel == "later":
         out += '<a href="index.html">show similarities to earlier puzzles instead</a>'
 
     out += '<ul>'
@@ -122,18 +131,23 @@ def get_index_html(pubid, pubxd, index_list, gridrel):
 if __name__ == "__main__":
 
     OUTPUT_DIR = sys.argv[1]
-    pubid = OUTPUT_DIR.split("/")[-1]
+    if flOnePublisher:
+        pubid = OUTPUT_DIR.split("/")[-1]
+    else:
+        pubid = "transposed"
+
+    pubxd = xdfile.xdfile(file("crosswords/%s/meta.txt" % pubid).read()) # just to parse some cached metadata
 
     if len(sys.argv) > 2:
         similar_txts = sys.argv[2:]
     else:
         similar_txts = [ "crosswords/%s/similar.txt" % pubid ]
+
     try:
         os.makedirs(OUTPUT_DIR)
     except Exception, e:
         print e
 
-    pubxd = xdfile.xdfile(file("crosswords/%s/meta.txt" % pubid).read()) # just to parse some cached metadata
 
     left_index_list =  { } # [(olderfn, newerfn)] -> (pct, index_line)
     right_index_list =  { } # [(olderfn, newerfn)] -> (pct, index_line)
@@ -141,21 +155,22 @@ if __name__ == "__main__":
     for inputfn in similar_txts:
       for line in file(inputfn).read().splitlines():
         if not line: continue
-        parts = line.strip().split(' ', 2)
+        parts = line.strip().split(None, 3)
         if len(parts) == 2:
             fn1, fn2 = parts
         elif len(parts) == 3:
-            fn1, fn2, rest = parts
+            pct, fn1, fn2 = parts
         else:
             print "ERROR in %s: %s" % (inputfn, line)
             continue
 
-        if pubid not in fn1 and pubid not in fn2:
-            continue
+        if not flTranspose:        
+            if pubid not in fn1 and pubid not in fn2:
+                continue
 
         try:
-            abbr, d1 = downloadraw.parse_date_from_filename(fn1)
-            abbr, d2 = downloadraw.parse_date_from_filename(fn2)
+            abbr, d1 = xdfile.parse_date_from_filename(fn1)
+            abbr, d2 = xdfile.parse_date_from_filename(fn2)
             if d2 < d1:
                 fn1, fn2 = fn2, fn1 # always older on left
         except:
@@ -164,9 +179,10 @@ if __name__ == "__main__":
         try:
             xd1 = xdfile.xdfile(file(fn1).read(), fn1)
             xd2 = xdfile.xdfile(file(fn2).read(), fn2)
+            if flTranspose:
+                xd2 = flipgrid.flipgrid(xd2)
         except Exception, e:
-            print str(e)
-            continue
+            print fn1, fn2, type(e), str(e)
             
 
         ret, pct = gendiff(xd1, xd2)
@@ -179,9 +195,13 @@ if __name__ == "__main__":
 
         b1 = xdfile.get_base_filename(fn1)
         b2 = xdfile.get_base_filename(fn2)
+
         outfn = "%s-%s.html" % (b1, b2)
 
-        index_line = '%d%% <a href="%s">%s - %s</a>' % (pct, outfn, b1, b2)
+        if flTranspose:
+            index_line = '%d%% <a href="%s">%s - %s (transposed)</a>' % (pct, outfn, b1, b2)
+        else:
+            index_line = '%d%% <a href="%s">%s - %s</a>' % (pct, outfn, b1, b2)
 
         index_txt = " ".join([ fn1, fn2, str(int(pct))])
 
@@ -195,21 +215,28 @@ if __name__ == "__main__":
             index_line += ' %s' % aut1
 
         added = False
-        if pubid in fn2:
-            right_index_list[(fn1, fn2)] = (pct, index_line, index_txt, b1, b2)
-            added = True
 
-        if pubid in fn1:
-            left_index_list[(fn1, fn2)] = (pct, index_line, index_txt, b1, b2)
+        if flOnePublisher:
+            if pubid in fn2:
+                right_index_list[(fn1, fn2)] = (pct, index_line, index_txt, b1, b2)
+                added = True
+
+            if pubid in fn1:
+                left_index_list[(fn1, fn2)] = (pct, index_line, index_txt, b1, b2)
+                added = True
+        else:
+            right_index_list[(fn1, fn2)] = (pct, index_line, index_txt, b1, b2)
             added = True
     
         if added:
             file(OUTPUT_DIR + "/" + outfn, 'w').write(ret.encode("utf-8"))
 
+    file("%s/index.html" % OUTPUT_DIR, 'w').write(get_index_html(pubid, pubxd, right_index_list, "earlier" + (flTranspose and " " or "")))
 
 
-    file("%s/index.html" % OUTPUT_DIR, 'w').write(get_index_html(pubid, pubxd, right_index_list, "earlier"))
-    file("%s/from.html" % OUTPUT_DIR, 'w').write(get_index_html(pubid, pubxd, left_index_list, "later"))
+    if flOnePublisher:
+        file("%s/from.html" % OUTPUT_DIR, 'w').write(get_index_html(pubid, pubxd, left_index_list, "later"))
+
     with file("%s/index.txt" % OUTPUT_DIR, 'w') as f:
         for pct, L, Ltxt, b1, b2 in sorted(left_index_list.values(), reverse=True):
             if pct < 25:
