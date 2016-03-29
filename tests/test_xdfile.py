@@ -1,5 +1,7 @@
 """This is test_xdfile.py"""
 
+import datetime
+
 import src.xdfile as xdfile
 
 test_selection = 'nyt1955-01-01.xd'
@@ -12,7 +14,7 @@ def test_filename():
 
 
 def test_parse_date():
-    import datetime
+
     date = xdfile.parse_date_from_filename(test_selection)
     assert isinstance(date, tuple)
     assert date[0] == 'nyt'
