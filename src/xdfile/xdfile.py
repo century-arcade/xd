@@ -167,7 +167,7 @@ class xdfile:
             self.parse_xd(xd_contents.decode("utf-8"))
 
     def __str__(self):
-        return self.filename
+        return self.filename or ""
 
     def get_header(self, fieldname):
         v = self.headers.get(fieldname)
@@ -194,11 +194,53 @@ class xdfile:
         else:
             self.headers[fieldname] = [value]
 
+    def get_clue_for_answer(self, target):
+        for pos, clue, answer in self.clues:
+            if answer == target:
+                return clue
+#        assert False, target
+
     def get_clue(self, clueid):
         for pos, clue, answer in self.clues:
             posdir, n = pos
             if clueid == posdir + str(n):
                 return clue
+
+    def cell(self, r, c):
+        if r < 0 or c < 0 or r >= len(self.grid) or c >= len(self.grid[0]):
+            return BLOCK_CHAR
+        return self.grid[r][c]
+
+    def iteranswers(self):
+        clue_num = 1
+        for r, row in enumerate(self.grid):
+            for c, cell in enumerate(row):
+                # compute number shown in box
+                new_clue = False
+                if self.cell(r, c-1) == BLOCK_CHAR:  # across clue start
+                    j = 0
+                    answer = ""
+                    while self.cell(r, c+j) != BLOCK_CHAR:
+                        answer += self.cell(r, c+j)
+                        j += 1
+
+                    if len(answer) > 1:
+                        new_clue = True
+                        yield "A", clue_num, answer
+
+                if self.cell(r-1, c) == BLOCK_CHAR:  # down clue start
+                    j = 0
+                    answer = ""
+                    while self.cell(r+j, c) != BLOCK_CHAR:
+                        answer += self.cell(r+j, c)
+                        j += 1
+
+                    if len(answer) > 1:
+                        new_clue = True
+                        yield "D", clue_num, answer
+
+                if new_clue:
+                    clue_num += 1
 
     def get_answer(self, clueid):
         for pos, clue, answer in self.clues:
@@ -307,7 +349,7 @@ class xdfile:
                     r += EOL
                 prevdir = cluedir
 
-                r += u"%s%s. %s ~ %s" % (cluedir, cluenum, clue.strip(), answer)
+                r += u"%s%s. %s ~ %s" % (cluedir, cluenum, (clue or "[XXX]").strip(), answer)
                 r += EOL
 
             if self.notes:

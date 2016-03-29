@@ -94,37 +94,10 @@ def parse_puz(contents, filename):
         xd.grid.append(rowstr)
 
     # clues
-    answers = {}
-    clue_num = 1
-
-    for r, row in enumerate(xd.grid):
-        for c, cell in enumerate(row):
-                # compute number shown in box
-                new_clue = False
-                if is_block(puzzle, c - 1, r):  # across clue start
-                    j = 0
-                    answer = ""
-                    while not is_block(puzzle, c + j, r):
-                        answer += puzzle[c + j, r].solution
-                        j += 1
-
-                    if len(answer) > 1:
-                        new_clue = True
-                        answers["A" + str(clue_num)] = answer
-
-                if is_block(puzzle, c, r - 1):  # down clue start
-                    j = 0
-                    answer = ""
-                    while not is_block(puzzle, c, r + j):
-                        answer += puzzle[c, r + j].solution
-                        j += 1
-
-                    if len(answer) > 1:
-                        new_clue = True
-                        answers["D" + str(clue_num)] = answer
-
-                if new_clue:
-                    clue_num += 1
+    answers = { }
+    
+    for posdir, posnum, answer in xd.iteranswers():
+        answers[posdir[0] + str(posnum)] = answer
 
     for number, clue in puzzle.clues.across():
         xd.clues.append((("A", number), decode(clue), answers["A" + str(number)]))
