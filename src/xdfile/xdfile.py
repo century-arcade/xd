@@ -380,10 +380,10 @@ def get_base_filename(fn):
 g_corpus = None
 
 
-def corpus():
+def corpus(corpusdir=""):
     global g_corpus
     if g_corpus is None:
-        g_corpus = load_corpus("crosswords")  # "xd-grids-2016.xdz")
+        g_corpus = load_corpus(corpusdir or "crosswords")  # "xd-grids-2016.xdz")
 
     return sorted(g_corpus.values(), key=lambda xd: xd.filename)
 
@@ -481,7 +481,7 @@ def main_load():
     return corpus
 
 
-def save_file(xd):
+def save_file(xd, outf):
     try:
         abbr, year, month, day, rest = parse_filename(xd.filename.lower())
         if not xd.get_header("Date"):
@@ -500,11 +500,12 @@ def save_file(xd):
     if args.toplevel:
         fullfn = "%s/%s/%s.xd" % (args.toplevel, "/".join(path.split("/")[1:]), base)
     else:
-        base, ext = os.path.splitext(fullfn)
         fullfn = base + ".xd"
 
     xd.filename = fullfn
     clean_headers(xd)
+
+    outfn = xd.filename
 
     xdstr = xd.to_unicode().encode("utf-8")
 
@@ -533,6 +534,7 @@ def save_file(xd):
         file(outfn, "w-").write(xdstr)
 
 def main_parse(parserfunc):
+    global args
 
     parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
     parser.add_argument('path', type=str, nargs='+', help='files, .zip, or directories to be converted')
@@ -570,7 +572,7 @@ def main_parse(parserfunc):
             if args.metadata_only:
                 print metadata_row(xd)
             else:
-                save_file(xd)
+                save_file(xd, outf)
         except Exception, e:
             if args.debug:
                 raise
