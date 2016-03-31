@@ -72,9 +72,7 @@ def get_dates_between(from_date, to_date, days_to_advance=None):
     if from_date == to_date:
         return []
     elif from_date > to_date:
-        temp = from_date
-        from_date = to_date
-        to_date = from_date
+        from_date, to_date = to_date, from_date
 
     days_diff = (to_date - from_date).days + 1
     return [from_date + datetime.timedelta(days=x) for x in range(days_to_advance, days_diff, days_to_advance)]
@@ -136,7 +134,7 @@ def download_recent(zipfn, u, first_date=None, last_date=None, ndays=None):
             print
 
         except (urllib2.HTTPError, urllib2.URLError) as err:
-            print '[%s] %s' %(err.code, err.reason)
+            print '[%s] %s' % (err.code, err.reason)
         except Exception, e:
             print e
 

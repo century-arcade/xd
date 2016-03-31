@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import downloadraw
 import xdfile
 
 corpus = xdfile.main_load()
@@ -21,7 +20,7 @@ for filename, xd in sorted(corpus.items()):
              "editors": set(),
              "authors": set(),
              "num": set(),
-            }
+        }
         publishers[abbrid] = v
     else:
         v = publishers[abbrid]

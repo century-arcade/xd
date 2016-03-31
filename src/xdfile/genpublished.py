@@ -7,7 +7,7 @@ import downloadraw
 SEP = "\t"
 
 print SEP.join(["pubid", "pubvol", "Date",
-                "Title", "Author", "Editor",])
+                "Title", "Author", "Editor"])
 
 corpus = xdfile.main_load()
 
