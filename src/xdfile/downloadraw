@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 
+import sys
+import argparse
 import os.path
 import datetime
 import zipfile
 import urllib2
+
+import xdfile
 
 
 class PuzzleUrl:
@@ -13,7 +17,7 @@ class PuzzleUrl:
         self.abbr = abbr
         self.dirname = dirname
         self.urlfmt = urlfmt
-    
+
     def filename(self, date):
         datestr = date.strftime("%Y-%m-%d")
         return "%s%s.%s" % (self.abbr, datestr, self.ext)
@@ -29,31 +33,36 @@ class PuzzleUrl:
 
 
 DAILY_PUZZLE_URLS = [
-    PuzzleUrl(7, 'xml', 'can', 'canadian',  'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_canadian/source/can%y%m%d-data.xml'),
+    PuzzleUrl(7, 'xml', 'can', 'canadian', 'http://v1.theglobeandmail.com/v5/content/puzzles/crossword_canadian/source/can%y%m%d-data.xml'),
     PuzzleUrl(7, 'puz', 'chr', 'chronicle', 'http://chronicle.com/items/biz/puzzles/%Y%m%d.puz'),
-    PuzzleUrl(7, 'xml', 'wap', 'wapost',    'https://washingtonpost.as.arkadiumhosted.com/clients/washingtonpost-content/SundayCrossword/ebirnholz_%y%m%d.xml'),
+    PuzzleUrl(7, 'xml', 'wap', 'wapost', 'https://washingtonpost.as.arkadiumhosted.com/clients/washingtonpost-content/SundayCrossword/ebirnholz_%y%m%d.xml'),
     PuzzleUrl(1, 'xml', 'up', 'universal', 'http://picayune.uclick.com/comics/fcx/data/fcx%y%m%d-data.xml'),
-    PuzzleUrl(1, 'html', 'nyt', 'nytimes',  'http://www.xwordinfo.com/PS?date=%-m/%-d/%Y'),
-    PuzzleUrl(1, 'xml', 'lat', 'latimes',   'http://cdn.games.arkadiumhosted.com/latimes/assets/DailyCrossword/la%y%m%d.xml'),
-    PuzzleUrl(1, 'xml', 'usa', 'usatoday',  'http://www.uclick.com/puzzles/usaon/data/usaon%y%m%d-data.xml'),
-    PuzzleUrl(1, 'pdf', 'wsj', 'wsj',       'http://www.wsj.com/public/resources/documents/puzzle%Y%m%d.pdf'),
-    PuzzleUrl(1, 'pdf', 'new', 'newsday',   'http://www.brainsonly.com/servlets-newsday-crossword/newsdaycrosswordPDF?pm=pdf&data=%%3CNAME%%3E' + '%y%m%d' + '%%3C%%2FNAME%%3E%%3CTYPE%%3E2%%3C%%2FTYPE%%3E'),
+    PuzzleUrl(1, 'html', 'nyt', 'nytimes', 'http://www.xwordinfo.com/PS?date=%-m/%-d/%Y'),
+    PuzzleUrl(1, 'xml', 'lat', 'latimes', 'http://cdn.games.arkadiumhosted.com/latimes/assets/DailyCrossword/la%y%m%d.xml'),
+    PuzzleUrl(1, 'xml', 'usa', 'usatoday', 'http://www.uclick.com/puzzles/usaon/data/usaon%y%m%d-data.xml'),
+    PuzzleUrl(1, 'pdf', 'wsj', 'wsj', 'http://www.wsj.com/public/resources/documents/puzzle%Y%m%d.pdf'),
+    PuzzleUrl(1, 'pdf', 'new', 'newsday', 'http://www.brainsonly.com/servlets-newsday-crossword/newsdaycrosswordPDF?pm=pdf&data=%%3CNAME%%3E' + '%y%m%d' + '%%3C%%2FNAME%%3E%%3CTYPE%%3E2%%3C%%2FTYPE%%3E'),
 ]
+
 
 def today():
     d = datetime.datetime.today()
     return datetime.date(d.year, d.month, d.day)
 
+
 def date_from_string(s):
     return datetime.datetime.strptime(s, "%Y-%m-%d")
 
+
 def date_to_string(d):
     return d.strftime("%Y-%m-%d")
+
 
 def get_source(abbr):
     for p in DAILY_PUZZLE_URLS:
         if abbr == p.abbr:
             return p
+
 
 # not including the from_date
 def get_dates_between(from_date, to_date, days_to_advance=None):
@@ -61,20 +70,19 @@ def get_dates_between(from_date, to_date, days_to_advance=None):
         days_to_advance = 1
 
     if from_date == to_date:
-        return [ ]
+        return []
     elif from_date > to_date:
-        temp = from_date
-        from_date = to_date
-        to_date = from_date
+        from_date, to_date = to_date, from_date
 
     days_diff = (to_date - from_date).days + 1
     return [from_date + datetime.timedelta(days=x) for x in range(days_to_advance, days_diff, days_to_advance)]
+
 
 def latest_date_in_zip(zipfn):
     first_date = None
 
     try:
-        existing_dates = [ ]
+        existing_dates = []
         with zipfile.ZipFile(zipfn, 'r') as rawzf:
             for zi in rawzf.infolist():
                 abbr, d = xdfile.parse_date_from_filename(zi.filename)
@@ -86,6 +94,7 @@ def latest_date_in_zip(zipfn):
         print "***", zipfn, e
 
     return first_date
+
 
 def download_recent(zipfn, u, first_date=None, last_date=None, ndays=None):
     if not last_date:
@@ -125,11 +134,12 @@ def download_recent(zipfn, u, first_date=None, last_date=None, ndays=None):
             print
 
         except (urllib2.HTTPError, urllib2.URLError) as err:
-            print '[%s] %s' %(err.code, err.reason)
+            print '[%s] %s' % (err.code, err.reason)
         except Exception, e:
             print e
 
     return nsaved
+
 
 def download_all():
     today_date = today()
@@ -138,8 +148,9 @@ def download_all():
         fnzip = u.rawzip(today_date)
         download_recent(fnzip, u)
 
+
 def main():
-    import argparse
+
     parser = argparse.ArgumentParser(description='download puzzles by date')
     parser.add_argument('path', type=str, nargs='*', help='.zips to be processed')
 
@@ -151,17 +162,15 @@ def main():
 
     today_date = today()
 
-    import sys
-
     if args.path:
         for fqpnzip in args.path:
             pathzip, fnzip = os.path.split(fqpnzip)
-            sources = [ u for u in DAILY_PUZZLE_URLS if u.rawzip(today_date) == fnzip ]
+            sources = [u for u in DAILY_PUZZLE_URLS if u.rawzip(today_date) == fnzip]
             assert len(sources) == 1
             if not download_recent(fqpnzip, sources[0]):
                 sys.exit(1)  # 'error' so that that the file isn't reuploaded by the calling script
     else:
-        sources = [ u for u in DAILY_PUZZLE_URLS if args.source in ( u.dirname, u.abbr ) ]
+        sources = [u for u in DAILY_PUZZLE_URLS if args.source in (u.dirname, u.abbr)]
         assert len(sources) == 1
         u = sources[0]
         from_date = date_from_string(args.from_date)
@@ -172,4 +181,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

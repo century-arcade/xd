@@ -1,15 +1,17 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8
 
 import sys
 import os
 import re
 import datetime
-import os.path
-import stat
+# import stat
 import string
 import zipfile
+import argparse
+
 import utils
+
 
 def log(s):
     sys.stdout.flush()
@@ -19,7 +21,8 @@ def log(s):
 BLOCK_CHAR = '#'
 EOL = '\n'
 SECTION_SEP = EOL + EOL
-HEADER_ORDER = [ 'title', 'author', 'editor', 'copyright', 'date', 'special', 'rebus', 'cluegroup', 'description' ]
+HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'date',
+                'special', 'rebus', 'cluegroup', 'description']
 
 publishers = {
     'unk': 'unknown',
@@ -67,8 +70,9 @@ publishers = {
     'ana': 'nytimes',
 }
 
-unknownpubs = { }
-all_files = { }
+unknownpubs = {}
+all_files = {}
+
 
 def clean_headers(xd):
     for hdr in xd.headers.keys():
@@ -80,7 +84,8 @@ def clean_headers(xd):
     rights = xd.get_header("Copyright") or ""
 
     if author:
-        m = re.search(r'(?i)(?:(?:By )*(.+)(?:[;/,-]|and) *)?(?:edited|Editor|(?<!\w)Ed[.])(?: By)*(.*)', author)
+        r = r'(?i)(?:(?:By )*(.+)(?:[;/,-]|and) *)?(?:edited|Editor|(?<!\w)Ed[.])(?: By)*(.*)'
+        m = re.search(r, author)
         if m:
             author, editor = m.groups()
 
@@ -134,6 +139,7 @@ def clean_headers(xd):
         if d:
             xd.set_header("Date", d.strftime("%Y-%m-%d"))
 
+
 def parse_date_from_filename(fn):
     m = re.search("(\w*)([12]\d{3})-(\d{2})-(\d{2})", fn)
     if m:
@@ -146,13 +152,14 @@ def parse_date_from_filename(fn):
         return abbr.lower(), dt
     else:
         return fn[:3].lower(), None
-        
+
+
 class xdfile:
     def __init__(self, xd_contents=None, filename=None):
         self.filename = filename
-        self.headers = { } # [key] -> value or list of values 
-        self.grid = [ ] # list of string rows
-        self.clues = [ ] # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
+        self.headers = {}  # [key] -> value or list of values
+        self.grid = []  # list of string rows
+        self.clues = []  # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
         self.notes = ""
         self.orig_contents = xd_contents
 
@@ -185,7 +192,7 @@ class xdfile:
             assert type(self.headers[fieldname]) == list
             self.headers[fieldname].append(value)
         else:
-            self.headers[fieldname] = [ value ]
+            self.headers[fieldname] = [value]
 
     def get_clue(self, clueid):
         for pos, clue, answer in self.clues:
@@ -229,10 +236,10 @@ class xdfile:
                 if ":" in line:
                     k, v = line.split(":", 1)
                     k, v = k.strip(), v.strip()
-                    
+
                     if k in self.headers:
                         if isinstance(self.headers[k], basestring):
-                            self.headers[k] = [ self.headers[k], v ]
+                            self.headers[k] = [self.headers[k], v]
                         else:
                             self.headers[k].append(v)
                     else:
@@ -249,7 +256,7 @@ class xdfile:
                 answer_idx = line.rfind("~")
                 if answer_idx > 0:
                     clue = line[:answer_idx]
-                    answer = line[answer_idx+1:]
+                    answer = line[answer_idx + 1:]
                 else:
                     clue, answer = line, ""
 
@@ -257,7 +264,7 @@ class xdfile:
 
                 assert clue_idx > 0, "no clue number: " + clue
                 pos = clue[:clue_idx].strip()
-                clue = clue[clue_idx+1:]
+                clue = clue[clue_idx + 1:]
 
                 if pos[0] in string.uppercase:
                     cluedir = pos[0]
@@ -267,7 +274,7 @@ class xdfile:
                     cluenum = pos
 
                 self.clues.append(((cluedir, cluenum), clue.strip(), answer.strip()))
-            else: # anything remaining
+            else:  # anything remaining
                 if line:
                     self.notes += line + EOL
 
@@ -275,12 +282,12 @@ class xdfile:
         # headers (section 1)
 
         r = u""
-        for k, v in sorted([ (x, y) for x,y in self.headers.items() ] , key=lambda i: i[0].lower() in HEADER_ORDER and HEADER_ORDER.index(i[0].lower() or 1000)):
+        for k, v in sorted([(x, y) for x, y in self.headers.items()], key=lambda i: i[0].lower() in HEADER_ORDER and HEADER_ORDER.index(i[0].lower() or 1000)):
             if not isinstance(v, list):
-                values = [ v ]
+                values = [v]
             else:
                 values = v
-               
+
             for i in values:
                 r += "%s: %s" % (k, i)
                 r += EOL
@@ -321,6 +328,7 @@ class xdfile:
 
         return r
 
+
 def get_base_filename(fn):
     path, b = os.path.split(fn)
     b, ext = os.path.splitext(b)
@@ -329,15 +337,17 @@ def get_base_filename(fn):
 
 g_corpus = None
 
+
 def corpus():
     global g_corpus
     if g_corpus is None:
-        g_corpus = load_corpus("crosswords")# "xd-grids-2016.xdz")
+        g_corpus = load_corpus("crosswords")  # "xd-grids-2016.xdz")
 
     return sorted(g_corpus.values(), key=lambda xd: xd.filename)
-    
+
+
 def load_corpus(*pathnames):
-    ret = { }
+    ret = {}
 
     n = 0
     for fullfn, contents in utils.find_files(*pathnames):
@@ -354,7 +364,7 @@ def load_corpus(*pathnames):
             ret[basefn] = xd
         except Exception, e:
             print unicode(e)
-            #if args.debug:
+            # if args.debug:
             #    raise
 
     print >>sys.stderr, ""
@@ -363,8 +373,9 @@ def load_corpus(*pathnames):
 
 SEP = "\t"
 
+
 def metadata_header():
-    return SEP.join([ 
+    return SEP.join([
         "pubid",
         "pubvol",
         "Date",
@@ -372,6 +383,7 @@ def metadata_header():
         "Author",
         "Editor",
     ])
+
 
 def metadata_line(xd):
     abbrid, d = parse_date_from_filename(xd.filename)
@@ -388,6 +400,7 @@ def metadata_line(xd):
 
     assert SEP not in "".join(fields), fields
     return SEP.join(fields).encode("utf-8")
+
 
 def parse_filename(fn):
     import re
@@ -409,8 +422,10 @@ def parse_filename(fn):
 #        print "%s %d-%02d-%02d" % (abbr, year, mon, day)
         return abbr, year, mon, day, "".join(rest.split())[:3]
 
+
 def xd_filename(pubid, pubabbr, year, mon, day, unique=""):
     return "crosswords/%s/%s/%s%s-%02d-%02d%s.xd" % (pubid, year, pubabbr, year, mon, day, unique)
+
 
 def main_load():
     corpus = load_corpus(*sys.argv[1:])
@@ -422,6 +437,7 @@ def main_load():
         log("%s puzzles" % len(corpus))
 
     return corpus
+
 
 def save_file(xd):
     try:
@@ -439,7 +455,6 @@ def save_file(xd):
         year, month, day = 1980, 1, 1
         outfn = "crosswords/misc/%s.xd" % base
 
-        
     if args.toplevel:
         fullfn = "%s/%s/%s.xd" % (args.toplevel, "/".join(path.split("/")[1:]), base)
     else:
@@ -476,9 +491,6 @@ def save_file(xd):
         file(outfn, "w-").write(xdstr)
 
 def main_parse(parserfunc):
-    import os.path
-    import sys
-    import argparse
 
     parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
     parser.add_argument('path', type=str, nargs='+', help='files, .zip, or directories to be converted')
@@ -502,7 +514,8 @@ def main_parse(parserfunc):
         print "\r" + fullfn,
         path, fn = os.path.split(fullfn)
         base_orig, ext = os.path.splitext(fn)
-        base = "".join([ c for c in base_orig.lower() if c in string.lowercase or c in string.digits ])
+        base = "".join([c for c in base_orig.lower()
+                        if c in string.lowercase or c in string.digits])
         if base != base_orig:
             print base_orig, base
         try:
@@ -523,7 +536,6 @@ def main_parse(parserfunc):
                 log("error: %s: %s" % (str(e), type(e)))
                 continue
 
-
         if abbr and abbr not in publishers:
             rights = xd.get_header("Copyright")
             if rights:
@@ -531,7 +543,6 @@ def main_parse(parserfunc):
                 if abbr not in unknownpubs:
                     unknownpubs[abbr] = set()
                 unknownpubs[abbr].add(rights.strip())
-
 
     for k, v in unknownpubs.items():
         print k, "\n".join(v)

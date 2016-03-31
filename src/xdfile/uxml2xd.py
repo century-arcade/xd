@@ -6,12 +6,14 @@ from lxml import etree
 
 import xdfile
 
+
 def udecode(s):
     t = unquote(s)
     try:
         return unicode(t.decode("utf-8"))
     except:
         return unicode(t)
+
 
 def parse_uxml(content, filename):
     POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright', 'Category']
@@ -22,7 +24,7 @@ def parse_uxml(content, filename):
         try:
             content = content.decode("cp1252")
         except:
-            pass # last ditch effort, just try the original string
+            pass  # last ditch effort, just try the original string
 
     content = content.replace("&", "&amp;")
     content = content.replace('"<"', '"&lt;"')
@@ -30,12 +32,13 @@ def parse_uxml(content, filename):
     content = content.replace("\x12", "'")  # ^R seems to be '
     content = content.replace("\x05", "'")  # ^E seems to be junk
 
-    content = re.sub(r'=""(\S)', r'="&quot;\1', content) # one case has c=""foo"".  sheesh
+    content = re.sub(r'=""(\S)', r'="&quot;\1', content)  # one case has c=""foo"".  sheesh
     content = re.sub(r'(\.)""', r'\1&quot;"', content)
 
     try:
         root = etree.fromstring(content)
     except:
+        # TODO: catch the specific exception
         xml = re.search(r"<(\w+).*?</\1>", content, flags=re.DOTALL).group()
         root = etree.fromstring(xml)
 
@@ -58,13 +61,13 @@ def parse_uxml(content, filename):
     all_answers = all_answers.replace('-', xdfile.BLOCK_CHAR)
     index = 0
     while index < len(all_answers):
-        row = all_answers[index:index+cols]
+        row = all_answers[index:index + cols]
         xd.grid.append(u"".join(row))
         index += cols
 
     # add clues
     for clue_type in ('across', 'down'):
-        for clue in root.xpath('//crossword/'+clue_type)[0].getchildren():
+        for clue in root.xpath('//crossword/' + clue_type)[0].getchildren():
             number = int(clue.attrib['cn'])
             text = udecode(clue.attrib['c'].strip())
             solution = clue.attrib['a'].strip()
@@ -74,4 +77,3 @@ def parse_uxml(content, filename):
 
 if __name__ == "__main__":
     xdfile.main_parse(parse_uxml)
-

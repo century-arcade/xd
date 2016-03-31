@@ -3,6 +3,7 @@ import os
 import stat
 import zipfile
 
+
 def find_files(*paths):
     for path in paths:
         if stat.S_ISDIR(os.stat(path).st_mode):
@@ -14,7 +15,6 @@ def find_files(*paths):
                         yield f, c
         else:
             try:
-                import zipfile
                 with zipfile.ZipFile(path, 'r') as zf:
                     for zi in zf.infolist():
                         fullfn = zi.filename
@@ -24,5 +24,3 @@ def find_files(*paths):
                 fullfn = path
                 contents = file(path).read()
                 yield fullfn, contents
-
-

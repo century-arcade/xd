@@ -2,18 +2,20 @@
 
 import xdfile
 
+
 def get_col(g, n):
-    return "".join([ r[n] for r in g ])
+    return "".join([r[n] for r in g])
+
 
 def flipgrid(xd):
     flipxd = xdfile.xdfile()
     flipxd.headers = xd.headers.copy()
-    g = [ ]
+    g = []
     for i in xrange(len(xd.grid[0])):
         g.append(get_col(xd.grid, i))
 
     flipxd.grid = g
-    
+
     for pos, clue, answer in xd.clues:
         posdir, n = pos
         if posdir == 'A':

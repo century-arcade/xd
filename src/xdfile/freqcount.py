@@ -3,7 +3,7 @@
 import xdfile
 import string
 
-freqdist = { }
+freqdist = {}
 corpus = xdfile.main_load()
 
 ok = string.uppercase + string.digits + "#"

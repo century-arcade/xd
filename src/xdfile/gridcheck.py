@@ -1,22 +1,24 @@
 #!/usr/bin/env python
 
-import os
+# import os
 import sys
+# import itertools
 
-import itertools
 import puz2xd
+
 
 class xdfile:
     def __init__(self, filename=None):
         self.filename = filename
-        self.headers = { } # [key] -> value or list of values 
-        self.grid = [ ] # list of string rows
-        self.clues = [ ] # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
+        self.headers = {}  # [key] -> value or list of values
+        self.grid = []  # list of string rows
+        self.clues = []  # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
         self.notes = ""
         self.orig_contents = xd_contents
 
         if xd_contents:
             self.parse_xd(xd_contents.decode("utf-8"))
+
 
 def parse_xd(xd_contents, fn):
     xd = xdfile(fn)
@@ -45,24 +47,24 @@ def parse_xd(xd_contents, fn):
                 subsection += 1
                 nblanklines = 0
 
-        if section == 1: # headers first
+        if section == 1:  # headers first
             assert ":" in line, line
 
             k, v = line.split(":", 1)
             k, v = k.strip(), v.strip()
-               
+
             assert k not in xd.headers, k
             xd.headers[k] = v
 
-        elif section == 2: # grid second
+        elif section == 2:  # grid second
             assert xd.headers, "no headers"
             xd.grid.append(line)
 
-        elif section == 3: # clues third
+        elif section == 3:  # clues third
             answer_idx = line.rfind("~")
             if answer_idx > 0:
                 clue = line[:answer_idx]
-                answer = line[answer_idx+1:]
+                answer = line[answer_idx + 1:]
             else:
                 clue, answer = line, ""
 
@@ -70,7 +72,7 @@ def parse_xd(xd_contents, fn):
 
             assert clue_idx > 0, "no clue number: " + clue
             pos = clue[:clue_idx].strip()
-            clue = clue[clue_idx+1:]
+            clue = clue[clue_idx + 1:]
 
             if pos[0] in string.uppercase:
                 cluedir = pos[0]
@@ -81,10 +83,11 @@ def parse_xd(xd_contents, fn):
 
             xd.clues.append(((cluedir, cluenum), clue.strip(), answer.strip()))
 
-        else: # notes last
+        else:  # notes last
             xd.notes += line.strip() + EOL
 
     return xd
+
 
 def parse_puz(contents, filename):
     rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
@@ -109,13 +112,14 @@ def parse_puz(contents, filename):
 
     xd.set_header("Title", puzobj.title)
 
-    rebus = { }
+    rebus = {}
     r = puzobj.rebus()
     if r.has_rebus():
         print puzobj.extensions
         for pair in puzobj.extensions["RTBL"].split(";"):
             pair = pair.strip()
-            if not pair: continue
+            if not pair:
+                continue
             k, v = pair.split(":")
             rebus[k] = v
 
@@ -140,7 +144,7 @@ def parse_puz(contents, filename):
                     cell.solution = rebus[c]
                 else:
                     if cell.solution not in grid_dict:
-#                        grid_dict[cell.solution] = rebus_shorthands.pop()
+                        # grid_dict[cell.solution] = rebus_shorthands.pop()
                         print " odd character '%s'" % cell.solution
                         rowstr += cell.solution
                     else:
@@ -148,48 +152,47 @@ def parse_puz(contents, filename):
 
         xd.grid.append(rowstr)
 
-
     # clues
-
-    answers = { }
+    answers = {}
     clue_num = 1
 
     for r, row in enumerate(xd.grid):
         for c, cell in enumerate(row):
                 # compute number shown in box
                 new_clue = False
-                if is_block(puzzle, c-1, r):  # across clue start
+                if is_block(puzzle, c - 1, r):  # across clue start
                     j = 0
                     answer = ""
-                    while not is_block(puzzle, c+j, r):
-                        answer += puzzle[c+j, r].solution
+                    while not is_block(puzzle, c + j, r):
+                        answer += puzzle[c + j, r].solution
                         j += 1
 
                     if len(answer) > 1:
                         new_clue = True
-                        answers["A"+str(clue_num)] = answer
+                        answers["A" + str(clue_num)] = answer
 
-                if is_block(puzzle, c, r-1):  # down clue start
+                if is_block(puzzle, c, r - 1):  # down clue start
                     j = 0
                     answer = ""
-                    while not is_block(puzzle, c, r+j):
-                        answer += puzzle[c, r+j].solution
+                    while not is_block(puzzle, c, r + j):
+                        answer += puzzle[c, r + j].solution
                         j += 1
 
                     if len(answer) > 1:
                         new_clue = True
-                        answers["D"+str(clue_num)] = answer
+                        answers["D" + str(clue_num)] = answer
 
                 if new_clue:
                     clue_num += 1
 
     for number, clue in puzzle.clues.across():
-        xd.clues.append((("A", number), decode(clue), answers["A"+str(number)]))
+        xd.clues.append((("A", number), decode(clue), answers["A" + str(number)]))
 
     for number, clue in puzzle.clues.down():
-        xd.clues.append((("D", number), decode(clue), answers["D"+str(number)]))
+        xd.clues.append((("D", number), decode(clue), answers["D" + str(number)]))
 
     return xd
+
 
 def find_files(*paths):
     import os
@@ -216,7 +219,6 @@ def find_files(*paths):
                 yield fullfn, contents
 
 
-
 def num_equal_cells(a, b):
     ncells = 0
     nblocks = 0
@@ -227,13 +229,14 @@ def num_equal_cells(a, b):
         for i in xrange(len(row1)):
             c1 = row1[i]
             c2 = row2[i]
-        
+
             if c1 == c2:
                 ncells += 1
                 if c1 == '#':
                     nblocks += 1
 
     return ncells, nblocks
+
 
 def find_similar_to(needle, haystack, min_pct=0.3):
     nrows = len(needle.grid)
@@ -245,13 +248,11 @@ def find_similar_to(needle, haystack, min_pct=0.3):
             continue
 
         nmatch, nblocks = num_equal_cells(needle, xd)
-        
+
         pct = (nmatch - nblocks) / (ncells - nblocks)
 
         if pct >= min_pct:
             yield pct, xd
-
-def lo
 
 if __name__ == "__main__":
     corpus = load_corpus("xd-grids-2016.xdz")
@@ -266,8 +267,7 @@ if __name__ == "__main__":
             ndups += 1
             bparts = str(b).split("/")
             bid = "%s/%s" % (bparts[1], bparts[-1])
-            print("\t".join(unicode(x) for x in [ needle, bid, int(pct*100), b.get_header("Copyright"), b.get_header("Title"), b.get_header("Author"), b.get_header("Editor"),  ]).encode("utf-8"))
+            print("\t".join(unicode(x) for x in [needle, bid, int(pct * 100), b.get_header("Copyright"), b.get_header("Title"), b.get_header("Author"), b.get_header("Editor"),]).encode("utf-8"))
 
         if ndups == 0:
-            print("\t".join(unicode(x) for x in [ needle, "None" ]))
- 
+            print("\t".join(unicode(x) for x in [needle, "None"]))
