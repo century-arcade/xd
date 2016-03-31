@@ -3,5 +3,4 @@
 .tox/*
 .eggs/*
 .cache/
-xd.egg*
-xdfile.*
+xd*egg*
