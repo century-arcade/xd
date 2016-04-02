@@ -33,7 +33,7 @@ BLOCK_CHAR = '#'
 EOL = '\n'
 SECTION_SEP = EOL + EOL
 HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'date',
-                'special', 'rebus', 'cluegroup', 'description']
+                'relation', 'special', 'rebus', 'cluegroup', 'description', 'notes']
 
 publishers = {
     'unk': 'unknown',
@@ -87,7 +87,10 @@ all_files = {}
 
 def clean_headers(xd):
     for hdr in xd.headers.keys():
-        assert hdr in "Title Author Editor Copyright Date Rebus Notes".split(), hdr
+        if hdr in [ "Source", "Identifier", "Acquired", "Issued", "Category" ]:
+            xd.set_header(hdr, None)
+        else:
+            assert hdr.lower() in HEADER_ORDER, hdr
 
     title = xd.get_header("Title") or ""
     author = xd.get_header("Author") or ""
@@ -122,6 +125,9 @@ def clean_headers(xd):
 
     author = author.strip()
     editor = editor.strip()
+
+    if title.endswith(']'):
+        title = title[:title.rfind('[')]
 
 #    rights = rights.replace(u"©", "(c)")
 
@@ -473,10 +479,13 @@ def xd_metadata(xd):
     abbrid, d = parse_date_from_filename(xd.filename)
     pubid = xd.filename.split("/")[1]
 
+    yearstr = d and str(d.year) or ""
+    datestr = d and d.strftime("%Y-%m-%d") or ""
+
     fields = [
         pubid,
-        abbrid + str(d.year),
-        xd.get_header("Date") or d.strftime("%Y-%m-%d"),
+        abbrid + yearstr,
+        xd.get_header("Date") or datestr,
         xd.get_header("Title") or "",
         xd.get_header("Author") or "",
         xd.get_header("Editor") or "",
