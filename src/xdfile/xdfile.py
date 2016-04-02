@@ -14,11 +14,14 @@ import argparse
 
 import utils
 
+SEP = "\t"
+
 
 def log(s):
     sys.stdout.flush()
     sys.stderr.flush()
     print(" " + s, file=sys.stderr)
+
 
 def progress(n, rest=""):
     if n % 100 == 0:
@@ -424,9 +427,10 @@ def corpus(corpusdir=""):
             except Exception, e:
                 log(unicode(e))
                 if args.debug:
-                   raise
+                    raise
 
         progress(-1)
+
 
 def load_corpus(*pathnames):
     ret = {}
@@ -447,13 +451,12 @@ def load_corpus(*pathnames):
         except Exception, e:
             log(unicode(e))
             if args.debug:
-               raise
+                raise
 
     progress()
 
     return ret
 
-SEP = "\t"
 
 def xd_metadata_header():
     return SEP.join([

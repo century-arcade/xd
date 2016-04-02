@@ -6,6 +6,7 @@ import xdfile
 
 SEP = '\t'
 
+
 def clean_set(s):
     try:
         s.remove(None)
@@ -15,6 +16,7 @@ def clean_set(s):
         s.remove("")
     except:
         pass
+
 
 class Publisher:
     def __init__(self, abbrid):
@@ -26,8 +28,10 @@ class Publisher:
         self.authors = set()
         self.puzzles = set()
 
+
 def publishers_header():
     print(SEP.join("pubid pubabbr Copyright #Issued Editors FirstDate LastDate".split()))
+
 
 def publisher_line(pub):
     clean_set(pub.dates)
@@ -44,6 +48,7 @@ def publisher_line(pub):
             pub.dates and ("%s" % max(pub.dates)) or ""
         ]).encode("utf-8"))
 
+
 def main():
     publishers = {}
 
@@ -53,7 +58,7 @@ def main():
         pubname = xd.get_header("Publisher") or xd.get_header("Copyright")
 
         if pubname not in publishers:
-            pub = Publisher(abbrid)
+            pub = Publisher(pubid)
             publishers[pubname] = pub
         else:
             pub = publishers[pubname]
@@ -72,5 +77,5 @@ def main():
     for pubname, pub in publishers.items():
         publisher_line(pub)
 
-main()
 
+main()
