@@ -4,7 +4,6 @@
 
 import zipfile
 import xdfile
-import os
 
 if __name__ == "__main__":
     corpus = xdfile.main_load()
@@ -28,4 +27,3 @@ if __name__ == "__main__":
         zi.external_attr = 0444 << 16L
         zi.compress_type = zipfile.ZIP_DEFLATED
         outzf.writestr(zi, xdstr.encode("utf-8"))
-

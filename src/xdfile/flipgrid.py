@@ -19,7 +19,7 @@ def flipgrid(xd):
             print xd
 
     flipxd.grid = g
-   
+
     for posdir, posnum, answer in flipxd.iteranswers():
         flipxd.clues.append(((posdir, posnum), xd.get_clue_for_answer(answer), answer))
 

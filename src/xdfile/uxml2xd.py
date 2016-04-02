@@ -43,7 +43,7 @@ def parse_uxml(content, filename):
         root = etree.fromstring(xml)
 
     # init crossword
-    rows = int(root.xpath('//crossword/Height')[0].attrib['v'])
+    # rows = int(root.xpath('//crossword/Height')[0].attrib['v'])
     cols = int(root.xpath('//crossword/Width')[0].attrib['v'])
     xd = xdfile.xdfile()
 

@@ -141,12 +141,12 @@ if __name__ == "__main__":
     else:
         pubid = "transposed"
 
-    pubxd = xdfile.xdfile(file("crosswords/%s/meta.txt" % pubid).read()) # just to parse some cached metadata
+    pubxd = xdfile.xdfile(file("crosswords/%s/meta.txt" % pubid).read())  # just to parse some cached metadata
 
     if len(sys.argv) > 2:
         similar_txts = sys.argv[2:]
     else:
-        similar_txts = [ "crosswords/%s/similar.txt" % pubid ]
+        similar_txts = ["crosswords/%s/similar.txt" % pubid]
 
     try:
         os.makedirs(OUTPUT_DIR)
@@ -157,85 +157,86 @@ if __name__ == "__main__":
     right_index_list = {}  # [(olderfn, newerfn)] -> (pct, index_line)
 
     for inputfn in similar_txts:
-      for line in file(inputfn).read().splitlines():
-        if not line: continue
-        parts = line.strip().split(None, 3)
-        if len(parts) == 2:
-            fn1, fn2 = parts
-        elif len(parts) == 3:
-            pct, fn1, fn2 = parts
-        else:
-            print "ERROR in %s: %s" % (inputfn, line)
-            continue
-
-        if not flTranspose:        
-            if pubid not in fn1 and pubid not in fn2:
+        for line in file(inputfn).read().splitlines():
+            if not line:
                 continue
 
-        try:
-            abbr, d1 = xdfile.parse_date_from_filename(fn1)
-            abbr, d2 = xdfile.parse_date_from_filename(fn2)
-            if d2 < d1:
-                fn1, fn2 = fn2, fn1 # always older on left
-        except:
-            pass # no date in filename
+            parts = line.strip().split(None, 3)
+            if len(parts) == 2:
+                fn1, fn2 = parts
+            elif len(parts) == 3:
+                pct, fn1, fn2 = parts
+            else:
+                print "ERROR in %s: %s" % (inputfn, line)
+                continue
 
-        try:
-            xd1 = xdfile.xdfile(file(fn1).read(), fn1)
-            xd2 = xdfile.xdfile(file(fn2).read(), fn2)
+            if not flTranspose:
+                if pubid not in fn1 and pubid not in fn2:
+                    continue
+
+            try:
+                abbr, d1 = xdfile.parse_date_from_filename(fn1)
+                abbr, d2 = xdfile.parse_date_from_filename(fn2)
+                if d2 < d1:
+                    fn1, fn2 = fn2, fn1  # always older on left
+            except:
+                pass  # no date in filename
+
+            try:
+                xd1 = xdfile.xdfile(file(fn1).read(), fn1)
+                xd2 = xdfile.xdfile(file(fn2).read(), fn2)
+                if flTranspose:
+                    xd2 = flipgrid.flipgrid(xd2)
+            except Exception, e:
+                print fn1, fn2, type(e), str(e)
+
+            ret, pct = gendiff(xd1, xd2)
+
+            if not ret:
+                print "%d%%, skipping" % pct
+                continue
+
+            print fn1, fn2
+
+            b1 = xdfile.get_base_filename(fn1)
+            b2 = xdfile.get_base_filename(fn2)
+
+            outfn = "%s-%s.html" % (b1, b2)
+
             if flTranspose:
-                xd2 = flipgrid.flipgrid(xd2)
-        except Exception, e:
-            print fn1, fn2, type(e), str(e)
-            
-        ret, pct = gendiff(xd1, xd2)
+                index_line = '%d%% <a href="%s">%s - %s (transposed)</a>' % (pct, outfn, b1, b2)
+            else:
+                index_line = '%d%% <a href="%s">%s - %s</a>' % (pct, outfn, b1, b2)
 
-        if not ret:
-            print "%d%%, skipping" % pct
-            continue
+            index_txt = " ".join([fn1, fn2, str(int(pct))])
 
-        print fn1, fn2
+            aut1 = xd1.get_header("Author")
+            aut2 = xd2.get_header("Author")
 
-        b1 = xdfile.get_base_filename(fn1)
-        b2 = xdfile.get_base_filename(fn2)
+            if aut1 != aut2:
+                index_line += ' <b>%s | %s</b>' % (aut1, aut2)
+                index_txt += " *"
+            else:
+                index_line += ' %s' % aut1
 
-        outfn = "%s-%s.html" % (b1, b2)
+            added = False
 
-        if flTranspose:
-            index_line = '%d%% <a href="%s">%s - %s (transposed)</a>' % (pct, outfn, b1, b2)
-        else:
-            index_line = '%d%% <a href="%s">%s - %s</a>' % (pct, outfn, b1, b2)
+            if flOnePublisher:
+                if pubid in fn2:
+                    right_index_list[(fn1, fn2)] = (pct, index_line, index_txt, b1, b2)
+                    added = True
 
-        index_txt = " ".join([fn1, fn2, str(int(pct))])
-
-        aut1 = xd1.get_header("Author")
-        aut2 = xd2.get_header("Author")
-
-        if aut1 != aut2:
-            index_line += ' <b>%s | %s</b>' % (aut1, aut2)
-            index_txt += " *"
-        else:
-            index_line += ' %s' % aut1
-
-        added = False
-
-        if flOnePublisher:
-            if pubid in fn2:
+                if pubid in fn1:
+                    left_index_list[(fn1, fn2)] = (pct, index_line, index_txt, b1, b2)
+                    added = True
+            else:
                 right_index_list[(fn1, fn2)] = (pct, index_line, index_txt, b1, b2)
                 added = True
 
-            if pubid in fn1:
-                left_index_list[(fn1, fn2)] = (pct, index_line, index_txt, b1, b2)
-                added = True
-        else:
-            right_index_list[(fn1, fn2)] = (pct, index_line, index_txt, b1, b2)
-            added = True
-
-        if added:
-            file(OUTPUT_DIR + "/" + outfn, 'w').write(ret.encode("utf-8"))
+            if added:
+                file(OUTPUT_DIR + "/" + outfn, 'w').write(ret.encode("utf-8"))
 
     file("%s/index.html" % OUTPUT_DIR, 'w').write(get_index_html(pubid, pubxd, right_index_list, "earlier" + (flTranspose and " " or "")))
-
 
     if flOnePublisher:
         file("%s/from.html" % OUTPUT_DIR, 'w').write(get_index_html(pubid, pubxd, left_index_list, "later"))

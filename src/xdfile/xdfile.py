@@ -217,22 +217,22 @@ class xdfile:
             for c, cell in enumerate(row):
                 # compute number shown in box
                 new_clue = False
-                if self.cell(r, c-1) == BLOCK_CHAR:  # across clue start
+                if self.cell(r, c - 1) == BLOCK_CHAR:  # across clue start
                     j = 0
                     answer = ""
-                    while self.cell(r, c+j) != BLOCK_CHAR:
-                        answer += self.cell(r, c+j)
+                    while self.cell(r, c + j) != BLOCK_CHAR:
+                        answer += self.cell(r, c + j)
                         j += 1
 
                     if len(answer) > 1:
                         new_clue = True
                         yield "A", clue_num, answer
 
-                if self.cell(r-1, c) == BLOCK_CHAR:  # down clue start
+                if self.cell(r - 1, c) == BLOCK_CHAR:  # down clue start
                     j = 0
                     answer = ""
-                    while self.cell(r+j, c) != BLOCK_CHAR:
-                        answer += self.cell(r+j, c)
+                    while self.cell(r + j, c) != BLOCK_CHAR:
+                        answer += self.cell(r + j, c)
                         j += 1
 
                     if len(answer) > 1:
@@ -415,8 +415,7 @@ def load_corpus(*pathnames):
 
 SEP = "\t"
 
-
-def metadata_header():
+def xd_metadata_header():
     return SEP.join([
         "pubid",
         "pubvol",
@@ -427,7 +426,7 @@ def metadata_header():
     ])
 
 
-def metadata_line(xd):
+def xd_metadata(xd):
     abbrid, d = parse_date_from_filename(xd.filename)
     pubid = xd.filename.split("/")[1]
 
@@ -492,7 +491,7 @@ def save_file(xd, outf):
             outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day, rest)
         else:
             base = "%s-%02d-%02d%s" % (year, month, day, rest)
-    except Exception, e:
+    except:
         abbr = ""
         year, month, day = 1980, 1, 1
         outfn = "crosswords/misc/%s.xd" % base
@@ -533,6 +532,7 @@ def save_file(xd, outf):
             pass
         file(outfn, "w-").write(xdstr)
 
+
 def main_parse(parserfunc):
     global args
 
@@ -570,26 +570,13 @@ def main_parse(parserfunc):
                 continue
 
             if args.metadata_only:
-                print metadata_row(xd)
+                print xd_metadata(xd)
             else:
                 save_file(xd, outf)
         except Exception, e:
+            log("error: %s: %s" % (str(e), type(e)))
             if args.debug:
                 raise
-            else:
-                log("error: %s: %s" % (str(e), type(e)))
-                continue
-
-        if abbr and abbr not in publishers:
-            rights = xd.get_header("Copyright")
-            if rights:
-                publishers[abbr] = abbr
-                if abbr not in unknownpubs:
-                    unknownpubs[abbr] = set()
-                unknownpubs[abbr].add(rights.strip())
-
-    for k, v in unknownpubs.items():
-        print k, "\n".join(v)
 
 if __name__ == "__main__":
     main_load()

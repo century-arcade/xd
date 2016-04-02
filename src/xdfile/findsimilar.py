@@ -78,11 +78,11 @@ def main():
         print >>sys.stderr, "\r% 3d/%d %s" % (i, len(needles), needle),
         dups = find_similar_to(needle, corpus.values(), min_pct=0.2)
         for pct, a, b, answers in sorted(dups, reverse=True):
-            print int(pct*100), a, b, len(answers)
+            print int(pct * 100), a, b, len(answers)
 
         dups = find_similar_to(flipgrid.flipgrid(needle), corpus.values(), min_pct=0.2)
         for pct, a, b, answers in sorted(dups, reverse=True):
-            print int(pct*100), a, b, len(answers)
+            print int(pct * 100), a, b, len(answers)
 
 if __name__ == "__main__":
     main()

@@ -32,7 +32,7 @@ def is_block(puz, x, y):
 
 
 def parse_puz(contents, filename):
-    rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
+    # rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
 
     if not filename.lower().endswith('.puz'):
         return
@@ -61,8 +61,8 @@ def parse_puz(contents, filename):
             pair = pair.strip()
             if not pair:
                 continue
-            k, v = pair.split(":")
-            rebus[k] = v
+            key, value = pair.split(":")
+            rebus[key] = value
 
         rebustr = " ".join([("%s=%s" % (k, v)) for k, v in sorted(rebus.items())])
         xd.set_header("Rebus", rebustr)
@@ -94,8 +94,8 @@ def parse_puz(contents, filename):
         xd.grid.append(rowstr)
 
     # clues
-    answers = { }
-    
+    answers = {}
+
     for posdir, posnum, answer in xd.iteranswers():
         answers[posdir[0] + str(posnum)] = answer
 
