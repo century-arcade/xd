@@ -16,6 +16,9 @@ $(CORPUS).tar.xz:
 $(CORPUS).zip:
 	find crosswords -name '*.xd' -print | sort | zip $@ -@
 
+publishers.tsv: $(SRCDIR)/enumpublishers.py
+	$(SRCDIR)/enumpublishers.py > $@
+
 findgrids: src/findgrids.c
 	gcc -std=c99 -ggdb -O3 -o $@ $<
 

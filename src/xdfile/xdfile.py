@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8
 
+from __future__ import print_function
+
 import sys
 import os
 import re
@@ -16,7 +18,13 @@ import utils
 def log(s):
     sys.stdout.flush()
     sys.stderr.flush()
-    print >>sys.stderr, " " + s
+    print(" " + s, file=sys.stderr)
+
+def progress(n, rest=""):
+    if n % 100 == 0:
+        print("\r% 6d %s" % (n, rest), file=sys.stderr, end="")
+    if n < 0:
+        print(file=sys.stderr)
 
 BLOCK_CHAR = '#'
 EOL = '\n'
@@ -382,11 +390,43 @@ g_corpus = None
 
 def corpus(corpusdir=""):
     global g_corpus
-    if g_corpus is None:
-        g_corpus = load_corpus(corpusdir or "crosswords")  # "xd-grids-2016.xdz")
+    if g_corpus is not None:
+        for xd in g_corpus:
+            yield xd
 
-    return sorted(g_corpus.values(), key=lambda xd: xd.filename)
+    else:
+        g_corpus = []
 
+        global args
+
+        parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
+        parser.add_argument('-d', dest='debug', action='store_true', default=False, help='abort on exception')
+        args = parser.parse_args()
+
+        all_files = sorted(utils.find_files(corpusdir or "crosswords"))
+        log("%d puzzles" % len(all_files))
+
+        n = 0
+        for fullfn, contents in all_files:
+            if not fullfn.endswith(".xd"):
+                continue
+
+            try:
+                basefn = get_base_filename(fullfn)
+                n += 1
+                progress(n, basefn)
+
+                xd = xdfile(contents, fullfn)
+
+                g_corpus.append(xd)
+
+                yield xd
+            except Exception, e:
+                log(unicode(e))
+                if args.debug:
+                   raise
+
+        progress(-1)
 
 def load_corpus(*pathnames):
     ret = {}
@@ -398,18 +438,18 @@ def load_corpus(*pathnames):
 
         try:
             basefn = get_base_filename(fullfn)
-            n += 1
-            if n % 100 == 0:
-                print "\r% 6d %s" % (n, basefn),
             xd = xdfile(contents, fullfn)
 
             ret[basefn] = xd
-        except Exception, e:
-            print unicode(e)
-            # if args.debug:
-            #    raise
 
-    print >>sys.stderr, ""
+            n += 1
+            progress(n, basefn)
+        except Exception, e:
+            log(unicode(e))
+            if args.debug:
+               raise
+
+    progress()
 
     return ret
 
@@ -473,7 +513,7 @@ def main_load():
 
     if len(corpus) == 1:
         xd = corpus.values()[0]
-        print xd.to_unicode().encode("utf-8")
+        print(xd.to_unicode().encode("utf-8"))
     else:
         log("%s puzzles" % len(corpus))
 
@@ -554,23 +594,27 @@ def main_parse(parserfunc):
         else:
             outf = None
 
-    for fullfn, contents in sorted(utils.find_files(*args.path)):
-        print "\r" + fullfn,
+    n = 0
+    all_files = sorted(utils.find_files(*args.path))
+    for fullfn, contents in all_files:
+        n += 1
+        progress(n, len(all_files), fullfn)
+
         path, fn = os.path.split(fullfn)
         base_orig, ext = os.path.splitext(fn)
         base = "".join([c for c in base_orig.lower()
                         if c in string.lowercase or c in string.digits])
         if base != base_orig:
-            print base_orig, base
+            print(base_orig, base)
         try:
             xd = parserfunc(contents, fullfn)
 
             if not xd:
-                print
+                print()
                 continue
 
             if args.metadata_only:
-                print xd_metadata(xd)
+                print(xd_metadata(xd))
             else:
                 save_file(xd, outf)
         except Exception, e:
