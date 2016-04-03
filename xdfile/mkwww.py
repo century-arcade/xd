@@ -8,7 +8,6 @@ import difflib
 import xdfile
 import downloadraw
 import findsimilar
-import flipgrid
 
 flOnePublisher = False
 flTranspose = True
@@ -70,7 +69,7 @@ def gendiff(xd1, xd2):
         desc2 = '<a href="">%s</a>' % xd2.filename
 
     pct = findsimilar.grid_similarity(xd1, xd2) * 100
-    pcttrans = findsimilar.grid_similarity(xd1, flipgrid.flipgrid(xd2)) * 100
+    pcttrans = findsimilar.grid_similarity(xd1, xd2.transpose()) * 100
     if pcttrans > pct:
         return "", pct
 
@@ -85,7 +84,7 @@ def gendiff(xd1, xd2):
 
     hd = difflib.HtmlDiff(linejunk=lambda x: False)
     diff_html = hd.make_table(s1.splitlines(), s2.splitlines(), fromdesc=desc1, todesc=desc2, numlines=False)
-    bothtrans_diff_html = hd.make_table(flipgrid.flipgrid(xd1).to_unicode().splitlines(), flipgrid.flipgrid(xd2).to_unicode().splitlines(), fromdesc=desc1, todesc=desc2, numlines=False)
+    bothtrans_diff_html = hd.make_table(xd1.transpose().to_unicode().splitlines(), xd2.transpose().to_unicode().splitlines(), fromdesc=desc1, todesc=desc2, numlines=False)
 
     ret += '<div class="answers"><br/>Shared answers:<br/> %s</div>' % " ".join(shared)
 
@@ -186,7 +185,7 @@ if __name__ == "__main__":
                 xd1 = xdfile.xdfile(file(fn1).read(), fn1)
                 xd2 = xdfile.xdfile(file(fn2).read(), fn2)
                 if flTranspose:
-                    xd2 = flipgrid.flipgrid(xd2)
+                    xd2 = xd2.transpose()
             except Exception, e:
                 print fn1, fn2, type(e), str(e)
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import xdfile
-import flipgrid
 import os
 
 def collapse_whitespace(s):
@@ -15,7 +14,7 @@ def rewrite_corpus(corpus):
 #        xdfile.clean_headers(xd)
         fullfn = xd.filename
 #        outxd = xd.to_unicode(emit_clues=False)
-        outxd = flipgrid.flipgrid(xd)
+        outxd = xd.transpose()
 #        if collapse_whitespace(outxd) != collapse_whitespace(inxd):
 #            print fullfn, "differs when re-emitted"
         try:

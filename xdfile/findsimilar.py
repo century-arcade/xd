@@ -2,7 +2,6 @@
 
 import sys
 import itertools
-import flipgrid
 
 import xdfile
 
@@ -80,7 +79,7 @@ def main():
         for pct, a, b, answers in sorted(dups, reverse=True):
             print int(pct * 100), a, b, len(answers)
 
-        dups = find_similar_to(flipgrid.flipgrid(needle), corpus.values(), min_pct=0.2)
+        dups = find_similar_to(needle.transpose(), corpus.values(), min_pct=0.2)
         for pct, a, b, answers in sorted(dups, reverse=True):
             print int(pct * 100), a, b, len(answers)
 

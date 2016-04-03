@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+import xdfile
+
+for xd in xdfile.corpus():
+    if not xd.grid:
+        continue
+
+    try:
+        xdt = xd.transpose()
+
+        # check that it transposes back to itself
+        d = xd.diffs(xdt.transpose())
+        if d:
+            for a, b in d:
+                print xdt, a, b
+
+    except Exception, e:
+        xdfile.log("%s : %s" % (xd.filename, str(e)))
+        raise
+

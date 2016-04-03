@@ -15,6 +15,7 @@ import argparse
 import utils
 
 SEP = "\t"
+REBUS_SEP = ","
 
 
 def log(s):
@@ -186,6 +187,22 @@ class xdfile:
     def __str__(self):
         return self.filename or ""
 
+    def iterdiffs(self, other):
+        for k in set(self.headers.keys()) | set(other.headers.keys()):
+            if self.get_header(k) != other.get_header(k):
+                yield self.get_header(k), other.get_header(k)
+
+        for a, b in zip(self.grid, other.grid):
+            if a != b:
+                yield a, b
+
+        for a, b in zip(self.clues, other.clues):
+            if a != b:
+                yield a, b
+
+    def diffs(self, other):
+        return [(a,b) for a,b in self.iterdiffs(other)]
+
     def get_header(self, fieldname):
         v = self.headers.get(fieldname)
         assert v is None or isinstance(v, basestring), v
@@ -212,10 +229,13 @@ class xdfile:
             self.headers[fieldname] = [value]
 
     def get_clue_for_answer(self, target):
+        clues = [ ]
         for pos, clue, answer in self.clues:
             if answer == target:
-                return clue
-#        assert False, target
+                clues.append(clue)
+
+        assert len(clues) == 1, clues
+        return clues[0]
 
     def get_clue(self, clueid):
         for pos, clue, answer in self.clues:
@@ -228,8 +248,25 @@ class xdfile:
             return BLOCK_CHAR
         return self.grid[r][c]
 
+    def rebus(self):
+        rebusstr = self.get_header("Rebus")
+        r = {}
+        if rebusstr:
+            for p in rebusstr.split(REBUS_SEP):
+                cellchar, replstr = p.split("=")
+                assert len(cellchar) == 1
+                replstr = replstr.strip()
+                r[cellchar] = replstr
+
+        return r
+
     def iteranswers(self):
         clue_num = 1
+        rebus = self.rebus()
+        for c in string.ascii_letters:
+            assert c not in rebus, c
+            rebus[c] = c.upper()
+
         for r, row in enumerate(self.grid):
             for c, cell in enumerate(row):
                 # compute number shown in box
@@ -238,7 +275,7 @@ class xdfile:
                     j = 0
                     answer = ""
                     while self.cell(r, c + j) != BLOCK_CHAR:
-                        answer += self.cell(r, c + j)
+                        answer += rebus[self.cell(r, c + j)]
                         j += 1
 
                     if len(answer) > 1:
@@ -249,7 +286,7 @@ class xdfile:
                     j = 0
                     answer = ""
                     while self.cell(r + j, c) != BLOCK_CHAR:
-                        answer += self.cell(r + j, c)
+                        answer += rebus[self.cell(r + j, c)]
                         j += 1
 
                     if len(answer) > 1:
@@ -327,10 +364,10 @@ class xdfile:
 
                 if pos[0] in string.uppercase:
                     cluedir = pos[0]
-                    cluenum = pos[1:]
+                    cluenum = int(pos[1:])
                 else:
                     cluedir = ""
-                    cluenum = pos
+                    cluenum = int(pos)
 
                 self.clues.append(((cluedir, cluenum), clue.strip(), answer.strip()))
             else:  # anything remaining
@@ -387,6 +424,27 @@ class xdfile:
 
         return r
 
+    def transpose(self):
+        def get_col(g, n):
+            return "".join([r[n] for r in g])
+
+        flipxd = xdfile()
+        flipxd.filename = self.filename
+        flipxd.headers = self.headers.copy()
+#        flipxd.set_header("Title", "(transposed) " + flipxd.get_header("Title"))
+
+        g = []
+        for i in xrange(len(self.grid[0])):
+            g.append(get_col(self.grid, i))
+
+        flipxd.grid = g
+
+        for posdir, posnum, answer in flipxd.iteranswers():
+            flipxd.clues.append(((posdir, posnum), self.get_clue_for_answer(answer), answer))
+
+        flipxd.clues = sorted(flipxd.clues)
+        return flipxd
+
 
 def get_base_filename(fn):
     path, b = os.path.split(fn)
@@ -397,7 +455,7 @@ def get_base_filename(fn):
 g_corpus = None
 
 
-def corpus(corpusdir=""):
+def corpus():
     global g_corpus
     if g_corpus is not None:
         for xd in g_corpus:
@@ -410,9 +468,10 @@ def corpus(corpusdir=""):
 
         parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
         parser.add_argument('-d', dest='debug', action='store_true', default=False, help='abort on exception')
+        parser.add_argument('-c', dest='corpusdir', default="crosswords", help='corpus source')
         args = parser.parse_args()
 
-        all_files = sorted(utils.find_files(corpusdir or "crosswords"))
+        all_files = sorted(utils.find_files(args.corpusdir))
         log("%d puzzles" % len(all_files))
 
         n = 0
