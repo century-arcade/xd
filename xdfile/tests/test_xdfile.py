@@ -2,7 +2,7 @@
 
 import datetime
 
-import src.xdfile as xdfile
+import xdfile as xdfile
 
 test_selection = 'nyt1955-01-01.xd'
 

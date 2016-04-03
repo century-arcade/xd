@@ -1,7 +1,7 @@
 """unit tests for utils.py"""
 import os
 
-from src.xdfile import utils
+from xdfile import utils
 
 TEST_DIRECTORY = os.path.abspath(os.path.dirname(__file__))
 
