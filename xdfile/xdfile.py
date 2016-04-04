@@ -7,12 +7,12 @@ import sys
 import os
 import re
 import datetime
-# import stat
 import string
 import zipfile
 import argparse
 
 import utils
+
 
 SEP = "\t"
 REBUS_SEP = ","
@@ -89,7 +89,7 @@ all_files = {}
 
 def clean_headers(xd):
     for hdr in xd.headers.keys():
-        if hdr in [ "Source", "Identifier", "Acquired", "Issued", "Category" ]:
+        if hdr in ["Source", "Identifier", "Acquired", "Issued", "Category"]:
             xd.set_header(hdr, None)
         else:
             assert hdr.lower() in HEADER_ORDER, hdr
@@ -202,7 +202,7 @@ class xdfile:
                 yield a, b
 
     def diffs(self, other):
-        return [(a,b) for a,b in self.iterdiffs(other)]
+        return [(a, b) for a, b in self.iterdiffs(other)]
 
     def get_header(self, fieldname):
         v = self.headers.get(fieldname)
@@ -230,7 +230,7 @@ class xdfile:
             self.headers[fieldname] = [value]
 
     def get_clue_for_answer(self, target):
-        clues = [ ]
+        clues = []
         for pos, clue, answer in self.clues:
             if answer == target:
                 clues.append(clue)
