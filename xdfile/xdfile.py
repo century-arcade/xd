@@ -18,9 +18,11 @@ import utils
 class Error(Exception):
     pass
 
+
 class UnknownFilenameFormat(Error):
     """Source filename format not known"""
     pass
+
 
 class IncompletePuzzleParse(Error):
     """Error while parsing source puzzle"""
@@ -631,6 +633,7 @@ def parse_fn(fqpn):
     nt = namedtuple('Pathname', 'path base ext')
     return nt(path=path, base=base, ext=ext)
 
+
 def save_file(xd, outf):
     try:
         try:
@@ -646,7 +649,7 @@ def save_file(xd, outf):
             outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day, rest)
         else:
             base = "%s-%02d-%02d%s" % (year, month, day, rest)
-    except UnknownFilenameFormat as e:
+    except UnknownFilenameFormat:
         abbr = ""
         year, month, day = 1980, 1, 1
         outfn = "crosswords/misc/%s.xd" % parse_fn(xd.filename).base

@@ -2,4 +2,3 @@
 # The inline comment causes pyflakes to ignore this line. It complains
 # about the * import, which isn't a problem.
 from xdfile import *  # NOQA
-
