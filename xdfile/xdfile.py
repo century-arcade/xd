@@ -37,52 +37,6 @@ SECTION_SEP = EOL + EOL
 HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'date',
                 'relation', 'special', 'rebus', 'cluegroup', 'description', 'notes']
 
-publishers = {
-    'unk': 'unknown',
-    'che': 'chronicle',
-    'ch': 'chicago',
-    'cs': 'crossynergy',
-    'pp': 'wapost',
-    'wsj': 'wsj',
-    'rnr': 'rocknroll',
-    'nw': 'newsday',
-    'nyt': 'nytimes',
-    'tech': 'nytimes',
-    'tm': "time",
-    'nfl': "cbs",
-    'cn': "crosswordnation",
-    'vwl': 'nytimes',
-    'nyk': 'nytimes',
-    'la': 'latimes',
-    'nys': 'nysun',
-    'pzz': 'puzzazz',
-    'nyh': 'nyherald',
-    'lt': 'london',
-    'pa': 'nytimes',
-    'pk': 'king',
-    'nym': 'nymag',
-    'db': 'dailybeast',
-    'awm': 'threeacross',
-    'rp': 'rexparker',
-    'wp': 'wapost',
-    'nl': 'lampoon',
-    'tmdcr': 'tribune',
-    'kc': 'kcstar',
-    'mg': 'mygen',
-    'atc': 'crossroads',
-    'onion': 'onion',
-    'mm': 'aarp',
-    'ue': 'universal',
-    'ut': 'universal',
-    'up': 'universal',
-    'us': 'universal',
-    'um': 'universal',
-    'ub': 'universal',
-    'ss': 'simonschuster',
-    'sl': 'slate',
-    'ana': 'nytimes',
-}
-
 unknownpubs = {}
 all_files = {}
 
@@ -131,27 +85,24 @@ def clean_headers(xd):
     if title.endswith(']'):
         title = title[:title.rfind('[')]
 
+    # title is only between the double-quotes for some USAToday
+    if title.startswith("USA Today"):
+        if title and title[-1] == '"':
+            newtitle = title[title.index('"') + 1:-1]
+            if newtitle[-1] == ",":
+                newtitle = newtitle[:-1]
+        elif title and title[0] == '"':
+            newtitle = title[1:title.rindex('"')]
+        else:
+            newtitle = title
+
+        xd.set_header("Title", newtitle)
+
 #    rights = rights.replace(u"©", "(c)")
 
-    xd.set_header("Title", title)
     xd.set_header("Author", author)
     xd.set_header("Editor", editor)
     xd.set_header("Copyright", rights)
-
-    # title is only between the double-quotes (some USAToday)
-    """
-    title = xd.get_header("Title")
-    if title and title[-1] == '"':
-        newtitle = title[title.index('"')+1:-1]
-        if newtitle[-1] == ",":
-            newtitle = newtitle[:-1]
-    elif title and title[0] == '"':
-        newtitle = title[1:title.rindex('"')]
-    else:
-        newtitle = title
-
-    xd.set_header("Title", newtitle)
-    """
 
     if not xd.get_header("Date"):
         abbrid, d = parse_date_from_filename(xd.filename)
@@ -467,6 +418,7 @@ g_corpus = None
 
 
 def corpus():
+    ''' DOCME '''
     global g_corpus
     if g_corpus is not None:
         for xd in g_corpus:
@@ -682,7 +634,7 @@ def main_parse(parserfunc):
     all_files = sorted(utils.find_files(*g_args.path))
     for fullfn, contents in all_files:
         n += 1
-        progress(n, len(all_files), fullfn)
+        progress(n, fullfn)
 
         path, fn = os.path.split(fullfn)
         base_orig, ext = os.path.splitext(fn)
