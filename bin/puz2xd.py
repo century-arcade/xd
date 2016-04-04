@@ -32,7 +32,7 @@ def is_block(puz, x, y):
 
 
 def parse_puz(contents, filename):
-    # rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
+    rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
 
     if not filename.lower().endswith('.puz'):
         return
@@ -54,7 +54,8 @@ def parse_puz(contents, filename):
 
     xd.set_header("Title", puzobj.title)
 
-    rebus = {}
+    used_rebuses = {}  # [puz_rebus_gridvalue_as_string] -> our_rebus_gridvalue
+    rebus = {}  # [our_rebus_gridvalue] -> full_cell
     r = puzobj.rebus()
     if r.has_rebus():
         for pair in puzobj.extensions["RTBL"].split(";"):
@@ -62,9 +63,11 @@ def parse_puz(contents, filename):
             if not pair:
                 continue
             key, value = pair.split(":")
-            rebus[key] = value
+            rebuskey = rebus_shorthands.pop()
+            used_rebuses[key] = rebuskey
+            rebus[rebuskey] = value
 
-        rebustr = " ".join([("%s=%s" % (k, v)) for k, v in sorted(rebus.items())])
+        rebustr = xdfile.REBUS_SEP.join([("%s=%s" % (k, v)) for k, v in sorted(rebus.items())])
         xd.set_header("Rebus", rebustr)
 
     for r, row in enumerate(puzzle):
@@ -82,7 +85,7 @@ def parse_puz(contents, filename):
                 if reb.has_rebus() and n in reb.get_rebus_squares():
                     c = str(reb.table[n] - 1)
                     rowstr += c
-                    cell.solution = rebus[c]
+                    cell.solution = rebus[used_rebuses[c]]
                 else:
                     if cell.solution not in grid_dict:
                         # grid_dict[cell.solution] = rebus_shorthands.pop()
@@ -99,11 +102,14 @@ def parse_puz(contents, filename):
     for posdir, posnum, answer in xd.iteranswers():
         answers[posdir[0] + str(posnum)] = answer
 
-    for number, clue in puzzle.clues.across():
-        xd.clues.append((("A", number), decode(clue), answers["A" + str(number)]))
+    try:
+        for number, clue in puzzle.clues.across():
+            xd.clues.append((("A", number), decode(clue), answers["A" + str(number)]))
 
-    for number, clue in puzzle.clues.down():
-        xd.clues.append((("D", number), decode(clue), answers["D" + str(number)]))
+        for number, clue in puzzle.clues.down():
+            xd.clues.append((("D", number), decode(clue), answers["D" + str(number)]))
+    except KeyError as e:
+        raise xdfile.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + str(e))
 
     return xd
 

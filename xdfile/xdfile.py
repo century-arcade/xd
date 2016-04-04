@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 
+from collections import namedtuple
 import sys
 import os
 import re
@@ -14,8 +15,69 @@ import argparse
 import utils
 
 
+class Error(Exception):
+    pass
+
+class UnknownFilenameFormat(Error):
+    """Source filename format not known"""
+    pass
+
+class IncompletePuzzleParse(Error):
+    """Error while parsing source puzzle"""
+    def __init__(self, xd, msg=""):
+        Error.__init__(self, msg)
+        self.xd = xd
+
+
+publishers = {
+    'unk': 'unknown',
+    'che': 'chronicle',
+    'ch': 'chicago',
+    'cs': 'crossynergy',
+    'pp': 'wapost',
+    'wsj': 'wsj',
+    'rnr': 'rocknroll',
+    'nw': 'newsday',
+    'nyt': 'nytimes',
+    'tech': 'nytimes',
+    'tm': "time",
+    'nfl': "cbs",
+    'cn': "crosswordnation",
+    'vwl': 'nytimes',
+    'nyk': 'nytimes',
+    'la': 'latimes',
+    'nys': 'nysun',
+    'pzz': 'puzzazz',
+    'nyh': 'nyherald',
+    'lt': 'london',
+    'pa': 'nytimes',
+    'pk': 'king',
+    'nym': 'nymag',
+    'db': 'dailybeast',
+    'awm': 'threeacross',
+    'rp': 'rexparker',
+    'wp': 'wapost',
+    'nl': 'lampoon',
+    'tmdcr': 'tribune',
+    'kc': 'kcstar',
+    'mg': 'mygen',
+    'atc': 'crossroads',
+    'onion': 'onion',
+    'mm': 'aarp',
+    'ue': 'universal',
+    'ut': 'universal',
+    'up': 'universal',
+    'us': 'universal',
+    'um': 'universal',
+    'ub': 'universal',
+    'ss': 'simonschuster',
+    'sl': 'slate',
+    'ana': 'nytimes',
+}
+
+
 SEP = "\t"
-REBUS_SEP = ","
+REBUS_SEP = " "
 g_args = None
 
 
@@ -25,8 +87,8 @@ def log(s):
     print(" " + s, file=sys.stderr)
 
 
-def progress(n, rest=""):
-    if n % 100 == 0:
+def progress(n, rest="", every=100):
+    if n % every == 0:
         print("\r% 6d %s" % (n, rest), file=sys.stderr, end="")
     if n < 0:
         print(file=sys.stderr)
@@ -204,24 +266,31 @@ class xdfile:
         return self.grid[r][c]
 
     def rebus(self):
+        """returns rebus dict of only special (non A-Z) characters"""
         rebusstr = self.get_header("Rebus")
         r = {}
         if rebusstr:
             for p in rebusstr.split(REBUS_SEP):
-                cellchar, replstr = p.split("=")
-                assert len(cellchar) == 1
+                parts = p.split("=")
+                assert len(parts) == 2, p
+                cellchar, replstr = parts
+                assert len(cellchar) == 1, (rebusstr, cellchar)
                 replstr = replstr.strip()
                 r[cellchar] = replstr
 
         return r
 
     def iteranswers(self):
-        clue_num = 1
+
+        # construct rebus dict with all grid possibilities so that answers are complete
         rebus = {}
         for c in string.ascii_letters:
             assert c not in rebus, c
             rebus[c] = c.upper()
         rebus.update(self.rebus())
+
+        # traverse grid and yield (dir, pos, answer)
+        clue_num = 1
 
         for r, row in enumerate(self.grid):
             for c, cell in enumerate(row):
@@ -556,9 +625,19 @@ def main_load():
     return corpus
 
 
+def parse_fn(fqpn):
+    path, fn = os.path.split(fqpn)
+    base, ext = os.path.splitext(fn)
+    nt = namedtuple('Pathname', 'path base ext')
+    return nt(path=path, base=base, ext=ext)
+
 def save_file(xd, outf):
     try:
-        abbr, year, month, day, rest = parse_filename(xd.filename.lower())
+        try:
+            abbr, year, month, day, rest = parse_filename(xd.filename.lower())
+        except:
+            raise UnknownFilenameFormat(xd.filename)
+
         if not xd.get_header("Date"):
             xd.set_header("Date", "%d-%02d-%02d" % (year, month, day))
 
@@ -567,15 +646,18 @@ def save_file(xd, outf):
             outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day, rest)
         else:
             base = "%s-%02d-%02d%s" % (year, month, day, rest)
-    except:
+    except UnknownFilenameFormat as e:
         abbr = ""
         year, month, day = 1980, 1, 1
-        outfn = "crosswords/misc/%s.xd" % base
+        outfn = "crosswords/misc/%s.xd" % parse_fn(xd.filename).base
+    except:
+        raise
 
     if g_args.toplevel:
-        fullfn = "%s/%s/%s.xd" % (g_args.toplevel, "/".join(path.split("/")[1:]), base)
+        # the toplevel option is for moving some or all subset into a flattened directory
+        fullfn = "%s/%s/%s.xd" % (g_args.toplevel, xd.filename.lstrip("crosswords/"), base)
     else:
-        fullfn = base + ".xd"
+        fullfn = outfn
 
     xd.filename = fullfn
     clean_headers(xd)
@@ -630,11 +712,8 @@ def main_parse(parserfunc):
         else:
             outf = None
 
-    n = 0
-    all_files = sorted(utils.find_files(*g_args.path))
-    for fullfn, contents in all_files:
-        n += 1
-        progress(n, fullfn)
+    for n, (fullfn, contents) in enumerate(utils.find_files(*g_args.path)):
+        progress(n, fullfn, every=1)
 
         path, fn = os.path.split(fullfn)
         base_orig, ext = os.path.splitext(fn)
@@ -643,7 +722,11 @@ def main_parse(parserfunc):
         if base != base_orig:
             print(base_orig, base)
         try:
-            xd = parserfunc(contents, fullfn)
+            try:
+                xd = parserfunc(contents, fullfn)
+            except IncompletePuzzleParse as e:
+                print(str(e))
+                xd = e.xd
 
             if not xd:
                 print()
