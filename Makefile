@@ -5,7 +5,7 @@ S3CFG= -c src/aws/s3cfg.century-arcade
 BUCKET= xd.saul.pw
 WWWDIR= www/xdiffs
 
-SRCDIR=$(shell pwd)/src
+SCRIPTDIR=$(shell pwd)/scripts
 
 sync-corpus: $(CORPUS).tar.xz $(CORPUS).zip
 	s3cmd ${S3CFG} put -P $^ s3://${BUCKET}/
@@ -16,14 +16,17 @@ $(CORPUS).tar.xz:
 $(CORPUS).zip:
 	find crosswords -name '*.xd' -print | sort | zip $@ -@
 
-puzzles.tsv: $(SRCDIR)/enumpuzzles.py
-	$(SRCDIR)/enumpuzzles.py > $@
+puzzles.tsv: $(SCRIPTDIR)/enumpuzzles.py
+	PYTHONPATH=. $(SCRIPTDIR)/enumpuzzles.py > $@
 
-publishers.tsv: $(SRCDIR)/enumpublishers.py
-	$(SRCDIR)/enumpublishers.py > $@
+publishers.tsv: $(SCRIPTDIR)/enumpublishers.py
+	PYTHONPATH=. $(SCRIPTDIR)/enumpublishers.py > $@
 
 findgrids: src/findgrids.c
 	gcc -std=c99 -ggdb -O3 -o $@ $<
+
+transpose-diffs.txt:
+	PYTHONPATH=. ${SCRIPTDIR}/transpose_corpus > transpose-diffs.txt
 
 .PHONY: always
 

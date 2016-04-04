@@ -1,12 +1,20 @@
 #!/usr/bin/env python
 
+# list all differences between a puzzle P and P.transpose().transpose()
+
 import xdfile
+
+rebuses = [ ]
 
 for xd in xdfile.corpus():
     if not xd.grid:
         continue
 
     try:
+        if xd.get_header("Rebus"):
+            rebuses.append(xd)
+            continue
+
         xdt = xd.transpose()
 
         # check that it transposes back to itself
@@ -16,6 +24,8 @@ for xd in xdfile.corpus():
                 print xdt, a, b
 
     except Exception, e:
-        xdfile.log("%s : %s" % (xd.filename, str(e)))
-        raise
+        print(("%s : %s" % (xd.filename, unicode(e))).encode("utf-8"))
+        if xdfile.args().debug:
+            raise
 
+print("skipped %d with rebus" % len(rebuses))

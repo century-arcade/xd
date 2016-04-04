@@ -16,6 +16,7 @@ import utils
 
 SEP = "\t"
 REBUS_SEP = ","
+g_args = None
 
 
 def log(s):
@@ -234,7 +235,10 @@ class xdfile:
             if answer == target:
                 clues.append(clue)
 
-        assert len(clues) == 1, clues
+        if not clues:
+            return "[XXX]"
+
+        assert len(clues) == 1, Exception("multiple clues for %s: %s" % (target, " | ".join(clues)))
         return clues[0]
 
     def get_clue(self, clueid):
@@ -262,10 +266,11 @@ class xdfile:
 
     def iteranswers(self):
         clue_num = 1
-        rebus = self.rebus()
+        rebus = {}
         for c in string.ascii_letters:
             assert c not in rebus, c
             rebus[c] = c.upper()
+        rebus.update(self.rebus())
 
         for r, row in enumerate(self.grid):
             for c, cell in enumerate(row):
@@ -275,7 +280,8 @@ class xdfile:
                     j = 0
                     answer = ""
                     while self.cell(r, c + j) != BLOCK_CHAR:
-                        answer += rebus[self.cell(r, c + j)]
+                        cellval = self.cell(r, c + j)
+                        answer += rebus.get(cellval, cellval)
                         j += 1
 
                     if len(answer) > 1:
@@ -286,7 +292,8 @@ class xdfile:
                     j = 0
                     answer = ""
                     while self.cell(r + j, c) != BLOCK_CHAR:
-                        answer += rebus[self.cell(r + j, c)]
+                        cellval = self.cell(r + j, c)
+                        answer += rebus.get(cellval, cellval)
                         j += 1
 
                     if len(answer) > 1:
@@ -452,6 +459,10 @@ def get_base_filename(fn):
 
     return b
 
+
+def args():
+    return g_args
+
 g_corpus = None
 
 
@@ -464,14 +475,16 @@ def corpus():
     else:
         g_corpus = []
 
-        global args
+        global g_args
 
         parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
-        parser.add_argument('-d', dest='debug', action='store_true', default=False, help='abort on exception')
-        parser.add_argument('-c', dest='corpusdir', default="crosswords", help='corpus source')
-        args = parser.parse_args()
+        parser.add_argument('-q', '--quiet', dest='verbose', action='store_const', const=-1)
+        parser.add_argument('-v', '--verbose', dest='verbose', action='count', default=0)
+        parser.add_argument('-d', '--debug', dest='debug', action='store_true', default=False, help='abort on exception')
+        parser.add_argument('-c', '--corpus', dest='corpusdir', default="crosswords", help='corpus source')
+        g_args = parser.parse_args()
 
-        all_files = sorted(utils.find_files(args.corpusdir))
+        all_files = sorted(utils.find_files(g_args.corpusdir))
         log("%d puzzles" % len(all_files))
 
         n = 0
@@ -491,7 +504,7 @@ def corpus():
                 yield xd
             except Exception, e:
                 log(unicode(e))
-                if args.debug:
+                if g_args.debug:
                     raise
 
         progress(-1)
@@ -515,7 +528,7 @@ def load_corpus(*pathnames):
             progress(n, basefn)
         except Exception, e:
             log(unicode(e))
-            if args.debug:
+            if g_args.debug:
                 raise
 
     progress()
@@ -607,8 +620,8 @@ def save_file(xd, outf):
         year, month, day = 1980, 1, 1
         outfn = "crosswords/misc/%s.xd" % base
 
-    if args.toplevel:
-        fullfn = "%s/%s/%s.xd" % (args.toplevel, "/".join(path.split("/")[1:]), base)
+    if g_args.toplevel:
+        fullfn = "%s/%s/%s.xd" % (g_args.toplevel, "/".join(path.split("/")[1:]), base)
     else:
         fullfn = base + ".xd"
 
@@ -645,7 +658,7 @@ def save_file(xd, outf):
 
 
 def main_parse(parserfunc):
-    global args
+    global g_args
 
     parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
     parser.add_argument('path', type=str, nargs='+', help='files, .zip, or directories to be converted')
@@ -654,19 +667,19 @@ def main_parse(parserfunc):
     parser.add_argument('-d', dest='debug', action='store_true', default=False, help='abort on exception')
     parser.add_argument('-m', dest='metadata_only', action='store_true', default=False, help='output metadata.tsv only')
 
-    args = parser.parse_args()
+    g_args = parser.parse_args()
 
     outf = sys.stdout
 
-    if args.output:
-        outbase, outext = os.path.splitext(args.output)
+    if g_args.output:
+        outbase, outext = os.path.splitext(g_args.output)
         if outext == ".zip":
-            outf = zipfile.ZipFile(args.output, 'w')
+            outf = zipfile.ZipFile(g_args.output, 'w')
         else:
             outf = None
 
     n = 0
-    all_files = sorted(utils.find_files(*args.path))
+    all_files = sorted(utils.find_files(*g_args.path))
     for fullfn, contents in all_files:
         n += 1
         progress(n, len(all_files), fullfn)
@@ -684,13 +697,13 @@ def main_parse(parserfunc):
                 print()
                 continue
 
-            if args.metadata_only:
+            if g_args.metadata_only:
                 print(xd_metadata(xd))
             else:
                 save_file(xd, outf)
         except Exception, e:
             log("error: %s: %s" % (str(e), type(e)))
-            if args.debug:
+            if g_args.debug:
                 raise
 
 if __name__ == "__main__":
