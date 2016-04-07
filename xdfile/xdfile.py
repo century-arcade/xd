@@ -276,9 +276,7 @@ class xdfile:
         r = {}
         if rebusstr:
             for p in rebusstr.split(REBUS_SEP):
-                parts = p.split("=")
-                assert len(parts) == 2, p
-                cellchar, replstr = parts
+                cellchar, _, replstr = p.partition("=")
                 assert len(cellchar) == 1, (rebusstr, cellchar)
                 replstr = replstr.strip()
                 r[cellchar] = replstr
@@ -287,7 +285,6 @@ class xdfile:
 
     def iteranswers(self):
 
-        print()
         # construct rebus dict with all grid possibilities so that answers are complete
         rebus = {}
         for c in string.ascii_letters:
