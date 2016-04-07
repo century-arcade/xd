@@ -95,7 +95,10 @@ def progress(n, rest="", every=100):
     if n < 0:
         print(file=sys.stderr)
 
+UNKNOWN_CHAR = '.'
 BLOCK_CHAR = '#'
+OPEN_CHAR = '_'
+NON_ANSWER_CHARS = [BLOCK_CHAR, OPEN_CHAR]  # UNKNOWN_CHAR is a wildcard answer character
 EOL = '\n'
 SECTION_SEP = EOL + EOL
 HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'date',
@@ -134,7 +137,7 @@ def clean_headers(xd):
 
         if " / " in author:
             assert not editor
-            author, editor = author.split(" / ")
+            author, editor = author.rsplit(" / ", 1)
 
     if editor:
         while editor.lower().startswith("by "):
@@ -284,6 +287,7 @@ class xdfile:
 
     def iteranswers(self):
 
+        print()
         # construct rebus dict with all grid possibilities so that answers are complete
         rebus = {}
         for c in string.ascii_letters:
@@ -298,32 +302,36 @@ class xdfile:
             for c, cell in enumerate(row):
                 # compute number shown in box
                 new_clue = False
-                if self.cell(r, c - 1) == BLOCK_CHAR:  # across clue start
+                if self.cell(r, c - 1) in NON_ANSWER_CHARS:  # across clue start
                     j = 0
                     answer = ""
-                    while self.cell(r, c + j) != BLOCK_CHAR:
+                    while self.cell(r, c + j) not in NON_ANSWER_CHARS:
                         cellval = self.cell(r, c + j)
                         answer += rebus.get(cellval, cellval)
                         j += 1
 
-                    if len(answer) > 1:
+                    if j > 1:
                         new_clue = True
                         yield "A", clue_num, answer
 
-                if self.cell(r - 1, c) == BLOCK_CHAR:  # down clue start
+                if self.cell(r - 1, c) in NON_ANSWER_CHARS:  # down clue start
                     j = 0
                     answer = ""
-                    while self.cell(r + j, c) != BLOCK_CHAR:
+                    while self.cell(r + j, c) not in NON_ANSWER_CHARS:
                         cellval = self.cell(r + j, c)
                         answer += rebus.get(cellval, cellval)
                         j += 1
 
-                    if len(answer) > 1:
+                    if j > 1:
                         new_clue = True
                         yield "D", clue_num, answer
 
                 if new_clue:
+                    print("%02d " % clue_num, end="")
                     clue_num += 1
+                else:
+                    print(" %s " % cell, end="")
+            print("")
 
     def get_answer(self, clueid):
         for pos, clue, answer in self.clues:
@@ -649,6 +657,7 @@ def save_file(xd, outf):
             outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day, rest)
         else:
             base = "%s-%02d-%02d%s" % (year, month, day, rest)
+            outfn = xd_filename("misc", "", year, month, day, rest)
     except UnknownFilenameFormat:
         abbr = ""
         year, month, day = 1980, 1, 1
@@ -722,17 +731,18 @@ def main_parse(parserfunc):
         base_orig, ext = os.path.splitext(fn)
         base = "".join([c for c in base_orig.lower()
                         if c in string.lowercase or c in string.digits])
-        if base != base_orig:
-            print(base_orig, base)
+
+#        if base != base_orig.lower():
+#            print(base_orig, base)
+
         try:
             try:
                 xd = parserfunc(contents, fullfn)
             except IncompletePuzzleParse as e:
-                print(str(e))
+                log("%s  %s" % (fullfn, e))
                 xd = e.xd
 
             if not xd:
-                print()
                 continue
 
             if g_args.metadata_only:

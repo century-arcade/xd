@@ -58,33 +58,37 @@ def parse_puz(contents, filename):
     rebus = {}  # [our_rebus_gridvalue] -> full_cell
     r = puzobj.rebus()
     if r.has_rebus():
-        for pair in puzobj.extensions["RTBL"].split(";"):
-            pair = pair.strip()
-            if not pair:
-                continue
-            key, value = pair.split(":")
-            rebuskey = rebus_shorthands.pop()
-            used_rebuses[key] = rebuskey
-            rebus[rebuskey] = value
+        grbs = puzobj.extensions["GRBS"]
+        if sum(ord(x) for x in grbs if ord(x) != 0) > 0:   # check for an actual rebus
+            for pair in puzobj.extensions["RTBL"].split(";"):
+                pair = pair.strip()
+                if not pair:
+                    continue
+                key, value = pair.split(":")
+                rebuskey = rebus_shorthands.pop()
+                used_rebuses[key] = rebuskey
+                rebus[rebuskey] = value
 
-        rebustr = xdfile.REBUS_SEP.join([("%s=%s" % (k, v)) for k, v in sorted(rebus.items())])
-        xd.set_header("Rebus", rebustr)
+            rebustr = xdfile.REBUS_SEP.join([("%s=%s" % (k, v)) for k, v in sorted(rebus.items())])
+            xd.set_header("Rebus", rebustr)
 
     for r, row in enumerate(puzzle):
         rowstr = ""
         for c, cell in enumerate(row):
             if puzzle.block is None and cell.solution == '.':
                 rowstr += xdfile.BLOCK_CHAR
-            elif puzzle.block == cell.solution:
+            elif cell.solution == puzzle.block:
                 rowstr += xdfile.BLOCK_CHAR
+            elif cell.solution == ':':
+                rowstr += xdfile.OPEN_CHAR
             elif cell == puzzle.empty:
-                rowstr += "."
+                rowstr += xdfile.UNKNOWN_CHAR
             else:
                 n = r * puzobj.width + c
                 reb = puzobj.rebus()
                 if reb.has_rebus() and n in reb.get_rebus_squares():
                     c = str(reb.table[n] - 1)
-                    rowstr += c
+                    rowstr += used_rebuses[c]
                     cell.solution = rebus[used_rebuses[c]]
                 else:
                     if cell.solution not in grid_dict:
@@ -104,10 +108,18 @@ def parse_puz(contents, filename):
 
     try:
         for number, clue in puzzle.clues.across():
-            xd.clues.append((("A", number), decode(clue), answers["A" + str(number)]))
+            cluenum = "A" + str(number)
+            if cluenum not in answers:
+                print(cluenum, clue)
+#                raise xdfile.IncompletePuzzleParse(xd, "Clue number doesn't match grid: " + cluenum)
+            xd.clues.append((("A", number), decode(clue), answers.get(cluenum, "")))
 
         for number, clue in puzzle.clues.down():
-            xd.clues.append((("D", number), decode(clue), answers["D" + str(number)]))
+            cluenum = "D" + str(number)
+            if cluenum not in answers:
+                print(cluenum, clue)
+#                raise xdfile.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + cluenum)
+            xd.clues.append((("D", number), decode(clue), answers.get(cluenum, "")))
     except KeyError as e:
         raise xdfile.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + str(e))
 

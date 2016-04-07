@@ -8,7 +8,7 @@ def find_files(*paths):
     for path in paths:
         if stat.S_ISDIR(os.stat(path).st_mode):
             for thisdir, subdirs, files in os.walk(path):
-                for fn in files:
+                for fn in sorted(files):
                     if fn[0] == ".":
                         continue
                     for f, c in find_files(os.path.join(thisdir, fn)):
@@ -16,7 +16,7 @@ def find_files(*paths):
         else:
             try:
                 with zipfile.ZipFile(path, 'r') as zf:
-                    for zi in zf.infolist():
+                    for zi in sorted(zf.infolist()):
                         fullfn = zi.filename
                         contents = zf.read(zi)
                         yield fullfn, contents
