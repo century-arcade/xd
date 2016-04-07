@@ -30,17 +30,17 @@ def from_puz(puzzle):
         rows.append(puzzle.solution[i:i + puzzle.width])
 
     def is_across(x, y):
-        if result[x, y].solution == '.':
+        if result[x, y].solution in ':.':
             return False
-        start = x == 0 or (0 <= x - 1 and result[x - 1, y].solution == '.')
-        end = (x + 1 < puzzle.width and result[x + 1, y].solution != '.')
+        start = x == 0 or (0 <= x - 1 and result[x - 1, y].solution in ':.')
+        end = (x + 1 < puzzle.width and result[x + 1, y].solution not in ':.')
         return start and end
 
     def is_down(x, y):
-        if result[x, y].solution == '.':
+        if result[x, y].solution in ':.':
             return False
-        start = y == 0 or (y - 1 >= 0 and result[x, y - 1].solution == '.')
-        end = (y + 1 < puzzle.height and result[x, y + 1].solution != '.')
+        start = y == 0 or (y - 1 >= 0 and result[x, y - 1].solution in ':.')
+        end = (y + 1 < puzzle.height and result[x, y + 1].solution not in ':.')
         return start and end
 
     for y, row in enumerate(rows):
