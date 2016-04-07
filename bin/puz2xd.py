@@ -110,15 +110,13 @@ def parse_puz(contents, filename):
         for number, clue in puzzle.clues.across():
             cluenum = "A" + str(number)
             if cluenum not in answers:
-                print(cluenum, clue)
-#                raise xdfile.IncompletePuzzleParse(xd, "Clue number doesn't match grid: " + cluenum)
+                raise xdfile.IncompletePuzzleParse(xd, "Clue number doesn't match grid: " + cluenum)
             xd.clues.append((("A", number), decode(clue), answers.get(cluenum, "")))
 
         for number, clue in puzzle.clues.down():
             cluenum = "D" + str(number)
             if cluenum not in answers:
-                print(cluenum, clue)
-#                raise xdfile.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + cluenum)
+                raise xdfile.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + cluenum)
             xd.clues.append((("D", number), decode(clue), answers.get(cluenum, "")))
     except KeyError as e:
         raise xdfile.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + str(e))

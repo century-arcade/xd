@@ -303,35 +303,31 @@ class xdfile:
                 # compute number shown in box
                 new_clue = False
                 if self.cell(r, c - 1) in NON_ANSWER_CHARS:  # across clue start
-                    j = 0
+                    ncells = 0
                     answer = ""
-                    while self.cell(r, c + j) not in NON_ANSWER_CHARS:
-                        cellval = self.cell(r, c + j)
+                    while self.cell(r, c + ncells) not in NON_ANSWER_CHARS:
+                        cellval = self.cell(r, c + ncells)
                         answer += rebus.get(cellval, cellval)
-                        j += 1
+                        ncells += 1
 
-                    if j > 1:
+                    if ncells > 1:
                         new_clue = True
                         yield "A", clue_num, answer
 
                 if self.cell(r - 1, c) in NON_ANSWER_CHARS:  # down clue start
-                    j = 0
+                    ncells = 0
                     answer = ""
-                    while self.cell(r + j, c) not in NON_ANSWER_CHARS:
-                        cellval = self.cell(r + j, c)
+                    while self.cell(r + ncells, c) not in NON_ANSWER_CHARS:
+                        cellval = self.cell(r + ncells, c)
                         answer += rebus.get(cellval, cellval)
-                        j += 1
+                        ncells += 1
 
-                    if j > 1:
+                    if ncells > 1:
                         new_clue = True
                         yield "D", clue_num, answer
 
                 if new_clue:
-                    print("%02d " % clue_num, end="")
                     clue_num += 1
-                else:
-                    print(" %s " % cell, end="")
-            print("")
 
     def get_answer(self, clueid):
         for pos, clue, answer in self.clues:
