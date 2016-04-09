@@ -81,15 +81,19 @@ publishers = {
 SEP = "\t"
 REBUS_SEP = " "
 g_args = None
+g_currentProgress = None
 
 
 def log(s):
+    print(" " + s, file=sys.stderr)  # preceding space to offset from progress
+    print(g_currentProgress + ": " + s)
     sys.stdout.flush()
     sys.stderr.flush()
-    print(" " + s, file=sys.stderr)
 
 
 def progress(n, rest="", every=100):
+    global g_currentProgress
+    g_currentProgress = rest
     if n % every == 0:
         print("\r% 6d %s" % (n, rest), file=sys.stderr, end="")
     if n < 0:
@@ -106,6 +110,7 @@ HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'date',
 
 unknownpubs = {}
 all_files = {}
+all_hashes = {}
 
 
 def clean_headers(xd):
@@ -113,7 +118,8 @@ def clean_headers(xd):
         if hdr in ["Source", "Identifier", "Acquired", "Issued", "Category"]:
             xd.set_header(hdr, None)
         else:
-            assert hdr.lower() in HEADER_ORDER, hdr
+            if hdr.lower() not in HEADER_ORDER:
+                log("%s: '%s' header not known: '%s' (%d)" % (xd.filename, hdr, xd.headers[hdr], ord(xd.headers[hdr])))
 
     title = xd.get_header("Title") or ""
     author = xd.get_header("Author") or ""
@@ -671,12 +677,26 @@ def save_file(xd, outf):
 
     xdstr = xd.to_unicode().encode("utf-8")
 
-    while outfn in all_files:
-        if all_files[outfn] != xdstr:
-            log("different versions: '%s'" % outfn)
-            outfn += ".2"
+    # check for duplicate filename and contents
 
-    all_files[outfn] = xdstr
+    xdhash = hash(xdstr)
+
+    while outfn in all_files:
+        if all_files[outfn] == xdhash:
+            log("exact duplicate")
+            return
+
+        log("same filename, different contents: '%s'" % outfn)
+        outfn += ".2"
+
+    all_files[outfn] = xdhash
+
+    if xdhash in all_hashes:
+        log("duplicate contents of %s" % all_hashes[xdhash])
+    else:
+        all_hashes[xdhash] = outfn
+
+    # write to output
 
     if isinstance(outf, zipfile.ZipFile):
         if year < 1980:
@@ -724,9 +744,6 @@ def main_parse(parserfunc):
         base_orig, ext = os.path.splitext(fn)
         base = "".join([c for c in base_orig.lower()
                         if c in string.lowercase or c in string.digits])
-
-#        if base != base_orig.lower():
-#            print(base_orig, base)
 
         try:
             try:

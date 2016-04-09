@@ -42,6 +42,7 @@ ACROSSDOWN = 'ACROSS&DOWN'
 
 BLACKSQUARE = '.'
 
+BLOCKS = '.:'
 
 def enum(**enums):
     return type('Enum', (), enums)
@@ -703,7 +704,8 @@ def restore(s, t):
 def is_blacksquare(c):
     if isinstance(c, int):
         c = chr(c)
-    return c == BLACKSQUARE
+    assert c != ':'
+    return c in BLOCKS
 
 
 #

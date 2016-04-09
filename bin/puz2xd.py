@@ -32,7 +32,7 @@ def is_block(puz, x, y):
 
 
 def parse_puz(contents, filename):
-    rebus_shorthands = list(u"♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
+    rebus_shorthands = list(u"⚷⚳♇♆⛢♄♃♂♁♀☿♹♸♷♶♵♴♳⅘⅗⅖⅕♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
 
     if not filename.lower().endswith('.puz'):
         return
@@ -49,7 +49,7 @@ def parse_puz(contents, filename):
     xd.set_header("Author", puzobj.author)
     xd.set_header("Copyright", puzobj.copyright)
     xd.set_header("Notes", puzobj.notes)
-    xd.set_header("Postscript", puzobj.postscript)
+    xd.set_header("Postscript", "".join(x for x in puzobj.postscript if ord(x) >= ord(' ')))
     xd.set_header("Preamble", puzobj.preamble)
 
     xd.set_header("Title", puzobj.title)
@@ -87,16 +87,24 @@ def parse_puz(contents, filename):
                 n = r * puzobj.width + c
                 reb = puzobj.rebus()
                 if reb.has_rebus() and n in reb.get_rebus_squares():
-                    c = str(reb.table[n] - 1)
-                    rowstr += used_rebuses[c]
-                    cell.solution = rebus[used_rebuses[c]]
+                    ch = str(reb.table[n] - 1)
+                    rowstr += used_rebuses[ch]
+                    cell.solution = rebus[used_rebuses[ch]]
                 else:
-                    if cell.solution not in grid_dict:
-                        # grid_dict[cell.solution] = rebus_shorthands.pop()
-                        print " odd character '%s'" % cell.solution
-                        rowstr += cell.solution
-                    else:
-                        rowstr += grid_dict[cell.solution]
+                    ch = cell.solution
+                    if ch not in grid_dict:
+                        if ch in rebus_shorthands:
+                            cellch = ch
+                            rebus_shorthands.remove(ch)
+                            xdfile.log("unknown grid character '%s', assuming rebus of itself" % ch)
+                        else:
+                            cellch = rebus_shorthands.pop()
+                            xdfile.log("unknown grid character '%s', assuming rebus (as '%s')" % (ch, cellch))
+
+                            xd.set_header("Rebus", xd.get_header("Rebus") + " %s=%s" % (cellch, ch))
+
+                        grid_dict[ch] = cellch
+                    rowstr += grid_dict[ch]
 
         xd.grid.append(rowstr)
 
