@@ -6,6 +6,7 @@ BUCKET= xd.saul.pw
 WWWDIR= www/xdiffs
 
 SCRIPTDIR=$(shell pwd)/scripts
+QUERYDIR=$(shell pwd)/queries
 
 sync-corpus: $(CORPUS).tar.xz $(CORPUS).zip
 	s3cmd ${S3CFG} put -P $^ s3://${BUCKET}/
@@ -16,11 +17,11 @@ $(CORPUS).tar.xz:
 $(CORPUS).zip:
 	find crosswords -name '*.xd' -print | sort | zip $@ -@
 
-puzzles.tsv: $(SCRIPTDIR)/enumpuzzles.py
-	PYTHONPATH=. $(SCRIPTDIR)/enumpuzzles.py > $@
+puzzles.tsv: $(QUERYDIR)/enumpuzzles.py
+	PYTHONPATH=. $(QUERYDIR)/enumpuzzles.py > $@
 
-publishers.tsv: $(SCRIPTDIR)/enumpublishers.py
-	PYTHONPATH=. $(SCRIPTDIR)/enumpublishers.py > $@
+publishers.tsv: $(QUERYDIR)/enumpublishers.py
+	PYTHONPATH=. $(QUERYDIR)/enumpublishers.py > $@
 
 findgrids: src/findgrids.c
 	gcc -std=c99 -ggdb -O3 -o $@ $<

@@ -23,6 +23,7 @@ def decode(s):
     s = s.replace(u'\x93', '"')
     s = s.replace(u'\x94', '"')
     s = s.replace(u'\x85', '...')
+    s = s.replace(u'\x86', u'†')
     s = urllib.unquote(s)
     return s
 
@@ -67,7 +68,7 @@ def parse_puz(contents, filename):
                 key, value = pair.split(":")
                 rebuskey = rebus_shorthands.pop()
                 used_rebuses[key] = rebuskey
-                rebus[rebuskey] = value
+                rebus[rebuskey] = decode(value.decode("latin-1"))
 
             rebustr = xdfile.REBUS_SEP.join([("%s=%s" % (k, v)) for k, v in sorted(rebus.items())])
             xd.set_header("Rebus", rebustr)
@@ -101,12 +102,14 @@ def parse_puz(contents, filename):
                             cellch = rebus_shorthands.pop()
                             xdfile.log("unknown grid character '%s', assuming rebus (as '%s')" % (ch, cellch))
 
-                            xd.set_header("Rebus", xd.get_header("Rebus") + " %s=%s" % (cellch, ch))
+                        xd.set_header("Rebus", xd.get_header("Rebus") + " %s=%s" % (cellch, ch))
 
                         grid_dict[ch] = cellch
                     rowstr += grid_dict[ch]
 
         xd.grid.append(rowstr)
+
+    assert xd.size() == (puzzle.width, puzzle.height), "non-matching grid sizes"
 
     # clues
     answers = {}

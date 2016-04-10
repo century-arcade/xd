@@ -85,15 +85,15 @@ g_currentProgress = None
 
 
 def log(s):
-    print(" " + s, file=sys.stderr)  # preceding space to offset from progress
-    print(g_currentProgress + ": " + s)
-    sys.stdout.flush()
+    print(" " + s.encode("utf-8"), file=sys.stderr)  # preceding space to offset from progress
     sys.stderr.flush()
+
+    if g_currentProgress:
+        print(g_currentProgress + ": " + s.encode("utf-8"))
+        sys.stdout.flush()
 
 
 def progress(n, rest="", every=100):
-    global g_currentProgress
-    g_currentProgress = rest
     if n % every == 0:
         print("\r% 6d %s" % (n, rest), file=sys.stderr, end="")
     if n < 0:
@@ -113,13 +113,18 @@ all_files = {}
 all_hashes = {}
 
 
+def clean_str(s):
+    cleanchars = string.ascii_letters + string.digits + "-_"
+    return "".join(c for c in s if c in cleanchars)
+
+
 def clean_headers(xd):
     for hdr in xd.headers.keys():
         if hdr in ["Source", "Identifier", "Acquired", "Issued", "Category"]:
             xd.set_header(hdr, None)
         else:
             if hdr.lower() not in HEADER_ORDER:
-                log("%s: '%s' header not known: '%s' (%d)" % (xd.filename, hdr, xd.headers[hdr], ord(xd.headers[hdr])))
+                log("%s: '%s' header not known: '%s'" % (xd.filename, hdr, xd.headers[hdr]))
 
     title = xd.get_header("Title") or ""
     author = xd.get_header("Author") or ""
@@ -142,8 +147,8 @@ def clean_headers(xd):
             author = ""
 
         if " / " in author:
-            assert not editor
-            author, editor = author.rsplit(" / ", 1)
+            if not editor:
+                author, editor = author.rsplit(" / ", 1)
 
     if editor:
         while editor.lower().startswith("by "):
@@ -212,6 +217,16 @@ class xdfile:
     def __str__(self):
         return self.filename or ""
 
+    def width(self):
+        return self.grid and len(self.grid[0]) or 0
+
+    def height(self):
+        return len(self.grid)
+
+    # returns (w, h)
+    def size(self):
+        return (self.width(), self.height())
+
     def iterdiffs(self, other):
         for k in set(self.headers.keys()) | set(other.headers.keys()):
             if self.get_header(k) != other.get_header(k):
@@ -235,6 +250,8 @@ class xdfile:
 
     def set_header(self, fieldname, newvalue=None):
         newvalue = unicode(newvalue).strip()
+        newvalue = " ".join(newvalue.splitlines())
+        newvalue = newvalue.replace("\t", "  ")
 
 #        if fieldname in self.headers:
 #            if newvalue != self.headers.get(fieldname, None):
@@ -414,15 +431,22 @@ class xdfile:
         # headers (section 1)
 
         r = u""
-        for k, v in sorted([(x, y) for x, y in self.headers.items()], key=lambda i: i[0].lower() in HEADER_ORDER and HEADER_ORDER.index(i[0].lower() or 1000)):
-            if not isinstance(v, list):
-                values = [v]
-            else:
-                values = v
 
-            for i in values:
-                r += "%s: %s" % (k, i)
+        def header_sort_key(item):
+            if item[0].lower() not in HEADER_ORDER:
+                return 1000
+
+            return HEADER_ORDER.index(item[0].lower())
+
+        if self.headers:
+            for k, v in sorted(self.headers.items(), key=header_sort_key):
+                assert isinstance(v, basestring), v
+
+                r += "%s: %s" % (k, v)
                 r += EOL
+        else:
+            r += "Title: %s" % parse_fn(self.filename).base
+            r += EOL
 
         r += SECTION_SEP
 
@@ -571,9 +595,11 @@ def xd_metadata_header():
         "pubid",
         "pubvol",
         "Date",
+        "Size",
         "Title",
         "Author",
         "Editor",
+        "1-Across/1-Down"
     ])
 
 
@@ -588,9 +614,11 @@ def xd_metadata(xd):
         pubid,
         abbrid + yearstr,
         xd.get_header("Date") or datestr,
-        xd.get_header("Title") or "",
-        xd.get_header("Author") or "",
-        xd.get_header("Editor") or "",
+        "%dx%d" % xd.size(),
+        xd.get_header("Title"),
+        xd.get_header("Author"),
+        xd.get_header("Editor"),
+        "%s/%s" % (xd.get_answer("A1"), xd.get_answer("D1"))
     ]
 
     assert SEP not in "".join(fields), fields
@@ -622,18 +650,6 @@ def xd_filename(pubid, pubabbr, year, mon, day, unique=""):
     return "crosswords/%s/%s/%s%s-%02d-%02d%s.xd" % (pubid, year, pubabbr, year, mon, day, unique)
 
 
-def main_load():
-    corpus = load_corpus(*sys.argv[1:])
-
-    if len(corpus) == 1:
-        xd = corpus.values()[0]
-        print(xd.to_unicode().encode("utf-8"))
-    else:
-        log("%s puzzles" % len(corpus))
-
-    return corpus
-
-
 def parse_fn(fqpn):
     path, fn = os.path.split(fqpn)
     base, ext = os.path.splitext(fn)
@@ -660,7 +676,7 @@ def save_file(xd, outf):
     except UnknownFilenameFormat:
         abbr = ""
         year, month, day = 1980, 1, 1
-        outfn = "crosswords/misc/%s.xd" % parse_fn(xd.filename).base
+        outfn = "crosswords/misc/%s.xd" % clean_str(parse_fn(xd.filename).base)
     except:
         raise
 
@@ -718,6 +734,7 @@ def save_file(xd, outf):
 
 def main_parse(parserfunc):
     global g_args
+    global g_currentProgress
 
     parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
     parser.add_argument('path', type=str, nargs='+', help='files, .zip, or directories to be converted')
@@ -738,6 +755,7 @@ def main_parse(parserfunc):
             outf = None
 
     for n, (fullfn, contents) in enumerate(utils.find_files(*g_args.path)):
+    	g_currentProgress = fullfn
         progress(n, fullfn, every=1)
 
         path, fn = os.path.split(fullfn)
@@ -760,7 +778,7 @@ def main_parse(parserfunc):
             else:
                 save_file(xd, outf)
         except Exception, e:
-            log("error: %s: %s" % (str(e), type(e)))
+            log("error: %s: %s" % (unicode(e), type(e)))
             if g_args.debug:
                 raise
 
