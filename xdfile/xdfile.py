@@ -88,7 +88,7 @@ def log(s):
     print(" " + s.encode("utf-8"), file=sys.stderr)  # preceding space to offset from progress
     sys.stderr.flush()
 
-    if g_currentProgress:
+    if g_args.verbose > 0:
         print(g_currentProgress + ": " + s.encode("utf-8"))
         sys.stdout.flush()
 
@@ -188,23 +188,10 @@ def clean_headers(xd):
             xd.set_header("Date", d.strftime("%Y-%m-%d"))
 
 
-def parse_date_from_filename(fn):
-    m = re.search("(\w*)([12]\d{3})-(\d{2})-(\d{2})", fn)
-    if m:
-        abbr, y, mon, d = m.groups()
-        try:
-            dt = datetime.date(int(y), int(mon), int(d))
-        except:
-            dt = None
-
-        return abbr.lower(), dt
-    else:
-        return fn[:3].lower(), None
-
-
 class xdfile:
     def __init__(self, xd_contents=None, filename=None):
         self.filename = filename
+        self.source = ""
         self.headers = {}  # [key] -> value or list of values
         self.grid = []  # list of string rows
         self.clues = []  # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
@@ -506,13 +493,6 @@ class xdfile:
         return flipxd
 
 
-def get_base_filename(fn):
-    path, b = os.path.split(fn)
-    b, ext = os.path.splitext(b)
-
-    return b
-
-
 def args():
     return g_args
 
@@ -547,7 +527,7 @@ def corpus():
                 continue
 
             try:
-                basefn = get_base_filename(fullfn)
+                basefn = parse_fn(fullfn).base
                 n += 1
                 progress(n, basefn)
 
@@ -573,7 +553,7 @@ def load_corpus(*pathnames):
             continue
 
         try:
-            basefn = get_base_filename(fullfn)
+            basefn = parse_fn(fullfn).base
             xd = xdfile(contents, fullfn)
 
             ret[basefn] = xd
@@ -590,44 +570,32 @@ def load_corpus(*pathnames):
     return ret
 
 
-def xd_metadata_header():
-    return SEP.join([
-        "pubid",
-        "pubvol",
-        "Date",
-        "Size",
-        "Title",
-        "Author",
-        "Editor",
-        "1-Across/1-Down"
-    ])
+def parse_date_from_filename(fn):
+    """
+    m = re.search("(\w*)([12]\d{3})-(\d{2})-(\d{2})", fn)
+    if m:
+        abbr, y, mon, d = m.groups()
+        try:
+            dt = datetime.date(int(y), int(mon), int(d))
+        except:
+            dt = None
 
+        return abbr.lower(), dt
+    else:
+        return parse_fn(fn).base[:3].lower(), None
+        """
+    abbr, y, mon, d, rest = parse_filename(fn)
 
-def xd_metadata(xd):
-    abbrid, d = parse_date_from_filename(xd.filename)
-    pubid = xd.filename.split("/")[1]
+    try:
+        dt = datetime.date(int(y), int(mon), int(d))
+    except:
+        dt = None
 
-    yearstr = d and str(d.year) or ""
-    datestr = d and d.strftime("%Y-%m-%d") or ""
-
-    fields = [
-        pubid,
-        abbrid + yearstr,
-        xd.get_header("Date") or datestr,
-        "%dx%d" % xd.size(),
-        xd.get_header("Title"),
-        xd.get_header("Author"),
-        xd.get_header("Editor"),
-        "%s/%s" % (xd.get_answer("A1"), xd.get_answer("D1"))
-    ]
-
-    assert SEP not in "".join(fields), fields
-    return SEP.join(fields).encode("utf-8")
+    return abbr.lower(), dt
 
 
 def parse_filename(fn):
-    import re
-    m = re.search("([A-z]*)[_\s]?(\d{2,4})-?(\d{2})-?(\d{2})(.*)\.", fn)
+    m = re.search("([A-Za-z]*)[_\s]?(\d{2,4})-?(\d{2})-?(\d{2})(.*)\.", fn)
     if m:
         abbr, yearstr, monstr, daystr, rest = m.groups()
         year, mon, day = int(yearstr), int(monstr), int(daystr)
@@ -638,7 +606,7 @@ def parse_filename(fn):
                 year += 1900
             else:
                 year += 2000
-        assert len(abbr) <= 5, fn
+        assert len(abbr) <= 5, abbr
         assert year > 1920 and year < 2017, "bad year %s" % yearstr
         assert mon >= 1 and mon <= 12, "bad month %s" % monstr
         assert day >= 1 and day <= 31, "bad day %s" % daystr
@@ -657,130 +625,31 @@ def parse_fn(fqpn):
     return nt(path=path, base=base, ext=ext)
 
 
-def save_file(xd, outf):
+def get_target_location(xd):
     try:
         try:
-            abbr, year, month, day, rest = parse_filename(xd.filename.lower())
+            abbr, year, month, day, rest = parse_filename(xd.source.lower())
         except:
-            raise UnknownFilenameFormat(xd.filename)
+            raise UnknownFilenameFormat(xd.source)
 
         if not xd.get_header("Date"):
             xd.set_header("Date", "%d-%02d-%02d" % (year, month, day))
 
         if abbr:
             base = "%s%s-%02d-%02d%s" % (abbr, year, month, day, rest)
-            outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day, rest)
+            outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day)
         else:
             base = "%s-%02d-%02d%s" % (year, month, day, rest)
             outfn = xd_filename("misc", "", year, month, day, rest)
     except UnknownFilenameFormat:
         abbr = ""
         year, month, day = 1980, 1, 1
-        outfn = "crosswords/misc/%s.xd" % clean_str(parse_fn(xd.filename).base)
+        outfn = "crosswords/misc/%s.xd" % clean_str(parse_fn(xd.source).base)
     except:
         raise
 
-    if g_args.toplevel:
-        # the toplevel option is for moving some or all subset into a flattened directory
-        fullfn = "%s/%s/%s.xd" % (g_args.toplevel, xd.filename.lstrip("crosswords/"), base)
-    else:
-        fullfn = outfn
+    return outfn
 
-    xd.filename = fullfn
-    clean_headers(xd)
-
-    outfn = xd.filename
-
-    xdstr = xd.to_unicode().encode("utf-8")
-
-    # check for duplicate filename and contents
-
-    xdhash = hash(xdstr)
-
-    while outfn in all_files:
-        if all_files[outfn] == xdhash:
-            log("exact duplicate")
-            return
-
-        log("same filename, different contents: '%s'" % outfn)
-        outfn += ".2"
-
-    all_files[outfn] = xdhash
-
-    if xdhash in all_hashes:
-        log("duplicate contents of %s" % all_hashes[xdhash])
-    else:
-        all_hashes[xdhash] = outfn
-
-    # write to output
-
-    if isinstance(outf, zipfile.ZipFile):
-        if year < 1980:
-            year = 1980
-        zi = zipfile.ZipInfo(outfn, (year, month, day, 9, 0, 0))
-        zi.external_attr = 0444 << 16L
-        zi.compress_type = zipfile.ZIP_DEFLATED
-        outf.writestr(zi, xdstr)
-    elif isinstance(outf, file):
-        outf.write(xdstr)
-    else:
-        try:
-            basedirs, fn = os.path.split(outfn)
-            os.makedirs(basedirs)
-        except:
-            pass
-        file(outfn, "w-").write(xdstr)
-
-
-def main_parse(parserfunc):
-    global g_args
-    global g_currentProgress
-
-    parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
-    parser.add_argument('path', type=str, nargs='+', help='files, .zip, or directories to be converted')
-    parser.add_argument('-o', dest='output', default=None, help='output directory (default stdout)')
-    parser.add_argument('-t', dest='toplevel', default=None, help='set toplevel directory of files in .zip')
-    parser.add_argument('-d', dest='debug', action='store_true', default=False, help='abort on exception')
-    parser.add_argument('-m', dest='metadata_only', action='store_true', default=False, help='output metadata.tsv only')
-
-    g_args = parser.parse_args()
-
-    outf = sys.stdout
-
-    if g_args.output:
-        outbase, outext = os.path.splitext(g_args.output)
-        if outext == ".zip":
-            outf = zipfile.ZipFile(g_args.output, 'w')
-        else:
-            outf = None
-
-    for n, (fullfn, contents) in enumerate(utils.find_files(*g_args.path)):
-    	g_currentProgress = fullfn
-        progress(n, fullfn, every=1)
-
-        path, fn = os.path.split(fullfn)
-        base_orig, ext = os.path.splitext(fn)
-        base = "".join([c for c in base_orig.lower()
-                        if c in string.lowercase or c in string.digits])
-
-        try:
-            try:
-                xd = parserfunc(contents, fullfn)
-            except IncompletePuzzleParse as e:
-                log("%s  %s" % (fullfn, e))
-                xd = e.xd
-
-            if not xd:
-                continue
-
-            if g_args.metadata_only:
-                print(xd_metadata(xd))
-            else:
-                save_file(xd, outf)
-        except Exception, e:
-            log("error: %s: %s" % (unicode(e), type(e)))
-            if g_args.debug:
-                raise
 
 if __name__ == "__main__":
     main_load()

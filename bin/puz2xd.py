@@ -35,8 +35,8 @@ def is_block(puz, x, y):
 def parse_puz(contents, filename):
     rebus_shorthands = list(u"⚷⚳♇♆⛢♄♃♂♁♀☿♹♸♷♶♵♴♳⅘⅗⅖⅕♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
 
-    if not filename.lower().endswith('.puz'):
-        return
+#    if not filename.lower().endswith('.puz'):
+#        return
 
     puzobj = puz.load(contents)
 
@@ -45,7 +45,7 @@ def parse_puz(contents, filename):
     grid_dict = dict(zip(string.uppercase, string.uppercase))
 
     xd = xdfile.xdfile()
-    xd.filename = filename
+    xd.source = filename
 
     xd.set_header("Author", puzobj.author)
     xd.set_header("Copyright", puzobj.copyright)
