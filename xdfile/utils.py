@@ -44,7 +44,7 @@ def args_parser(desc=""):
     return argparse.ArgumentParser(description=desc)
 
 
-def get_args(desc, parser=None):
+def get_args(parser=None, desc=""):
     global g_args
 
     if g_args:
@@ -65,7 +65,8 @@ def get_args(desc, parser=None):
 
 
 # walk all 'paths' recursively and yield (filename, contents) for non-hidden files
-def find_files(*paths, ext=None):
+def find_files(*paths, **kwargs):
+    ext = kwargs.get("ext")
     for path in paths:
         if stat.S_ISDIR(os.stat(path).st_mode):
             # handle directories

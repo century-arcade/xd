@@ -55,20 +55,20 @@ xd_puzzles_header = COLUMN_SEPARATOR.join([
 
 # yields dict corresponding to each row of receipts.tsv, in sequential order
 def receipts_meta():
-    return parse_tsv(file(RECEIPTS_TSV, 'r').read()
+    return parse_tsv(file(RECEIPTS_TSV, 'r').read())
 
 def publications_meta():
-    return parse_tsv(file(PUBLICATIONS_TSV, 'r').read()
+    return parse_tsv(file(PUBLICATIONS_TSV, 'r').read())
 
 def puzzles_meta():
-    return parse_tsv(file(PUZZLES_TSV, 'r').read()
+    return parse_tsv(file(PUZZLES_TSV, 'r').read())
 
 def append_receipts(receipts):
     file(RECEIPTS_TSV, 'a').write(receipts)
 
 # for each row in fnDownloadZip:*.tsv, assigns ReceiptId, ReceivedTime, and appends to receipts.tsv.  
 def xd_receipts_row(nt):
-    return receipts += COLUMN_SEPARATOR.join([
+    return COLUMN_SEPARATOR.join([
         nt.ReceiptId,
         nt.DownloadTime,
         nt.ReceivedTime,

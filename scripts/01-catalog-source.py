@@ -10,7 +10,7 @@ from __future__ import print_function
 import sys
 import zipfile
 
-from xdfile.metadatabase import xd_source_row, xd_source_header
+from xdfile.metadatabase import xd_source_row, xd_sources_header
 from xdfile.utils import find_files, zip_append, get_log, get_args, filetime, args_parser, parse_pathname, log, iso8601
 
 
@@ -21,9 +21,9 @@ def main():
 
     log("importing from %s" % args.source)
 
-    zf = zipfile.ZipFile(args.output, 'w')
+    zf = zipfile.ZipFile(args.output, 'w', allowZip64=True)
 
-    sources = xd_source_header
+    sources = xd_sources_header
 
     for input_source in args.inputs:
         for fn, contents in find_files(input_source):
