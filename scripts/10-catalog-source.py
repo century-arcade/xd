@@ -5,8 +5,6 @@
 #
 #    zips all files under <toplevel-directory>. includes .log of process and .tsv of contents
 
-from __future__ import print_function
-
 import sys
 import zipfile
 
@@ -23,7 +21,7 @@ def main():
 
     zf = zipfile.ZipFile(args.output, 'w', allowZip64=True)
 
-    sources = xd_sources_header
+    sources = []
 
     for input_source in args.inputs:
         for fn, contents in find_files(input_source):
@@ -35,13 +33,13 @@ def main():
 
             zip_append(zf, fn, contents, dt)
 
-            sources += xd_source_row(fn, args.source or input_source, iso8601(dt))
+            sources.append(xd_source_row(fn, args.source or input_source, iso8601(dt)))
 
-    log("Done")
+    log("%s files cataloged" % len(sources))
 
     outbase = parse_pathname(args.output).base
 
-    zip_append(zf, "%s.tsv" % outbase, sources)
+    zip_append(zf, "%s.tsv" % outbase, xd_sources_header + "".join(sources))
     zip_append(zf, "%s.log" % outbase, get_log())
 
 main()

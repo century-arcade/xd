@@ -8,6 +8,26 @@ WWWDIR= www/xdiffs
 SCRIPTDIR=$(shell pwd)/scripts
 QUERYDIR=$(shell pwd)/queries
 
+bwh-all:
+
+bwh-extract:
+	mkdir -p bwh
+	tar -C bwh/ -zxf bwh-2015.tgz
+
+bwh-catalog: bwh-2015-source.zip
+
+bwh-convert: bwh-2015-xd.zip
+
+bwh-clean:
+	rm -f bwh-2015-source.zip
+	rm -f bwh-2015-xd.zip
+
+bwh-2015-source.zip: bwh/
+	PYTHONPATH=. ${SCRIPTDIR}/10-catalog-source.py -o $@ -s bwh-2015.tgz $<
+
+bwh-2015-xd.zip: bwh-2015-source.zip always
+	PYTHONPATH=. ${SCRIPTDIR}/20-convert2xd.py -o $@ $<
+
 sync-corpus: $(CORPUS).tar.xz $(CORPUS).zip
 	s3cmd ${S3CFG} put -P $^ s3://${BUCKET}/
 

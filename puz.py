@@ -161,9 +161,7 @@ class Puzzle:
         # start of the puzzle use the ACROSS&DOWN magic string as a waypoint
         # save the preamble for round-tripping
         if not s.seek_to(ACROSSDOWN.encode(ENCODING), -2):
-            raise PuzzleFormatError("Data does not appear to represent a "
-                                    "puzzle. Are you sure you didn't intend "
-                                    "to use read?")
+            raise PuzzleFormatError("does not appear to be .puz format")
 
         self.preamble = s.data[:s.pos]
 
@@ -219,7 +217,7 @@ class Puzzle:
         for code, cksum_ext in ext_cksum.items():
             if cksum_ext != data_cksum(self.extensions[code]):
                 raise PuzzleFormatError(
-                    'extension %s checksum does not match' % code
+                    "extension '%s' checksum does not match" % code
                 )
 
     def save(self, filename):

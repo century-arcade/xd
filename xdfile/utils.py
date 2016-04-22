@@ -6,6 +6,7 @@ import os
 import stat
 import sys
 import zipfile
+import csv
 import datetime
 import time
 import argparse
@@ -13,7 +14,7 @@ import argparse
 EOL = '\n'
 COLUMN_SEPARATOR = '\t'
 
-g_logs = [ ]   # get with get_logs()
+g_logs = [ ]   # get with get_log()
 g_args = None  # get with args()
 g_currentProgress = None
 g_numProgress = 0
@@ -24,19 +25,28 @@ def get_log():
 
 
 def log(s, minverbose=0):
-    g_logs.append("%s: %s" % (g_currentProgress or sys.argv[0], s))
+    g_logs.append("%s: %s" % (g_currentProgress or parse_pathname(sys.argv[0]).base, s))
 
     if g_args.verbose >= minverbose:
         print(" " + s.encode("utf-8"))
 
 
+# print without logging if -d
+def debug(s):
+    if g_args.debug:
+        print(" " + s.encode("utf-8"))
+
+
 def progress(rest="", every=1):
     global g_currentProgress, g_numProgress
-    g_numProgress += 1
-    g_currentProgress = rest
-    if g_numProgress % every == every-1:
-        print("\r% 6d %s" % (g_numProgress, rest), end="")
-    if not rest:
+    if rest:
+        g_numProgress += 1
+        g_currentProgress = rest
+        if g_numProgress % every == every-1:
+            print("\r% 6d %s" % (g_numProgress, rest), end="")
+    else:
+        g_currentProgress = ""
+        g_numProgress = 0
         print()
 
 
@@ -72,7 +82,8 @@ def find_files(*paths, **kwargs):
             # handle directories
             for thisdir, subdirs, files in os.walk(path):
                 for fn in sorted(files):
-                    if ext and fn.endswith(ext):  # only looking for one particular ext, don't log
+
+                    if ext and not fn.endswith(ext):  # only looking for one particular ext, don't log
                         continue
 
                     fullfn = os.path.join(thisdir, fn)
@@ -82,24 +93,28 @@ def find_files(*paths, **kwargs):
                         log("ignoring dotfile")
                         continue
 
-                    for f, c in find_files(fullfn):
-                        yield f, c
+                    yield fullfn, file(fullfn).read()
         else:
             try:
                 # handle .zip files
                 with zipfile.ZipFile(path, 'r') as zf:
-                    for zi in sorted(zf.infolist()):
+                    for zi in sorted(zf.infolist(), key=lambda x: x.filename):
+                        if ext and not zi.filename.endswith(ext):  # as above
+                            continue
+
                         fullfn = zi.filename
                         progress(fullfn)
 
                         contents = zf.read(zi)
                         yield fullfn, contents
-            except:
+            except zipfile.BadZipfile:
                 # handle individual files
                 fullfn = path
                 contents = file(path).read()
                 yield fullfn, contents
 
+    # reset progress indicator after processing all files
+    progress()
 
 def zip_append(zf, fn, contents, timet=None):
     if not timet:
@@ -115,7 +130,7 @@ def filetime(fn):
 
 
 def iso8601(timet):
-    return datetime.datetime.fromtimestamp(timet).isoformat(' ')
+    return datetime.datetime.fromtimestamp(int(timet)).isoformat(' ').split(' ')[0]
 
 
 def parse_pathname(path):
@@ -133,6 +148,9 @@ def replace_ext(fn, newext):
 
 # always includes header row
 #   returns a sequence of mappings
-def parse_tsv(contents):
-    return []
+def parse_tsv(contents, objname=""):
+    lines = contents.splitlines()
+    csvreader = csv.DictReader(contents.splitlines(), delimiter=COLUMN_SEPARATOR, quoting=csv.QUOTE_NONE) 
+    nt = namedtuple(objname, " ".join(csvreader.fieldnames))
+    return [nt(**row) for row in csvreader]
 

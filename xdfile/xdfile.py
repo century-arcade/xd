@@ -14,6 +14,8 @@ import argparse
 
 import utils
 
+from utils import log, progress
+
 
 class Error(Exception):
     pass
@@ -29,6 +31,10 @@ class IncompletePuzzleParse(Error):
     def __init__(self, xd, msg=""):
         Error.__init__(self, msg)
         self.xd = xd
+
+
+class PuzzleParseError(Error):
+    pass
 
 
 publishers = {
@@ -83,21 +89,6 @@ REBUS_SEP = " "
 g_args = None
 g_currentProgress = None
 
-
-def log(s):
-    print(" " + s.encode("utf-8"), file=sys.stderr)  # preceding space to offset from progress
-    sys.stderr.flush()
-
-    if g_args.verbose > 0:
-        print(g_currentProgress + ": " + s.encode("utf-8"))
-        sys.stdout.flush()
-
-
-def progress(n, rest="", every=100):
-    if n % every == 0:
-        print("\r% 6d %s" % (n, rest), file=sys.stderr, end="")
-    if n < 0:
-        print(file=sys.stderr)
 
 UNKNOWN_CHAR = '.'
 BLOCK_CHAR = '#'
@@ -202,7 +193,7 @@ class xdfile:
             self.parse_xd(xd_contents.decode("utf-8"))
 
     def __str__(self):
-        return self.filename or ""
+        return self.filename or self.source or ""
 
     def width(self):
         return self.grid and len(self.grid[0]) or 0
@@ -432,7 +423,7 @@ class xdfile:
                 r += "%s: %s" % (k, v)
                 r += EOL
         else:
-            r += "Title: %s" % parse_fn(self.filename).base
+            r += "Title: %s" % utils.parse_pathname(self.source).base
             r += EOL
 
         r += SECTION_SEP
@@ -477,6 +468,7 @@ class xdfile:
 
         flipxd = xdfile()
         flipxd.filename = self.filename
+        flipxd.source = self.source
         flipxd.headers = self.headers.copy()
 #        flipxd.set_header("Title", "(transposed) " + flipxd.get_header("Title"))
 
@@ -592,26 +584,6 @@ def parse_date_from_filename(fn):
         dt = None
 
     return abbr.lower(), dt
-
-
-def parse_filename(fn):
-    m = re.search("([A-Za-z]*)[_\s]?(\d{2,4})-?(\d{2})-?(\d{2})(.*)\.", fn)
-    if m:
-        abbr, yearstr, monstr, daystr, rest = m.groups()
-        year, mon, day = int(yearstr), int(monstr), int(daystr)
-        if len(yearstr) == 2:
-            if year > 1900:
-                pass
-            elif year > 18:
-                year += 1900
-            else:
-                year += 2000
-        assert len(abbr) <= 5, abbr
-        assert year > 1920 and year < 2017, "bad year %s" % yearstr
-        assert mon >= 1 and mon <= 12, "bad month %s" % monstr
-        assert day >= 1 and day <= 31, "bad day %s" % daystr
-#        print "%s %d-%02d-%02d" % (abbr, year, mon, day)
-        return abbr, year, mon, day, "".join(rest.split())[:3]
 
 
 def xd_filename(pubid, pubabbr, year, mon, day, unique=""):

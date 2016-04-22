@@ -35,12 +35,14 @@ def is_block(puz, x, y):
 def parse_puz(contents, filename):
     rebus_shorthands = list(u"⚷⚳♇♆⛢♄♃♂♁♀☿♹♸♷♶♵♴♳⅘⅗⅖⅕♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
 
-#    if not filename.lower().endswith('.puz'):
-#        return
-
-    puzobj = puz.load(contents)
-
-    puzzle = crossword.from_puz(puzobj)
+    try:
+        puzobj = puz.load(contents)
+        puzzle = crossword.from_puz(puzobj)
+    except puz.PuzzleFormatError, e:
+        emsg = e.message
+        if "<html>" in contents.lower():
+            emsg += " (looks like html)"
+        raise xdfile.PuzzleParseError(emsg)
 
     grid_dict = dict(zip(string.uppercase, string.uppercase))
 
@@ -135,4 +137,11 @@ def parse_puz(contents, filename):
     return xd
 
 if __name__ == "__main__":
-    xdfile.main_parse(parse_puz)
+    import sys
+    from utils import get_args, find_files
+
+    args = get_args(desc='parse .puz files')
+    for fn, contents in find_files(*sys.argv[1:]):
+        xd = parse_puz(contents, fn)
+        print(xd.to_unicode().encode("utf-8"))
+

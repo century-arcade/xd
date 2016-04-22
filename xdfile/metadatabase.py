@@ -1,6 +1,11 @@
 
-from utils import COLUMN_SEPARATOR, EOL
+import os.path
+
+from utils import COLUMN_SEPARATOR, EOL, parse_tsv
 from xdfile import corpus
+
+
+RECEIPTS_TSV = "receipts.tsv"
 
 
 # <source>-source-YYYY-MM-DD.zip/.tsv
@@ -8,7 +13,7 @@ from xdfile import corpus
 # Each delivery from an extractor should have a 'sources' table, to preserve the precise external sources.
 xd_sources_header = COLUMN_SEPARATOR.join([
         "SourceFilename",   # filename in the containing .zip; ideally referenceable by the ExternalSource
-        "DownloadTime",     # '2016-04-11T01:24' [ISO8601]
+        "DownloadTime",     # '2016-04-11' (ISO8601; can be truncated)
         "ExternalSource",   # URL or email
     ]) + EOL
 
@@ -16,11 +21,11 @@ xd_sources_header = COLUMN_SEPARATOR.join([
 # Each row from every 'sources' table appends an expanded version to the global 'receipts' table.
 xd_receipts_header = COLUMN_SEPARATOR.join([
         "ReceiptId",        # simple numeric row id (empty if Rejected)
-        "DownloadTime",     # [these identically-named fields copied from above xd-downloads.tsv]
-        "ReceivedTime",     # '2016-04-14'; any Date or Time can be truncated
-        "ExternalSource",   # [see above]
+        "DownloadTime",     # '2016-04-11' [as above, copied from xd-downloads.tsv]
+        "ReceivedTime",     # '2016-04-14' [date of entry into receipts]
+        "ExternalSource",   # URL or email [as above]
         "InternalSource",   # 'src/2016/xd-download-2016-04-11.zip'
-        "SourceFilename",   # [see above]
+        "SourceFilename",   # filename in the containing .zip [as above]
         "Rejected"          # reason for immediate rejection: obviously not a valid puzzle file; 
     ]) + EOL
 
@@ -54,28 +59,41 @@ xd_puzzles_header = COLUMN_SEPARATOR.join([
 
 
 # yields dict corresponding to each row of receipts.tsv, in sequential order
-def receipts_meta():
-    return parse_tsv(file(RECEIPTS_TSV, 'r').read())
+def xd_receipts_meta():
+    return parse_tsv(file(RECEIPTS_TSV, 'r').read(), "Receipt")
 
-def publications_meta():
-    return parse_tsv(file(PUBLICATIONS_TSV, 'r').read())
+def xd_publications_meta():
+    return parse_tsv(file(PUBLICATIONS_TSV, 'r').read(), "Publication")
 
-def puzzles_meta():
-    return parse_tsv(file(PUZZLES_TSV, 'r').read())
+def xd_puzzles_meta():
+    return parse_tsv(file(PUZZLES_TSV, 'r').read(), "Puzzle")
 
 def append_receipts(receipts):
     file(RECEIPTS_TSV, 'a').write(receipts)
 
+
+def get_last_receipt_id():
+    try:
+        all_receipts = xd_receipts_meta()
+        if all_receipts:
+            return int(all_receipts[-1].ReceiptId)
+        else:
+            return 0
+    except IOError:
+        file(RECEIPTS_TSV, 'w').write(xd_receipts_header)
+        return 0
+        
+
 # for each row in fnDownloadZip:*.tsv, assigns ReceiptId, ReceivedTime, and appends to receipts.tsv.  
 def xd_receipts_row(nt):
     return COLUMN_SEPARATOR.join([
-        nt.ReceiptId,
+        str(nt.ReceiptId),
         nt.DownloadTime,
         nt.ReceivedTime,
         nt.ExternalSource,
         nt.InternalSource,
         nt.SourceFilename,
-        nt.Rejected
+        str(nt.Rejected)
    ]) + EOL
 
 # for each row in fnDownloadZip:*.tsv, converts to .xd and appends to puzzles.tsv
