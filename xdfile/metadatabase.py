@@ -6,6 +6,8 @@ from xdfile import corpus
 
 
 RECEIPTS_TSV = "receipts.tsv"
+PUBLICATIONS_TSV = "publications.tsv"
+PUZZLES_TSV = "puzzles.tsv"
 
 
 # <source>-source-YYYY-MM-DD.zip/.tsv

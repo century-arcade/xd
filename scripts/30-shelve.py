@@ -1,41 +1,157 @@
 #!/usr/bin/env python
 #
-# Usage: $0 [-o <output-xd> <input>
+# Usage: $0 [-o <output-location>] <input>
 #
 #   Renames the <input> file(s) according to metadata (in .xd, .tsv, or filenameb)
-#   Appends to puzzles.tsv
+#   Appends metadata row to puzzles.tsv
 #
 
-        pfn = parse_filename(fn)
-        acceptable_chars = string.lowercase + string.digits + "_-"
-        base = "".join([ch for ch in pfn.base.lower() if ch in acceptable_chars])
+import string
+import re
+import zipfile
 
-        path, fn = os.path.split(fullfn)
-        base_orig, ext = os.path.splitext(fn)
+from xdfile import xdfile
+from xdfile.metadatabase import xd_publications_meta
+from xdfile.utils import get_args, find_files, parse_pathname, log, get_log, zip_append
 
-        try:
+badchars = """ "'\\"""
+
+def clean_filename(fn):
+    basefn = parse_pathname(fn).base
+    for ch in badchars:
+        basefn = basefn.replace(ch, '_')
+    return basefn
 
 
-            outfn = get_target_location(xd)
-
-            if g_args.toplevel:
-                # the toplevel option is for moving some or all subset into a flattened directory
-                fullfn = "%s/%s/%s.xd" % (g_args.toplevel, xd.filename.lstrip("crosswords/"), base)
+def parse_filename(fn):
+    m = re.search("([A-Za-z]*)[_\s]?(\d{2,4})-?(\d{2})-?(\d{2})(.*)\.", fn)
+    if m:
+        abbr, yearstr, monstr, daystr, rest = m.groups()
+        year, mon, day = int(yearstr), int(monstr), int(daystr)
+        if len(yearstr) == 2:
+            if year > 1900:
+                pass
+            elif year > 18:
+                year += 1900
             else:
-                fullfn = outfn
+                year += 2000
+        assert len(abbr) <= 5, abbr
+        assert year > 1920 and year < 2017, "bad year %s" % yearstr
+        assert mon >= 1 and mon <= 12, "bad month %s" % monstr
+        assert day >= 1 and day <= 31, "bad day %s" % daystr
+        return abbr, year, mon, day, "".join(rest.split())[:3]
 
-            xd.filename = fullfn
 
-            clean_headers(xd)
+def get_publication(xd):
+    matching_publications = set()
 
-            if g_args.metadata_only:
-                print(xd_metadata(xd))
-            else:
-                save_file(xd, outf)
-        except Exception, e:
-            log("error: %s: %s" % (unicode(e), type(e)))
-            if g_args.debug:
-                raise
+    all_headers = "|".join(hdr for hdr in xd.headers.values()).lower()
+
+    try:
+        abbr, year, mon, day, rest = parse_filename(xd.filename)
+    except:
+        abbr = ""
+
+    all_pubs = xd_publications_meta()
+
+    for publ in all_pubs:
+#        if publ.PublisherAbbr == abbr.lower():
+#            matching_publications.add(publ)
+
+        if publ.PublicationAbbr == abbr.lower():
+            matching_publications.add(publ)
+
+        if publ.PublicationName and publ.PublicationName.lower() in all_headers:
+            matching_publications.add(publ)
+
+        if publ.PublisherName and publ.PublisherName.lower() in all_headers:
+            matching_publications.add(publ)
+
+    if not matching_publications:
+        return None
+    elif len(matching_publications) == 1:
+        return matching_publications.pop()
+
+    # otherwise, filter out 'self' publications
+    matching_pubs = set([ p for p in matching_publications if 'self' not in p.PublisherAbbr ])
+
+    if len(matching_pubs) == 1:
+        return matching_pubs.pop()
+
+    log("%s: pubs=%s; headers=%s" % (xd, " ".join(p.PublicationAbbr for p in matching_pubs or matching_publications), all_headers))
+
+
+def get_target_filename(xd):
+    # determine publisher/publication
+    try:
+        publ = get_publication(xd)
+    except Exception, e:
+        publ = None
+        if args.debug:
+            raise
+
+    # determine date (or at least year)
+    try:
+        _abbr, year, month, day, rest = parse_filename(xd.filename.lower())
+        seqnum = "%04d-%02d-%02d" % (year, month, day)
+    except:
+        year = ""
+        m = re.search(r'(\d+)', xd.filename)
+        if m:
+            seqnum = m.group(1)
+        else:
+            seqnum = None
+
+    if publ and seqnum:
+        if year:
+            publabbr = "%s/%s/%s" % (publ.PublisherAbbr, year, publ.PublicationAbbr)
+        elif publ:
+            publabbr = "%s/%s" % (publ.PublisherAbbr, publ.PublicationAbbr)
+    else:
+        return "misc/%s.xd" % clean_filename(xd.filename)
+
+    return "%s%s.xd" % (publabbr, seqnum)
+
+
+
+def main():
+    global args
+    args = get_args(desc='shelve .xd files in proper location')
+
+    if args.output:
+        outzf = zipfile.ZipFile(args.output, 'w', allowZip64=True)
+    else:
+        outzf = None
+
+    all_filenames = set()
+
+    for input_source in args.inputs:
+        for fn, contents in find_files(input_source, ext='.xd'):
+            xd = xdfile(contents, fn)
+
+            try:
+                target_fn = get_target_filename(xd)
+                real_target_fn = target_fn
+                i = 0
+                while real_target_fn in all_filenames:
+                    real_target_fn = target_fn + string.lowercase[i]
+                    i += 1
+
+                reencoding = xd.to_unicode().encode("utf-8")
+                if reencoding != contents:
+                    log("non-identical contents when re-encoded")
+
+                all_filenames.add(real_target_fn)
+                if outzf:
+                    zip_append(outzf, real_target_fn, contents)
+                else:
+                    log("would store to '%s'" % real_target_fn)
+            except Exception, e:
+                log("unshelveable: " + str(e))
+                if args.debug:
+                    raise
+
+    log("%d puzzles in misc/" % len([ fn for fn in all_filenames if fn.startswith("misc")]))
 
 
 def save_file(xd, outf):
@@ -80,3 +196,6 @@ def save_file(xd, outf):
         except:
             pass
         file(outfn, "w-").write(xdstr)
+        
+if __name__ == "__main__":
+    main()

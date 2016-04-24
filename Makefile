@@ -18,15 +18,21 @@ bwh-catalog: bwh-2015-source.zip
 
 bwh-convert: bwh-2015-xd.zip
 
+bwh-shelve: bwh-2015-shelved.zip
+
 bwh-clean:
+	rm -f bwh-2015-shelved.zip
 	rm -f bwh-2015-source.zip
 	rm -f bwh-2015-xd.zip
 
 bwh-2015-source.zip: bwh/
 	PYTHONPATH=. ${SCRIPTDIR}/10-catalog-source.py -o $@ -s bwh-2015.tgz $<
 
-bwh-2015-xd.zip: bwh-2015-source.zip always
+bwh-2015-xd.zip: bwh-2015-source.zip
 	PYTHONPATH=. ${SCRIPTDIR}/20-convert2xd.py -o $@ $<
+
+bwh-2015-shelved.zip: always #bwh-2015-xd.zip
+	PYTHONPATH=. ${SCRIPTDIR}/30-shelve.py -o $@ bwh/ #$<
 
 sync-corpus: $(CORPUS).tar.xz $(CORPUS).zip
 	s3cmd ${S3CFG} put -P $^ s3://${BUCKET}/
