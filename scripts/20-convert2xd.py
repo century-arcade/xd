@@ -110,9 +110,8 @@ def main():
             this_receipt = xd_receipts_row(sources_row)
             new_receipts += this_receipt
 
-        base = parse_pathname(input_source).base
-        zip_append(xdzf, base + "-receipts.tsv", new_receipts.encode("utf-8"))
-        zip_append(xdzf, base + "-converted.log", get_log().encode("utf-8"))
+    zip_append(xdzf, "receipts.tsv", new_receipts.encode("utf-8"))
+    zip_append(xdzf, "converted.log", get_log().encode("utf-8"))
 
     # only append to global receipts.tsv if entire conversion process succeeded
     append_receipts(new_receipts)

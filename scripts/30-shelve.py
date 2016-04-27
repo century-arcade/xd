@@ -23,23 +23,9 @@ def clean_filename(fn):
     return basefn
 
 
-def parse_filename(fn):
-    m = re.search("([A-Za-z]*)[_\s]?(\d{2,4})-?(\d{2})-?(\d{2})(.*)\.", fn)
-    if m:
-        abbr, yearstr, monstr, daystr, rest = m.groups()
-        year, mon, day = int(yearstr), int(monstr), int(daystr)
-        if len(yearstr) == 2:
-            if year > 1900:
-                pass
-            elif year > 18:
-                year += 1900
-            else:
-                year += 2000
-        assert len(abbr) <= 5, abbr
-        assert year > 1920 and year < 2017, "bad year %s" % yearstr
-        assert mon >= 1 and mon <= 12, "bad month %s" % monstr
-        assert day >= 1 and day <= 31, "bad day %s" % daystr
-        return abbr, year, mon, day, "".join(rest.split())[:3]
+def parse_pubid_from_filename(fn):
+    m = re.search("(^[A-Za-z]*)", fn)
+    return m.group(1)
 
 
 def get_publication(xd):
@@ -47,10 +33,7 @@ def get_publication(xd):
 
     all_headers = "|".join(hdr for hdr in xd.headers.values()).lower()
 
-    try:
-        abbr, year, mon, day, rest = parse_filename(xd.filename)
-    except:
-        abbr = ""
+    abbr = parse_pubid_from_filename(xd.filename)
 
     all_pubs = xd_publications_meta()
 
@@ -90,11 +73,11 @@ def get_target_filename(xd):
         if args.debug:
             raise
 
-    # determine date (or at least year)
-    try:
-        _abbr, year, month, day, rest = parse_filename(xd.filename.lower())
-        seqnum = "%04d-%02d-%02d" % (year, month, day)
-    except:
+    # determine date (or at least year if possible)
+    seqnum = xd.get_header("Date")
+    if seqnum:
+        year = seqnum.split("-")[0]
+    else:
         year = ""
         m = re.search(r'(\d+)', xd.filename)
         if m:
@@ -110,7 +93,7 @@ def get_target_filename(xd):
     else:
         return "misc/%s.xd" % clean_filename(xd.filename)
 
-    return "%s%s.xd" % (publabbr, seqnum)
+    return "crosswords/%s%s.xd" % (publabbr, seqnum)
 
 
 
@@ -152,8 +135,10 @@ def main():
                     raise
 
     log("%d puzzles in misc/" % len([ fn for fn in all_filenames if fn.startswith("misc")]))
+    if outzf:
+        zip_append(outzf, "cleaned.log", get_log().encode("utf-8"))
 
-
+"""
 def save_file(xd, outf):
     outfn = xd.filename
 
@@ -196,6 +181,7 @@ def save_file(xd, outf):
         except:
             pass
         file(outfn, "w-").write(xdstr)
-        
+"""
+
 if __name__ == "__main__":
     main()

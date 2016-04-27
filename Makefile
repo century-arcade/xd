@@ -8,31 +8,42 @@ WWWDIR= www/xdiffs
 SCRIPTDIR=$(shell pwd)/scripts
 QUERYDIR=$(shell pwd)/queries
 
-bwh-all:
+COLLECTION=bwh-2015
 
-bwh-extract:
+all:
+
+extract:
 	mkdir -p bwh
-	tar -C bwh/ -zxf bwh-2015.tgz
+	tar -C bwh/ -zxf ${COLLECTION}.tgz
 
-bwh-catalog: bwh-2015-source.zip
+catalog: ${COLLECTION}-source.zip
 
-bwh-convert: bwh-2015-xd.zip
+convert: ${COLLECTION}-converted.zip
 
-bwh-shelve: bwh-2015-shelved.zip
+headers-clean: ${COLLECTION}-cleaned.zip
 
-bwh-clean:
-	rm -f bwh-2015-shelved.zip
-	rm -f bwh-2015-source.zip
-	rm -f bwh-2015-xd.zip
+shelve: ${COLLECTION}-shelved.zip
 
-bwh-2015-source.zip: bwh/
-	PYTHONPATH=. ${SCRIPTDIR}/10-catalog-source.py -o $@ -s bwh-2015.tgz $<
+collection-clean:
+	rm -f ${COLLECTION}-shelved.zip
+	rm -f ${COLLECTION}-cleaned.zip
+	rm -f ${COLLECTION}-source.zip
+	rm -f ${COLLECTION}-converted.zip
 
-bwh-2015-xd.zip: bwh-2015-source.zip
+${COLLECTION}-source.zip: bwh/
+	PYTHONPATH=. ${SCRIPTDIR}/10-catalog-source.py -o $@ -s ${COLLECTION}.tgz $<
+
+${COLLECTION}-converted.zip: ${COLLECTION}-source.zip
 	PYTHONPATH=. ${SCRIPTDIR}/20-convert2xd.py -o $@ $<
 
-bwh-2015-shelved.zip: always #bwh-2015-xd.zip
-	PYTHONPATH=. ${SCRIPTDIR}/30-shelve.py -o $@ bwh/ #$<
+#${COLLECTION}-cleaned.zip: ${COLLECTION}-converted.zip
+#	PYTHONPATH=. ${SCRIPTDIR}/25-clean-headers.py -o $@ $<
+
+${COLLECTION}-shelved.zip: ${COLLECTION}-cleaned.zip
+	PYTHONPATH=. ${SCRIPTDIR}/30-shelve.py -o $@ $<
+
+${COLLECTION}-puzzles.tsv: ${COLLECTION}-shelved.zip
+	PYTHONPATH=. $(SCRIPTDIR)/40-catalog-puzzles.py -c $< -o $@
 
 sync-corpus: $(CORPUS).tar.xz $(CORPUS).zip
 	s3cmd ${S3CFG} put -P $^ s3://${BUCKET}/
@@ -42,9 +53,6 @@ $(CORPUS).tar.xz:
 
 $(CORPUS).zip:
 	find crosswords -name '*.xd' -print | sort | zip $@ -@
-
-puzzles.tsv: $(QUERYDIR)/enumpuzzles.py
-	PYTHONPATH=. $(QUERYDIR)/enumpuzzles.py > $@
 
 publishers.tsv: $(QUERYDIR)/enumpublishers.py
 	PYTHONPATH=. $(QUERYDIR)/enumpublishers.py > $@

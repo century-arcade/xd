@@ -63,7 +63,7 @@ def get_args(parser=None, desc=""):
     if not parser:
         parser = args_parser(desc)
 
-    parser.add_argument('inputs', nargs='+', help='toplevel input(s)')
+    parser.add_argument('inputs', nargs='*', help='toplevel input(s)')
     parser.add_argument('-o', '--output', dest='output', action='store')
     parser.add_argument('-q', '--quiet', dest='verbose', action='store_const', const=-1, default=0)
     parser.add_argument('-v', '--verbose', dest='verbose', action='count', default=0)

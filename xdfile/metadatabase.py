@@ -1,7 +1,7 @@
 
 import os.path
 
-from utils import COLUMN_SEPARATOR, EOL, parse_tsv
+from utils import COLUMN_SEPARATOR, EOL, parse_tsv, parse_pathname
 from xdfile import corpus
 
 
@@ -98,30 +98,6 @@ def xd_receipts_row(nt):
         str(nt.Rejected)
    ]) + EOL
 
-# for each row in fnDownloadZip:*.tsv, converts to .xd and appends to puzzles.tsv
-def convert_sources(fnDownloadZip):
-    abbrid, d = parse_date_from_filename(xd.filename)
-    pubid = xd.filename.split("/")[1]
-
-    yearstr = d and str(d.year) or ""
-    datestr = d and d.strftime("%Y-%m-%d") or ""
-
-    fields = [
-        parse_fn(xd.filename).base,
-        xd.source,
-        pubid,
-        abbrid + yearstr,
-        xd.get_header("Date") or datestr,
-        "%dx%d" % xd.size(),
-        xd.get_header("Title"),
-        xd.get_header("Author"),
-        xd.get_header("Editor"),
-        "%s/%s" % (xd.get_answer("A1"), xd.get_answer("D1"))
-    ]
-
-    assert SEP not in "".join(fields), fields
-    return COLUMN_SEPARATOR.join(fields).encode("utf-8")
-
 
 def xd_source_row(SourceFilename, ExternalSource, DownloadTime):
     return COLUMN_SEPARATOR.join([
@@ -129,4 +105,22 @@ def xd_source_row(SourceFilename, ExternalSource, DownloadTime):
         DownloadTime,
         ExternalSource
     ]) + EOL
+
+
+def xd_puzzles_row(xd):
+    fields = [
+        parse_pathname(xd.filename).base,  # xdid
+        "ReceiptId",                 # ReceiptId
+        xd.publisher_id(),           # "nytimes"
+        xd.publication_id(),         # "nyt"
+        xd.get_header("Date"),
+        "%dx%d" % xd.size(),
+        xd.get_header("Title"),
+        xd.get_header("Author"),
+        xd.get_header("Editor"),
+        "%s/%s" % (xd.get_answer("A1"), xd.get_answer("D1"))
+    ]
+
+    assert COLUMN_SEPARATOR not in "".join(fields), fields
+    return COLUMN_SEPARATOR.join(fields).encode("utf-8") + EOL
 

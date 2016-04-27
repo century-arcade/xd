@@ -7,10 +7,7 @@ from collections import namedtuple
 import sys
 import os
 import re
-import datetime
 import string
-import zipfile
-import argparse
 
 import utils
 
@@ -18,11 +15,6 @@ from utils import log, progress
 
 
 class Error(Exception):
-    pass
-
-
-class UnknownFilenameFormat(Error):
-    """Source filename format not known"""
     pass
 
 
@@ -37,57 +29,7 @@ class PuzzleParseError(Error):
     pass
 
 
-publishers = {
-    'unk': 'unknown',
-    'che': 'chronicle',
-    'ch': 'chicago',
-    'cs': 'crossynergy',
-    'pp': 'wapost',
-    'wsj': 'wsj',
-    'rnr': 'rocknroll',
-    'nw': 'newsday',
-    'nyt': 'nytimes',
-    'tech': 'nytimes',
-    'tm': "time",
-    'nfl': "cbs",
-    'cn': "crosswordnation",
-    'vwl': 'nytimes',
-    'nyk': 'nytimes',
-    'la': 'latimes',
-    'nys': 'nysun',
-    'pzz': 'puzzazz',
-    'nyh': 'nyherald',
-    'lt': 'london',
-    'pa': 'nytimes',
-    'pk': 'king',
-    'nym': 'nymag',
-    'db': 'dailybeast',
-    'awm': 'threeacross',
-    'rp': 'rexparker',
-    'wp': 'wapost',
-    'nl': 'lampoon',
-    'tmdcr': 'tribune',
-    'kc': 'kcstar',
-    'mg': 'mygen',
-    'atc': 'crossroads',
-    'onion': 'onion',
-    'mm': 'aarp',
-    'ue': 'universal',
-    'ut': 'universal',
-    'up': 'universal',
-    'us': 'universal',
-    'um': 'universal',
-    'ub': 'universal',
-    'ss': 'simonschuster',
-    'sl': 'slate',
-    'ana': 'nytimes',
-}
-
-
-SEP = "\t"
 REBUS_SEP = " "
-g_args = None
-g_currentProgress = None
 
 
 UNKNOWN_CHAR = '.'
@@ -103,80 +45,6 @@ unknownpubs = {}
 all_files = {}
 all_hashes = {}
 
-
-def clean_str(s):
-    cleanchars = string.ascii_letters + string.digits + "-_"
-    return "".join(c for c in s if c in cleanchars)
-
-
-def clean_headers(xd):
-    for hdr in xd.headers.keys():
-        if hdr in ["Source", "Identifier", "Acquired", "Issued", "Category"]:
-            xd.set_header(hdr, None)
-        else:
-            if hdr.lower() not in HEADER_ORDER:
-                log("%s: '%s' header not known: '%s'" % (xd.filename, hdr, xd.headers[hdr]))
-
-    title = xd.get_header("Title") or ""
-    author = xd.get_header("Author") or ""
-    editor = xd.get_header("Editor") or ""
-    rights = xd.get_header("Copyright") or ""
-
-    if author:
-        r = r'(?i)(?:(?:By )*(.+)(?:[;/,-]|and) *)?(?:edited|Editor|(?<!\w)Ed[.])(?: By)*(.*)'
-        m = re.search(r, author)
-        if m:
-            author, editor = m.groups()
-
-        if author:
-            while author.lower().startswith("by "):
-                author = author[3:]
-
-            while author[-1] in ",.":
-                author = author[:-1]
-        else:
-            author = ""
-
-        if " / " in author:
-            if not editor:
-                author, editor = author.rsplit(" / ", 1)
-
-    if editor:
-        while editor.lower().startswith("by "):
-            editor = editor[3:]
-
-        while editor[-1] in ",.":
-            editor = editor[:-1]
-
-    author = author.strip()
-    editor = editor.strip()
-
-    if title.endswith(']'):
-        title = title[:title.rfind('[')]
-
-    # title is only between the double-quotes for some USAToday
-    if title.startswith("USA Today"):
-        if title and title[-1] == '"':
-            newtitle = title[title.index('"') + 1:-1]
-            if newtitle[-1] == ",":
-                newtitle = newtitle[:-1]
-        elif title and title[0] == '"':
-            newtitle = title[1:title.rindex('"')]
-        else:
-            newtitle = title
-
-        xd.set_header("Title", newtitle)
-
-#    rights = rights.replace(u"©", "(c)")
-
-    xd.set_header("Author", author)
-    xd.set_header("Editor", editor)
-    xd.set_header("Copyright", rights)
-
-    if not xd.get_header("Date"):
-        abbrid, d = parse_date_from_filename(xd.filename)
-        if d:
-            xd.set_header("Date", d.strftime("%Y-%m-%d"))
 
 
 class xdfile:
@@ -204,6 +72,18 @@ class xdfile:
     # returns (w, h)
     def size(self):
         return (self.width(), self.height())
+
+    def xdid(self):
+        return utils.parse_pathname(self.filename).base
+
+    def publisher_id(self):  # "nytimes"
+        try:
+            return utils.parse_pathname(self.filename).path.split("/")[1]
+        except:
+            return "misc"
+
+    def publication_id(self):  # "nyt"
+        return utils.parse_pathname(self.filename).base[:3]
 
     def iterdiffs(self, other):
         for k in set(self.headers.keys()) | set(other.headers.keys()):
@@ -455,6 +335,7 @@ class xdfile:
         r = r.replace(u'\x92', "'")
         r = r.replace(u'\x93', '"')
         r = r.replace(u'\x94', '"')
+        r = r.replace(u'\x96', '___')
         r = r.replace(u'\x85', '...')
 
         # these are always supposed to be double-quotes
@@ -485,12 +366,10 @@ class xdfile:
         return flipxd
 
 
-def args():
-    return g_args
-
 g_corpus = None
 
 
+# get_args(...) should be called before corpus()
 def corpus():
     ''' DOCME '''
     global g_corpus
@@ -501,27 +380,18 @@ def corpus():
     else:
         g_corpus = []
 
-        global g_args
+        args = utils.get_args()
 
-        parser = argparse.ArgumentParser(description='convert crosswords to .xd format')
-        parser.add_argument('-q', '--quiet', dest='verbose', action='store_const', const=-1)
-        parser.add_argument('-v', '--verbose', dest='verbose', action='count', default=0)
-        parser.add_argument('-d', '--debug', dest='debug', action='store_true', default=False, help='abort on exception')
-        parser.add_argument('-c', '--corpus', dest='corpusdir', default="crosswords", help='corpus source')
-        g_args = parser.parse_args()
-
-        all_files = sorted(utils.find_files(g_args.corpusdir))
+        all_files = sorted(utils.find_files(args.corpusdir))
         log("%d puzzles" % len(all_files))
 
-        n = 0
         for fullfn, contents in all_files:
             if not fullfn.endswith(".xd"):
                 continue
 
             try:
-                basefn = parse_fn(fullfn).base
-                n += 1
-                progress(n, basefn)
+                basefn = utils.parse_pathname(fullfn).base
+                progress(basefn)
 
                 xd = xdfile(contents, fullfn)
 
@@ -530,98 +400,9 @@ def corpus():
                 yield xd
             except Exception, e:
                 log(unicode(e))
-                if g_args.debug:
+                if args.debug:
                     raise
 
-        progress(-1)
+        progress()
 
 
-def load_corpus(*pathnames):
-    ret = {}
-
-    n = 0
-    for fullfn, contents in utils.find_files(*pathnames):
-        if not fullfn.endswith(".xd"):
-            continue
-
-        try:
-            basefn = parse_fn(fullfn).base
-            xd = xdfile(contents, fullfn)
-
-            ret[basefn] = xd
-
-            n += 1
-            progress(n, basefn)
-        except Exception, e:
-            log(unicode(e))
-            if g_args.debug:
-                raise
-
-    progress()
-
-    return ret
-
-
-def parse_date_from_filename(fn):
-    """
-    m = re.search("(\w*)([12]\d{3})-(\d{2})-(\d{2})", fn)
-    if m:
-        abbr, y, mon, d = m.groups()
-        try:
-            dt = datetime.date(int(y), int(mon), int(d))
-        except:
-            dt = None
-
-        return abbr.lower(), dt
-    else:
-        return parse_fn(fn).base[:3].lower(), None
-        """
-    abbr, y, mon, d, rest = parse_filename(fn)
-
-    try:
-        dt = datetime.date(int(y), int(mon), int(d))
-    except:
-        dt = None
-
-    return abbr.lower(), dt
-
-
-def xd_filename(pubid, pubabbr, year, mon, day, unique=""):
-    return "crosswords/%s/%s/%s%s-%02d-%02d%s.xd" % (pubid, year, pubabbr, year, mon, day, unique)
-
-
-def parse_fn(fqpn):
-    path, fn = os.path.split(fqpn)
-    base, ext = os.path.splitext(fn)
-    nt = namedtuple('Pathname', 'path base ext')
-    return nt(path=path, base=base, ext=ext)
-
-
-def get_target_location(xd):
-    try:
-        try:
-            abbr, year, month, day, rest = parse_filename(xd.source.lower())
-        except:
-            raise UnknownFilenameFormat(xd.source)
-
-        if not xd.get_header("Date"):
-            xd.set_header("Date", "%d-%02d-%02d" % (year, month, day))
-
-        if abbr:
-            base = "%s%s-%02d-%02d%s" % (abbr, year, month, day, rest)
-            outfn = xd_filename(publishers.get(abbr, abbr), abbr, year, month, day)
-        else:
-            base = "%s-%02d-%02d%s" % (year, month, day, rest)
-            outfn = xd_filename("misc", "", year, month, day, rest)
-    except UnknownFilenameFormat:
-        abbr = ""
-        year, month, day = 1980, 1, 1
-        outfn = "crosswords/misc/%s.xd" % clean_str(parse_fn(xd.source).base)
-    except:
-        raise
-
-    return outfn
-
-
-if __name__ == "__main__":
-    main_load()
