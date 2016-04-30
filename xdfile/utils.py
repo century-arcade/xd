@@ -14,7 +14,7 @@ import argparse
 EOL = '\n'
 COLUMN_SEPARATOR = '\t'
 
-g_logs = [ ]   # get with get_log()
+g_logs = []   # get with get_log()
 g_args = None  # get with args()
 g_currentProgress = None
 g_numProgress = 0
@@ -42,7 +42,7 @@ def progress(rest="", every=1):
     if rest:
         g_numProgress += 1
         g_currentProgress = rest
-        if g_numProgress % every == every-1:
+        if g_numProgress % every == every - 1:
             print("\r% 6d %s" % (g_numProgress, rest), end="")
     else:
         g_currentProgress = ""
@@ -116,6 +116,7 @@ def find_files(*paths, **kwargs):
     # reset progress indicator after processing all files
     progress()
 
+
 def zip_append(zf, fn, contents, timet=None):
     if not timet:
         timet = time.time()
@@ -149,8 +150,6 @@ def replace_ext(fn, newext):
 # always includes header row
 #   returns a sequence of mappings
 def parse_tsv(contents, objname=""):
-    lines = contents.splitlines()
-    csvreader = csv.DictReader(contents.splitlines(), delimiter=COLUMN_SEPARATOR, quoting=csv.QUOTE_NONE) 
+    csvreader = csv.DictReader(contents.splitlines(), delimiter=COLUMN_SEPARATOR, quoting=csv.QUOTE_NONE)
     nt = namedtuple(objname, " ".join(csvreader.fieldnames))
     return [nt(**row) for row in csvreader]
-

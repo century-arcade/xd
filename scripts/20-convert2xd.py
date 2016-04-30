@@ -8,8 +8,6 @@
 
 from collections import namedtuple
 
-import os.path
-import sys
 import time
 import zipfile
 
@@ -19,7 +17,7 @@ from xdfile.utils import log, debug, get_log
 from xdfile.utils import find_files, parse_pathname, replace_ext, filetime
 from xdfile.utils import get_args, parse_tsv, iso8601, zip_append
 
-from xdfile.metadatabase import xd_receipts_header, xd_receipts_row, xd_receipts_meta, append_receipts, get_last_receipt_id
+from xdfile.metadatabase import xd_receipts_header, xd_receipts_row, append_receipts, get_last_receipt_id
 
 from xdfile.ccxml2xd import parse_ccxml
 from xdfile.uxml2xd import parse_uxml
@@ -27,15 +25,16 @@ from xdfile.ujson2xd import parse_ujson
 from xdfile.puz2xd import parse_puz
 from xdfile.xwordinfo2xd import parse_xwordinfo
 
+
 def main():
-    parsers = { 
-        '.xml': [ parse_ccxml, parse_uxml ],
-        '.json': [ parse_ujson ],
-        '.puz': [ parse_puz ],
-        '.html': [ parse_xwordinfo ],
-        '.pdf': [ ],
-        '.jpg': [ ],
-        '.gif': [ ]
+    parsers = {
+        '.xml': [parse_ccxml, parse_uxml],
+        '.json': [parse_ujson],
+        '.puz': [parse_puz],
+        '.html': [parse_xwordinfo],
+        '.pdf': [],
+        '.jpg': [],
+        '.gif': []
     }
 
     args = get_args(desc='convert crosswords to .xd format')

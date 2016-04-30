@@ -5,7 +5,6 @@
 #
 #    zips all files under <toplevel-directory>. includes .log of process and .tsv of contents
 
-import sys
 import zipfile
 
 from xdfile.metadatabase import xd_source_row, xd_sources_header

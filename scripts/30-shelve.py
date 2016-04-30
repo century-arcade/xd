@@ -16,6 +16,7 @@ from xdfile.utils import get_args, find_files, parse_pathname, log, get_log, zip
 
 badchars = """ "'\\"""
 
+
 def clean_filename(fn):
     basefn = parse_pathname(fn).base
     for ch in badchars:
@@ -38,9 +39,6 @@ def get_publication(xd):
     all_pubs = xd_publications_meta()
 
     for publ in all_pubs:
-#        if publ.PublisherAbbr == abbr.lower():
-#            matching_publications.add(publ)
-
         if publ.PublicationAbbr == abbr.lower():
             matching_publications.add(publ)
 
@@ -56,7 +54,7 @@ def get_publication(xd):
         return matching_publications.pop()
 
     # otherwise, filter out 'self' publications
-    matching_pubs = set([ p for p in matching_publications if 'self' not in p.PublisherAbbr ])
+    matching_pubs = set([p for p in matching_publications if 'self' not in p.PublisherAbbr])
 
     if len(matching_pubs) == 1:
         return matching_pubs.pop()

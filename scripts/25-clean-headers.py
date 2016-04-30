@@ -12,8 +12,7 @@ import zipfile
 import datetime
 
 from xdfile import xdfile, HEADER_ORDER
-from xdfile.metadatabase import xd_publications_meta
-from xdfile.utils import get_args, find_files, parse_pathname, log, get_log, zip_append
+from xdfile.utils import get_args, find_files, log, get_log, zip_append
 
 
 # from original filename
@@ -44,6 +43,7 @@ def clean_year(year):
         year += 2000
     assert year > 1920 and year < 2017, "bad year %s" % year
     return year
+
 
 def parse_date_from_filename(fn):
     m = re.search("(\d+)", fn)
@@ -157,10 +157,9 @@ def main():
             xd = xdfile(contents, fn)
             clean_headers(xd)
             zip_append(outzf, xd.filename, xd.to_unicode().encode("utf-8"))
-        
+
     zip_append(outzf, "cleaned.log", get_log().encode("utf-8"))
 
 
 if __name__ == "__main__":
     main()
-

@@ -3,9 +3,6 @@
 
 from __future__ import print_function
 
-from collections import namedtuple
-import sys
-import os
 import re
 import string
 
@@ -44,7 +41,6 @@ HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'date',
 unknownpubs = {}
 all_files = {}
 all_hashes = {}
-
 
 
 class xdfile:
@@ -404,5 +400,3 @@ def corpus():
                     raise
 
         progress()
-
-
