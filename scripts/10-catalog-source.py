@@ -7,7 +7,7 @@
 
 import zipfile
 
-from xdfile.metadatabase import xd_source_row, xd_sources_header
+from xdfile.metadatabase import xd_sources_row, xd_sources_header
 from xdfile.utils import find_files, zip_append, get_log, get_args, filetime, args_parser, parse_pathname, log, iso8601
 
 
@@ -32,7 +32,7 @@ def main():
 
             zip_append(zf, fn, contents, dt)
 
-            sources.append(xd_source_row(fn, args.source or input_source, iso8601(dt)))
+            sources.append(xd_sources_row(fn, args.source or input_source, iso8601(dt)))
 
     log("%s files cataloged" % len(sources))
 

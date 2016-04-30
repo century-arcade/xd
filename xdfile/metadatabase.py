@@ -8,6 +8,7 @@ from xdfile import corpus
 RECEIPTS_TSV = "receipts.tsv"
 PUBLICATIONS_TSV = "publications.tsv"
 PUZZLES_TSV = "puzzles.tsv"
+PUZZLE_SOURCES_TSV = "puzzle_sources.tsv"
 
 
 # <source>-source-YYYY-MM-DD.zip/.tsv
@@ -70,6 +71,9 @@ def xd_publications_meta():
 def xd_puzzles_meta():
     return parse_tsv(file(PUZZLES_TSV, 'r').read(), "Puzzle")
 
+def xd_puzzle_sources():
+    return parse_tsv(file(PUZZLE_SOURCES_TSV, 'r').read(), "PuzzleSource")
+
 def append_receipts(receipts):
     file(RECEIPTS_TSV, 'a').write(receipts)
 
@@ -99,7 +103,7 @@ def xd_receipts_row(nt):
    ]) + EOL
 
 
-def xd_source_row(SourceFilename, ExternalSource, DownloadTime):
+def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
     return COLUMN_SEPARATOR.join([
         SourceFilename,
         DownloadTime,

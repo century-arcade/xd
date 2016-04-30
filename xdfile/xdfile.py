@@ -38,10 +38,6 @@ SECTION_SEP = EOL + EOL
 HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'date',
                 'relation', 'special', 'rebus', 'cluegroup', 'description', 'notes']
 
-unknownpubs = {}
-all_files = {}
-all_hashes = {}
-
 
 class xdfile:
     def __init__(self, xd_contents=None, filename=None):

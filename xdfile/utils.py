@@ -117,6 +117,10 @@ def find_files(*paths, **kwargs):
     progress()
 
 
+def zip_create(fn):
+     return zipfile.ZipFile(fn, 'w', allowZip64=True)
+
+
 def zip_append(zf, fn, contents, timet=None):
     if not timet:
         timet = time.time()
