@@ -9,8 +9,7 @@ import xdfile
 
 POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright']
 
-
-def parse_ujson(content):
+def parse_ujson(content, filename):
     json_data = json.loads(content)
 
     # init crossword

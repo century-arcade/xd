@@ -6,8 +6,8 @@
 
 export REGION=us-west-2
 export BRANCH=master
-export BUCKET=xd.workmuch.com
-export EMAIL=xd@workmuch.com
+export BUCKET=xd.saul.pw
+export EMAIL=xd@saul.pw
 
 export LOGFILE=/tmp/`date +"%Y-%m-%d"`.log
 
@@ -15,7 +15,7 @@ exec > >(tee -i ${LOGFILE}) 2>&1
 
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update && \
-    sudo apt-get install --yes zip awscli python-lxml python-pip && \
+    sudo apt-get install --yes zip awscli python-lxml python-pip zipmerge git && \
     sudo pip install cssselect crossword puzpy
 
 cd /tmp

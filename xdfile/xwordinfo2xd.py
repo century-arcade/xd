@@ -22,7 +22,7 @@ def stringify_children(node):
 
 
 # content is unicode()
-def parse_xwordinfo(content):
+def parse_xwordinfo(content, filename):
     REBUS_LONG_HANDS = {'NINE': '9',
                         'EIGHT': '8',
                         'SEVEN': '7',

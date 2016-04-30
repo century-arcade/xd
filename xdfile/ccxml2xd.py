@@ -8,7 +8,7 @@ import xdfile
 
 
 # content is unicode()
-def parse_ccxml(content):
+def parse_ccxml(content, filename):
     content = content.replace("<b>", "{*")
     content = content.replace("</b>", "*}")
     content = content.replace("<i>", "{/")
