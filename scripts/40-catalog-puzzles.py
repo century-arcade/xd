@@ -12,13 +12,14 @@ import sys
 import time
 import zipfile
 
-from xdfile import corpus
 
 from xdfile.utils import log, debug, get_log
 from xdfile.utils import find_files, parse_pathname, replace_ext, filetime
 from xdfile.utils import get_args, parse_tsv, iso8601, zip_append
 
 from xdfile.metadatabase import xd_puzzles_header, xd_puzzles_row
+
+from xdfile import corpus, xdfile
 
 def main():
     args = get_args(desc='appends rows to puzzles.tsv')

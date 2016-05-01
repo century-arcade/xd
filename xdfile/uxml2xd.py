@@ -49,12 +49,11 @@ def parse_uxml(content, filename):
 
     # add meta data
     for item in POSSIBLE_META_DATA:
-        try:
-            text = root.xpath('//crossword/' + item)[0].attrib['v']
+        elem = root.xpath('//crossword/' + item)
+        if elem:
+            text = elem[0].attrib['v']
             if text:
-                xd.headers.append((item, unquote(text)))
-        except:
-            pass
+                xd.set_header(item, unquote(text))
 
     # add puzzle
     all_answers = root.xpath('//crossword/AllAnswer')[0].attrib['v']

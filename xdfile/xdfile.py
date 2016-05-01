@@ -3,12 +3,9 @@
 
 from __future__ import print_function
 
-import re
 import string
 
-import utils
-
-from utils import log, progress
+from utils import parse_pathname, parse_xdid
 
 
 class Error(Exception):
@@ -42,7 +39,6 @@ HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'date',
 class xdfile:
     def __init__(self, xd_contents=None, filename=None):
         self.filename = filename
-        self.source = ""
         self.headers = {}  # [key] -> value or list of values
         self.grid = []  # list of string rows
         self.clues = []  # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
@@ -53,7 +49,7 @@ class xdfile:
             self.parse_xd(xd_contents.decode("utf-8"))
 
     def __str__(self):
-        return self.filename or self.source or ""
+        return self.filename or "<unknown xd puzzle>"
 
     def width(self):
         return self.grid and len(self.grid[0]) or 0
@@ -66,16 +62,17 @@ class xdfile:
         return (self.width(), self.height())
 
     def xdid(self):
-        return utils.parse_pathname(self.filename).base
+        return parse_pathname(self.filename).base
 
     def publisher_id(self):  # "nytimes"
         try:
-            return utils.parse_pathname(self.filename).path.split("/")[1]
+            return parse_pathname(self.filename).path.split("/")[1]
         except:
             return "misc"
 
     def publication_id(self):  # "nyt"
-        return utils.parse_pathname(self.filename).base[:3]
+        pubid, dt = parse_xdid(self.xdid())
+        return pubid
 
     def iterdiffs(self, other):
         for k in set(self.headers.keys()) | set(other.headers.keys()):
@@ -99,15 +96,15 @@ class xdfile:
         return (v or "").strip()
 
     def set_header(self, fieldname, newvalue=None):
-        newvalue = unicode(newvalue).strip()
-        newvalue = " ".join(newvalue.splitlines())
-        newvalue = newvalue.replace("\t", "  ")
-
 #        if fieldname in self.headers:
 #            if newvalue != self.headers.get(fieldname, None):
 #                log("%s[%s] '%s' -> '%s'" % (self.filename, fieldname, self.headers[fieldname], newvalue))
 
         if newvalue:
+            newvalue = unicode(newvalue).strip()
+            newvalue = " ".join(newvalue.splitlines())
+            newvalue = newvalue.replace("\t", "  ")
+
             self.headers[fieldname] = newvalue
         else:
             if fieldname in self.headers:
@@ -295,7 +292,7 @@ class xdfile:
                 r += "%s: %s" % (k, v)
                 r += EOL
         else:
-            r += "Title: %s" % utils.parse_pathname(self.source).base
+            r += "Title: %s" % parse_pathname(self.filename).base
             r += EOL
 
         r += SECTION_SEP
@@ -363,7 +360,8 @@ g_corpus = None
 
 # get_args(...) should be called before corpus()
 def corpus():
-    ''' DOCME '''
+    from utils import log, progress, find_files, get_args
+
     global g_corpus
     if g_corpus is not None:
         for xd in g_corpus:
@@ -372,9 +370,9 @@ def corpus():
     else:
         g_corpus = []
 
-        args = utils.get_args()
+        args = get_args()
 
-        all_files = sorted(utils.find_files(args.corpusdir))
+        all_files = sorted(find_files(args.corpusdir))
         log("%d puzzles" % len(all_files))
 
         for fullfn, contents in all_files:
@@ -382,7 +380,7 @@ def corpus():
                 continue
 
             try:
-                basefn = utils.parse_pathname(fullfn).base
+                basefn = parse_pathname(fullfn).base
                 progress(basefn)
 
                 xd = xdfile(contents, fullfn)

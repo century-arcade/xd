@@ -12,7 +12,7 @@ import zipfile
 
 from xdfile import xdfile
 from xdfile.metadatabase import xd_publications_meta
-from xdfile.utils import get_args, find_files, parse_pathname, log, get_log, zip_append
+from xdfile.utils import get_args, find_files, parse_pathname, log, debug, get_log, zip_append
 
 badchars = """ "'\\"""
 
@@ -25,7 +25,7 @@ def clean_filename(fn):
 
 
 def parse_pubid_from_filename(fn):
-    m = re.search("(^[A-Za-z]*)", fn)
+    m = re.search("(^[A-Za-z]*)", parse_pathname(fn).base)
     return m.group(1)
 
 
@@ -40,29 +40,34 @@ def get_publication(xd):
 
     for publ in all_pubs:
         if publ.PublicationAbbr == abbr.lower():
-            matching_publications.add(publ)
+            matching_publications.add((1, publ))
 
         if publ.PublicationName and publ.PublicationName.lower() in all_headers:
-            matching_publications.add(publ)
+            matching_publications.add((2, publ))
 
         if publ.PublisherName and publ.PublisherName.lower() in all_headers:
-            matching_publications.add(publ)
+            matching_publications.add((3, publ))
 
     if not matching_publications:
         return None
     elif len(matching_publications) == 1:
-        return matching_publications.pop()
+        return matching_publications.pop()[1]
 
     # otherwise, filter out 'self' publications
-    matching_pubs = set([p for p in matching_publications if 'self' not in p.PublisherAbbr])
+    matching_pubs = set([(pri, p) for pri, p in matching_publications if 'self' not in p.PublisherAbbr])
 
-    if len(matching_pubs) == 1:
-        return matching_pubs.pop()
+    if not matching_pubs:
+        matching_pubs = matching_publications  # right back where we started
+    elif len(matching_pubs) == 1:
+        return matching_pubs.pop()[1]
 
-    log("%s: pubs=%s; headers=%s" % (xd, " ".join(p.PublicationAbbr for p in matching_pubs or matching_publications), all_headers))
+    debug("%s: pubs=%s; headers=%s" % (xd, " ".join(p.PublicationAbbr for pri, p in matching_pubs), all_headers))
+
+    return sorted(matching_pubs)[0][1]
 
 
-def get_target_filename(xd):
+# all but extension
+def get_target_basename(xd):
     # determine publisher/publication
     try:
         publ = get_publication(xd)
@@ -89,9 +94,9 @@ def get_target_filename(xd):
         elif publ:
             publabbr = "%s/%s" % (publ.PublisherAbbr, publ.PublicationAbbr)
     else:
-        return "misc/%s.xd" % clean_filename(xd.filename)
+        return "crosswords/misc/%s" % clean_filename(xd.filename)
 
-    return "crosswords/%s%s.xd" % (publabbr, seqnum)
+    return "crosswords/%s%s" % (publabbr, seqnum)
 
 
 
@@ -111,11 +116,11 @@ def main():
             xd = xdfile(contents, fn)
 
             try:
-                target_fn = get_target_filename(xd)
-                real_target_fn = target_fn
+                target_fn = get_target_basename(xd)
+                real_target_fn = target_fn + ".xd"
                 i = 0
                 while real_target_fn in all_filenames:
-                    real_target_fn = target_fn + string.lowercase[i]
+                    real_target_fn = target_fn + string.lowercase[i] + ".xd"
                     i += 1
 
                 reencoding = xd.to_unicode().encode("utf-8")
@@ -132,7 +137,7 @@ def main():
                 if args.debug:
                     raise
 
-    log("%d puzzles in misc/" % len([ fn for fn in all_filenames if fn.startswith("misc")]))
+    log("%d puzzles in misc/" % len([ fn for fn in all_filenames if "/misc/" in fn]))
     if outzf:
         zip_append(outzf, "cleaned.log", get_log().encode("utf-8"))
 

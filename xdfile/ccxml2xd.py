@@ -27,7 +27,11 @@ def parse_ccxml(content, filename):
     root = etree.fromstring(content)
 
     # init crossword
-    grid = root.xpath('//puzzle:crossword/puzzle:grid', namespaces=ns)[0]
+    grid = root.xpath('//puzzle:crossword/puzzle:grid', namespaces=ns)
+    if not grid:
+        return None
+
+    grid = grid[0]
     rows = int(grid.attrib['height'])
     cols = int(grid.attrib['width'])
 
@@ -38,7 +42,7 @@ def parse_ccxml(content, filename):
         text = metadata.text and metadata.text.strip()
         title = re.sub('\{[^\}]*\}', '', metadata.tag.title())
         if text:
-            xd.headers.append((title, text))
+            xd.set_header(title, text)
 
     # add puzzle
     puzzle = []

@@ -12,12 +12,13 @@ import zipfile
 import datetime
 
 from xdfile import xdfile, HEADER_ORDER
-from xdfile.utils import get_args, find_files, log, get_log, zip_append
+from xdfile.utils import get_args, find_files, log, get_log, zip_append, parse_pathname
 
 
 # from original filename
 def parse_date_from_filename_old(fn):
-    m = re.search("([A-Za-z]*)[_\s]?(\d{2,4})-?(\d{2})-?(\d{2})(.*)\.", fn)
+    base = parse_pathname(fn).base
+    m = re.search("([A-Za-z]*)[_\s]?(\d{2,4})-?(\d{2})-?(\d{2})(.*)", base)
     if m:
         abbr, yearstr, monstr, daystr, rest = m.groups()
         year, mon, day = int(yearstr), int(monstr), int(daystr)
@@ -46,7 +47,7 @@ def clean_year(year):
 
 
 def parse_date_from_filename(fn):
-    m = re.search("(\d+)", fn)
+    m = re.search("(\d{6})", fn)
     if m:
         datestr = m.group(1)
         if len(datestr) == 6:
@@ -72,15 +73,16 @@ def parse_date_from_filename(fn):
 
 
 def clean_headers(xd):
-    for hdr in xd.headers.keys():
-        if hdr in ["Source", "Identifier", "Acquired", "Issued", "Category"]:
-            xd.set_header(hdr, None)
-        else:
-            if hdr.lower() not in HEADER_ORDER:
-                log("%s: '%s' header not known: '%s'" % (xd.filename, hdr, xd.headers[hdr]))
+    author = xd.get_header("Author") or ""
+
+    if xd.get_header("Creator"):
+        assert not author
+        author = xd.get_header("Creator")
+        xd.set_header("Creator", None)
+    else:
+        author = xd.get_header("Author") or ""
 
     title = xd.get_header("Title") or ""
-    author = xd.get_header("Author") or ""
     editor = xd.get_header("Editor") or ""
     rights = xd.get_header("Copyright") or ""
 
@@ -145,6 +147,15 @@ def clean_headers(xd):
                 xd.set_header("Date", d.strftime("%Y-%m-%d"))
         except Exception, e:
             log(str(e))
+
+    # make sure header fields are all known
+    for hdr in xd.headers.keys():
+        if hdr in ["Source", "Identifier", "Acquired", "Issued", "Category"]:
+            xd.set_header(hdr, None)
+        else:
+            if hdr.lower() not in HEADER_ORDER:
+                log("%s: '%s' header not known: '%s'" % (xd.filename, hdr, xd.headers[hdr]))
+
 
 
 def main():

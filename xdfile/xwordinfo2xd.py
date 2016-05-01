@@ -88,9 +88,9 @@ def parse_xwordinfo(content, filename):
     except:
         pass
 
-    xd.headers.append(("Title", '%s%s' % (title, subtitle)))
-    xd.headers.append(("Author", root.cssselect(xwiprefix + 'AuthorLabel')[0].text.strip()))
-    xd.headers.append(("Editor", root.cssselect(xwiprefix + 'EditorLabel')[0].text.strip()))
+    xd.set_header("Title", '%s%s' % (title, subtitle))
+    xd.set_header("Author", root.cssselect(xwiprefix + 'AuthorLabel')[0].text.strip())
+    xd.set_header("Editor", root.cssselect(xwiprefix + 'EditorLabel')[0].text.strip())
 
     xd.notes = xd.notes.replace("<br/>", "\n")
     xd.notes = xd.notes.replace("<b>Notepad:</b>", "\n")
@@ -153,13 +153,13 @@ def parse_xwordinfo(content, filename):
 
     if len(rebus):
         rebus = ["%s=%s" % (rebus[x], x.upper()) for x in rebus_order]
-        xd.headers.append(("Rebus", ','.join(rebus)))
+        xd.set_header("Rebus", ','.join(rebus))
     if special_type:
-        xd.headers.append(("Special", special_type))
+        xd.set_header("Special", special_type)
 
     # add clues
-    # across_clues = _fetch_clues(xd, 'A', root, xwiprefix + 'AcrossClues', rebus)
-    # down_clues = _fetch_clues(xd, 'D', root, xwiprefix + 'DownClues', rebus)
+    across_clues = _fetch_clues(xd, 'A', root, xwiprefix + 'AcrossClues', rebus)
+    down_clues = _fetch_clues(xd, 'D', root, xwiprefix + 'DownClues', rebus)
 
     return xd
 
@@ -205,4 +205,9 @@ def _fetch_clues(xd, clueprefix, root, css_identifier, rebus):
                     text += " " + content
 
 if __name__ == "__main__":
-    xdfile.main_parse(parse_xwordinfo)
+    import sys
+    from utils import find_files
+    for fn, contents in find_files(*sys.argv[1:]):
+        xd = parse_xwordinfo(contents, fn)
+        print "--- %s ---" % fn
+        print xd.to_unicode().encode("utf-8")

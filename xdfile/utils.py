@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 from collections import namedtuple
+import re
 import os
 import stat
 import sys
@@ -157,3 +158,12 @@ def parse_tsv(contents, objname=""):
     csvreader = csv.DictReader(contents.splitlines(), delimiter=COLUMN_SEPARATOR, quoting=csv.QUOTE_NONE)
     nt = namedtuple(objname, " ".join(csvreader.fieldnames))
     return [nt(**row) for row in csvreader]
+
+
+def parse_xdid(xdid):
+    m = re.search(r'([a-z]+)(\d+)-(\d+)-(\d+)', xdid)
+    if m:
+        abbr, y, m, d = m.groups()
+        return abbr, datetime.date(int(y), int(m), int(d))
+    else:
+        log("no xdid found in '%s'" % xdid)

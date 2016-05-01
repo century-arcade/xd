@@ -49,7 +49,7 @@ def main():
         # collect 'sources' metadata
         source_files = {}
         for fn, contents in find_files(input_source, ext='.tsv'):
-            assert fn.endswith('source.tsv'), fn
+            assert fn.endswith('sources.tsv'), fn
             for row in parse_tsv(contents, "Source"):
                 if row.SourceFilename in source_files:
                     log("%s: already in source_files!" % row.SourceFilename)
@@ -84,6 +84,7 @@ def main():
             if not possible_parsers:
                 sources_row.Rejected = "no parser"
             else:
+                sources_row.Rejected = ""
                 for parsefunc in possible_parsers:
                     try:
                         try:
@@ -95,16 +96,21 @@ def main():
                         if not xd:
                             continue
 
+                        xd.filename = replace_ext(fn, ".xd")
+
                         xdstr = xd.to_unicode()
-                        zip_append(xdzf, replace_ext(fn, ".xd"), xdstr.encode("utf-8"))
+                        zip_append(xdzf, xd.filename, xdstr.encode("utf-8"))
                         debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
                         sources_row.Rejected = ""
                         break  # stop after first successful parsing
                     except Exception, e:
-                        log("%s could not convert: %s" % (parsefunc.__name__, str(e)))
-                        sources_row.Rejected = "Parse error: " + str(e)
+                        debug("%s could not convert: %s" % (parsefunc.__name__, str(e)))
+                        sources_row.Rejected += "[%s] %s  " % (parsefunc.__name__, str(e))
                         if args.debug:
                             raise
+
+                if sources_row.Rejected:
+                    log("could not convert: %s" % sources_row.Rejected)
 
             this_receipt = xd_receipts_row(sources_row)
             new_receipts += this_receipt

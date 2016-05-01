@@ -10,20 +10,11 @@ import urllib2
 import datetime
 import re
 
-from xdfile.utils import get_args, log, debug, get_log, find_files, parse_pathname, zip_append, zip_create
+from xdfile.utils import get_args, log, debug, get_log, find_files, parse_pathname, zip_append, zip_create, parse_xdid
 from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sources
 
 def construct_xdid(pubabbr, dt):
     return pubabbr + dt.strftime("%Y-%m-%d")
-
-
-def parse_xdid(xdid):
-    m = re.search(r'([a-z]+)(\d+)-(\d+)-(\d+)', xdid)
-    if m:
-        abbr, y, m, d = m.groups()
-        return abbr, datetime.date(int(y), int(m), int(d))
-    else:
-        log("no xdid found in '%s'" % xdid)
 
 
 def get_dates_between(before_date, after_date, days_to_advance=1):
@@ -50,7 +41,7 @@ def main():
                 most_recents[pubid] = max(dt, most_recents.get(pubid, nyd))
    
 
-    toplevel_dir = today.strftime("downloadraw-%Y-%m-%d")
+    toplevel_dir = today.strftime("download-%Y-%m-%d")
 
     sources_tsv = xd_sources_header
 
