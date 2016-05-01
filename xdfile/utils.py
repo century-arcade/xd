@@ -28,7 +28,7 @@ def get_log():
 def log(s, minverbose=0):
     g_logs.append("%s: %s" % (g_currentProgress or parse_pathname(sys.argv[0]).base, s))
 
-    if g_args.verbose >= minverbose:
+    if not g_args or g_args.verbose >= minverbose:
         print(" " + s.encode("utf-8"))
 
 
@@ -52,6 +52,7 @@ def progress(rest="", every=1):
 
 
 def args_parser(desc=""):
+    log("[%s]: %s" % (desc, " ".join(sys.argv)))
     return argparse.ArgumentParser(description=desc)
 
 
@@ -78,6 +79,7 @@ def get_args(desc="", parser=None):
 # walk all 'paths' recursively and yield (filename, contents) for non-hidden files
 def find_files(*paths, **kwargs):
     ext = kwargs.get("ext")
+    should_strip_toplevel = kwargs.get("strip_toplevel", True)
     for path in paths:
         if stat.S_ISDIR(os.stat(path).st_mode):
             # handle directories
@@ -107,6 +109,8 @@ def find_files(*paths, **kwargs):
                         progress(fullfn)
 
                         contents = zf.read(zi)
+                        if should_strip_toplevel:
+                            fullfn = strip_toplevel(fullfn)
                         yield fullfn, contents
             except zipfile.BadZipfile:
                 # handle individual files
@@ -116,11 +120,6 @@ def find_files(*paths, **kwargs):
 
     # reset progress indicator after processing all files
     progress()
-
-
-def zip_create(fn):
-     return zipfile.ZipFile(fn, 'w', allowZip64=True)
-
 
 
 def filetime(fn):
@@ -226,7 +225,7 @@ def open_output(fnout=None):
         fnout = g_args.output
 
     if not fnout:
-        outf = OutputStdout()
+        outf = OutputFile(sys.stdout)
     elif fnout.endswith(".zip"):
         outf = OutputZipFile(fnout, parse_pathname(fnout).base)
     elif not parse_pathname(fnout).ext:  # extensionless assumed to be directories

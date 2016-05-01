@@ -76,7 +76,7 @@ def main():
             nextReceiptId += 1
 
             sources_row.ReceivedTime = iso8601(time.time())
-            sources_row.InternalSource = args.output
+            sources_row.InternalSource = input_source
 
             # try each parser by extension
             possible_parsers = parsers.get(parse_pathname(fn).ext.lower(), parsers[".puz"])
@@ -99,7 +99,7 @@ def main():
                         xd.filename = replace_ext(fn, ".xd")
 
                         xdstr = xd.to_unicode()
-                        outf.write_file(strip_toplevel(xd.filename), xdstr.encode("utf-8"))
+                        outf.write_file(xd.filename, xdstr.encode("utf-8"))
                         debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
                         sources_row.Rejected = ""
                         break  # stop after first successful parsing

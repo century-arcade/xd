@@ -9,7 +9,7 @@
 import sys
 import itertools
 
-from xdfile.utils import progress, get_args, find_files, COLUMN_SEPARATOR, EOL
+from xdfile.utils import progress, get_args, find_files, open_output, COLUMN_SEPARATOR, EOL
 from xdfile import xdfile, corpus
 
 
@@ -53,9 +53,8 @@ def grid_similarity(a, b):
 
 
 def find_similar_to(needle, haystack, min_pct=0.3):
-    ret = []
     if not needle.grid:
-        return ret
+        return
 
     nsquares = len(needle.grid) * len(needle.grid[0])
     for xd in haystack:
@@ -67,12 +66,10 @@ def find_similar_to(needle, haystack, min_pct=0.3):
             pct = 0
 
         if pct >= min_pct:
-            ret.append((grid_similarity(needle, xd), needle, xd, s))
-
-    return ret
+            yield grid_similarity(needle, xd), needle, xd
 
 
-xd_similar_header = COLUMN_SEPARATOR.join(["needle", "match", "percent"]) + COLUMN_SEPARATOR + EOL
+xd_similar_header = COLUMN_SEPARATOR.join(["needle", "match", "percent"]) + EOL
 
 
 def xd_similar_row(xd1, xd2, pct):
@@ -83,18 +80,14 @@ def main():
     args = get_args(desc='find similar grids')
     g_corpus = [ x for x in corpus() ]
 
-    if args.output:
-        outfp = file(args.output, 'w')
-    else:
-        outfp = sys.stdout
+    outf = open_output()
 
-    outfp.write(xd_similar_header)
+    outf.write(xd_similar_header)
 
-    for fn, contents in find_files(*args.inputs):
+    for fn, contents in find_files(*args.inputs, strip_toplevel=False):
         needle = xdfile(contents, fn)
-        dups = find_similar_to(needle, g_corpus)
-        for pct, a, b, answers in sorted(dups):
-            outfp.write(xd_similar_row(a, b, pct))
+        for pct, a, b in find_similar_to(needle, g_corpus):
+            outf.write(xd_similar_row(a, b, pct))
 
 if __name__ == "__main__":
     main()

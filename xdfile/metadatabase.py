@@ -18,7 +18,7 @@ xd_sources_header = COLUMN_SEPARATOR.join([
         "SourceFilename",   # filename in the containing .zip; ideally referenceable by the ExternalSource
         "DownloadTime",     # '2016-04-11' (ISO8601; can be truncated)
         "ExternalSource",   # URL or email
-    ]) + COLUMN_SEPARATOR + EOL
+    ]) + EOL
 
 
 # Each row from every 'sources' table appends an expanded version to the global 'receipts' table.
@@ -30,7 +30,7 @@ xd_receipts_header = COLUMN_SEPARATOR.join([
         "InternalSource",   # 'src/2016/xd-download-2016-04-11.zip'
         "SourceFilename",   # filename in the containing .zip [as above]
         "Rejected"          # reason for immediate rejection: obviously not a valid puzzle file; 
-    ]) + COLUMN_SEPARATOR + EOL
+    ]) + EOL
 
 
 # xd-publications.tsv is curated manually or via some other process
@@ -42,7 +42,7 @@ xd_publications_header = COLUMN_SEPARATOR.join([
         "FirstIssueDate",   # YYYY-MM-DD; empty if unknown
         "LastIssueDate",    # YYYY-MM-DD; empty if ongoing
         "NumberIssued",     # estimates allowed with leading '~'
-    ]) + COLUMN_SEPARATOR + EOL
+    ]) + EOL
     
 
 # xd-puzzles.tsv
@@ -57,19 +57,25 @@ xd_puzzles_header = COLUMN_SEPARATOR.join([
         "Title",            #
         "Author",           #
         "Editor",           #
-        "1-Across/1-Down"   # a useful hash of the grid
-    ]) + COLUMN_SEPARATOR + EOL
+        "1Across_1Down"     # a useful hash of the grid
+    ]) + EOL
 
 
 # yields dict corresponding to each row of receipts.tsv, in sequential order
-def xd_receipts_meta():
-    return parse_tsv(file(RECEIPTS_TSV, 'r').read(), "Receipt")
+def xd_receipts_meta(data=None):
+    if not data:
+        data = file(RECEIPTS_TSV, 'r').read()
+
+    return parse_tsv(data, "Receipt")
 
 def xd_publications_meta():
     return parse_tsv(file(PUBLICATIONS_TSV, 'r').read(), "Publication")
 
 def xd_puzzles_meta():
     return parse_tsv(file(PUZZLES_TSV, 'r').read(), "Puzzle")
+
+def xd_puzzles_append(tsv_rows):
+    file(PUZZLES_TSV, 'a').write(tsv_rows)
 
 def xd_puzzle_sources():
     return parse_tsv(file(PUZZLE_SOURCES_TSV, 'r').read(), "PuzzleSource")
@@ -111,18 +117,18 @@ def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
     ]) + EOL
 
 
-def xd_puzzles_row(xd):
+def xd_puzzles_row(xd, ReceiptId=""):
     fields = [
         parse_pathname(xd.filename).base,  # xdid
-        "ReceiptId",                 # ReceiptId
+        str(ReceiptId),              # ReceiptId
         xd.publisher_id(),           # "nytimes"
         xd.publication_id(),         # "nyt"
         xd.get_header("Date"),
         "%dx%d" % xd.size(),
         xd.get_header("Title"),
-        xd.get_header("Author"),
+        xd.get_header("Author") or xd.get_header("Creator"),
         xd.get_header("Editor"),
-        "%s/%s" % (xd.get_answer("A1"), xd.get_answer("D1"))
+        "%s_%s" % (xd.get_answer("A1"), xd.get_answer("D1"))
     ]
 
     assert COLUMN_SEPARATOR not in "".join(fields), fields
