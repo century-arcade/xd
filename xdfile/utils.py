@@ -55,7 +55,7 @@ def args_parser(desc=""):
     return argparse.ArgumentParser(description=desc)
 
 
-def get_args(parser=None, desc=""):
+def get_args(desc="", parser=None):
     global g_args
 
     if g_args:
@@ -122,14 +122,6 @@ def zip_create(fn):
      return zipfile.ZipFile(fn, 'w', allowZip64=True)
 
 
-def zip_append(zf, fn, contents, timet=None):
-    if not timet:
-        timet = time.time()
-    zi = zipfile.ZipInfo(fn, datetime.datetime.fromtimestamp(timet).timetuple())
-    zi.external_attr = 0444 << 16L
-    zi.compress_type = zipfile.ZIP_DEFLATED
-    zf.writestr(zi, contents)
-
 
 def filetime(fn):
     return os.path.getmtime(fn)
@@ -154,7 +146,7 @@ def replace_ext(fn, newext):
 
 # always includes header row
 #   returns a sequence of mappings
-def parse_tsv(contents, objname=""):
+def parse_tsv(contents, objname):
     csvreader = csv.DictReader(contents.splitlines(), delimiter=COLUMN_SEPARATOR, quoting=csv.QUOTE_NONE)
     nt = namedtuple(objname, " ".join(csvreader.fieldnames))
     return [nt(**row) for row in csvreader]
@@ -167,3 +159,44 @@ def parse_xdid(xdid):
         return abbr, datetime.date(int(y), int(m), int(d))
     else:
         log("no xdid found in '%s'" % xdid)
+
+
+class OutputZipFile(zipfile.ZipFile):
+    def __init__(self, fnzip):
+        zipfile.ZipFile.__init__(self, fnzip, 'w', allowZip64=True)
+        self.toplevel_name = parse_pathname(fnzip).base
+
+    def write_file(self, fn, contents, timet=None):
+        if not timet:
+            timet = time.time()
+
+        fullfn = os.path.join(self.toplevel_name, fn)
+
+        zi = zipfile.ZipInfo(fullfn, datetime.datetime.fromtimestamp(timet).timetuple())
+        zi.external_attr = 0444 << 16L
+        zi.compress_type = zipfile.ZIP_DEFLATED
+        self.writestr(zi, contents)
+
+
+class OutputDirectory:
+    def __init__(self, toplevel_dir):
+        self.toplevel_name = toplevel_dir
+
+    def write_file(self, fn, contents, timet=None):
+        if not timet:
+            timet = time.time()
+
+        fullfn = os.path.join(self.toplevel_name, fn)
+
+        file(fullfn, 'w').write(contents)
+
+
+def open_output():
+    assert g_args
+
+    if g_args.output.endswith(".zip"):
+        outf = OutputZipFile(g_args.output)
+    else:
+        outf = OutputDirectory(g_args.output)
+
+    return outf

@@ -64,6 +64,10 @@ class xdfile:
     def xdid(self):
         return parse_pathname(self.filename).base
 
+    def date(self):
+        pubid, dt = parse_xdid(self.xdid())
+        return dt
+
     def publisher_id(self):  # "nytimes"
         try:
             return parse_pathname(self.filename).path.split("/")[1]
@@ -340,10 +344,8 @@ class xdfile:
             return "".join([r[n] for r in g])
 
         flipxd = xdfile()
-        flipxd.filename = self.filename
-        flipxd.source = self.source
+        flipxd.filename = self.filename + ".transposed"
         flipxd.headers = self.headers.copy()
-#        flipxd.set_header("Title", "(transposed) " + flipxd.get_header("Title"))
 
         g = []
         for i in xrange(len(self.grid[0])):

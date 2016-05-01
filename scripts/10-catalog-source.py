@@ -8,17 +8,17 @@
 import zipfile
 
 from xdfile.metadatabase import xd_sources_row, xd_sources_header
-from xdfile.utils import find_files, zip_append, get_log, get_args, filetime, args_parser, parse_pathname, log, iso8601
+from xdfile.utils import find_files, get_log, get_args, filetime, args_parser, parse_pathname, log, iso8601, open_output
 
 
 def main():
     p = args_parser('catalog source files and create source.tsv')
     p.add_argument('-s', '--source', default=None, help='ExternalSource')
-    args = get_args(p)
+    args = get_args(parser=p)
 
     log("importing from %s" % args.source)
 
-    zf = zipfile.ZipFile(args.output, 'w', allowZip64=True)
+    outf = open_output():
 
     sources = []
 
@@ -28,9 +28,7 @@ def main():
                 log("ignoring empty file")
                 continue
 
-            dt = filetime(fn)
-
-            zip_append(zf, fn, contents, dt)
+            outf.write_file(fn, contents, filetime(fn))
 
             sources.append(xd_sources_row(fn, args.source or input_source, iso8601(dt)))
 
@@ -38,7 +36,7 @@ def main():
 
     outbase = parse_pathname(args.output).base
 
-    zip_append(zf, "%s.tsv" % outbase, xd_sources_header + "".join(sources))
-    zip_append(zf, "%s.log" % outbase, get_log())
+    outf.write_file("%s.tsv" % outbase, xd_sources_header + "".join(sources))
+    outf.write_file("%s.log" % outbase, get_log())
 
 main()

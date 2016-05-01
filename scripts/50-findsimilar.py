@@ -52,13 +52,7 @@ def grid_similarity(a, b):
     return (r + total_diffs) / float(tot + 1)
 
 
-def same_answers(a, b):
-    ans1 = set(sol for pos, clue, sol in a.clues)
-    ans2 = set(sol for pos, clue, sol in b.clues)
-    return ans1 & ans2
-
-
-def find_similar_to(needle, haystack, min_pct=0.3, num_answers=0):
+def find_similar_to(needle, haystack, min_pct=0.3):
     ret = []
     nsquares = len(needle.grid) * len(needle.grid[0])
     for xd in haystack:
@@ -70,10 +64,12 @@ def find_similar_to(needle, haystack, min_pct=0.3, num_answers=0):
             pct = 0
 
         if pct >= min_pct:
-            s = same_answers(needle, xd)
-            if len(s) >= num_answers:
-                ret.append((grid_similarity(needle, xd), needle, xd, s))
+            ret.append((grid_similarity(needle, xd), needle, xd, s))
+
     return ret
+
+
+xd_similar_header = COLUMN_SEPARATOR.join(["needle", "match", "percent"]) + COLUMN_SEPARATOR + EOL
 
 
 def xd_similar_row(xd1, xd2, pct):
@@ -88,6 +84,8 @@ def main():
         outfp = file(args.output, 'w')
     else:
         outfp = sys.stdout
+
+    outfp.write(xd_similar_header)
 
     for fn, contents in find_files(*args.inputs):
         needle = xdfile(contents, fn)

@@ -18,7 +18,7 @@ xd_sources_header = COLUMN_SEPARATOR.join([
         "SourceFilename",   # filename in the containing .zip; ideally referenceable by the ExternalSource
         "DownloadTime",     # '2016-04-11' (ISO8601; can be truncated)
         "ExternalSource",   # URL or email
-    ]) + EOL
+    ]) + COLUMN_SEPARATOR + EOL
 
 
 # Each row from every 'sources' table appends an expanded version to the global 'receipts' table.
@@ -30,7 +30,7 @@ xd_receipts_header = COLUMN_SEPARATOR.join([
         "InternalSource",   # 'src/2016/xd-download-2016-04-11.zip'
         "SourceFilename",   # filename in the containing .zip [as above]
         "Rejected"          # reason for immediate rejection: obviously not a valid puzzle file; 
-    ]) + EOL
+    ]) + COLUMN_SEPARATOR + EOL
 
 
 # xd-publications.tsv is curated manually or via some other process
@@ -42,7 +42,7 @@ xd_publications_header = COLUMN_SEPARATOR.join([
         "FirstIssueDate",   # YYYY-MM-DD; empty if unknown
         "LastIssueDate",    # YYYY-MM-DD; empty if ongoing
         "NumberIssued",     # estimates allowed with leading '~'
-    ]) + EOL
+    ]) + COLUMN_SEPARATOR + EOL
     
 
 # xd-puzzles.tsv
@@ -58,7 +58,7 @@ xd_puzzles_header = COLUMN_SEPARATOR.join([
         "Author",           #
         "Editor",           #
         "1-Across/1-Down"   # a useful hash of the grid
-    ]) + EOL
+    ]) + COLUMN_SEPARATOR + EOL
 
 
 # yields dict corresponding to each row of receipts.tsv, in sequential order
