@@ -57,7 +57,7 @@ def main():
                 source_files[row.SourceFilename] = row
 
         # enumerate all files in this source
-        for fn, contents in find_files(input_source):
+        for fn, contents in find_files(input_source, strip_toplevel=False):
             if fn.endswith(".tsv") or fn.endswith(".log"):
                 continue
 
@@ -68,6 +68,7 @@ def main():
                 sources_row.ExternalSource = srcrow.ExternalSource
                 sources_row.SourceFilename = srcrow.SourceFilename
             else:
+                log("%s not in sources.tsv, [0]=%s" % (fn, source_files.keys()[0]))
                 sources_row.DownloadTime = iso8601(filetime(fn))
                 sources_row.ExternalSource = input_source
                 sources_row.SourceFilename = fn
@@ -96,7 +97,7 @@ def main():
                         if not xd:
                             continue
 
-                        xd.filename = replace_ext(fn, ".xd")
+                        xd.filename = replace_ext(strip_toplevel(fn), ".xd")
 
                         xdstr = xd.to_unicode()
                         outf.write_file(xd.filename, xdstr.encode("utf-8"))
