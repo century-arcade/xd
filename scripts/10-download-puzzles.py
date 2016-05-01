@@ -10,8 +10,9 @@ import urllib2
 import datetime
 import re
 
-from xdfile.utils import get_args, log, debug, get_log, find_files, parse_pathname, zip_append, zip_create, parse_xdid
+from xdfile.utils import get_args, log, debug, get_log, find_files, parse_pathname, open_output, parse_xdid
 from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sources
+
 
 def construct_xdid(pubabbr, dt):
     return pubabbr + dt.strftime("%Y-%m-%d")
@@ -41,13 +42,11 @@ def main():
                 most_recents[pubid] = max(dt, most_recents.get(pubid, nyd))
    
 
-    toplevel_dir = today.strftime("download-%Y-%m-%d")
-
     sources_tsv = xd_sources_header
 
     puzzle_sources = dict((s.PublicationAbbr, s) for s in xd_puzzle_sources())
 
-    outzf = zip_create(args.output)
+    outf = open_output()
 
     # download new puzzles since most recent download
     for pubid, latest_date in most_recents.items():
@@ -75,14 +74,14 @@ def main():
             try:
                 xdid = construct_xdid(pubid, dt)
                 url = dt.strftime(puzsrc.UrlFormat)
-                fn = "%s/%s.%s" % (toplevel_dir, xdid, puzsrc.FileExtension)
+                fn = "%s.%s" % (xdid, puzsrc.FileExtension)
 
                 debug("downloading '%s' from '%s'" % (fn, url))
 
                 response = urllib2.urlopen(url)
                 content = response.read()
 
-                zip_append(outzf, fn, content)
+                outf.write_file(fn, content)
             except (urllib2.HTTPError, urllib2.URLError) as err:
                 log('%s [%s] %s: %s' % (xdid, err.code, err.reason, url))
             except Exception, e:
@@ -90,8 +89,8 @@ def main():
 
             sources_tsv += xd_sources_row(fn, url, today.strftime("%Y-%m-%d"))
 
-    zip_append(outzf, toplevel_dir + "/sources.tsv", sources_tsv)
-    zip_append(outzf, toplevel_dir + "/download.log", get_log())
+    outf.write_file("sources.tsv", sources_tsv)
+    outf.write_file("download.log", get_log())
 
 
 

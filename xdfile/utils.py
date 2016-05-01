@@ -124,7 +124,10 @@ def zip_create(fn):
 
 
 def filetime(fn):
-    return os.path.getmtime(fn)
+    try:
+        return os.path.getmtime(fn)
+    except:
+        return time.time()
 
 
 def iso8601(timet):
@@ -162,41 +165,73 @@ def parse_xdid(xdid):
 
 
 class OutputZipFile(zipfile.ZipFile):
-    def __init__(self, fnzip):
+    def __init__(self, fnzip, toplevel=""):
         zipfile.ZipFile.__init__(self, fnzip, 'w', allowZip64=True)
-        self.toplevel_name = parse_pathname(fnzip).base
+        self.toplevel = toplevel
 
     def write_file(self, fn, contents, timet=None):
         if not timet:
             timet = time.time()
 
-        fullfn = os.path.join(self.toplevel_name, fn)
+        fullfn = os.path.join(self.toplevel, fn)
 
         zi = zipfile.ZipInfo(fullfn, datetime.datetime.fromtimestamp(timet).timetuple())
         zi.external_attr = 0444 << 16L
         zi.compress_type = zipfile.ZIP_DEFLATED
         self.writestr(zi, contents)
 
+    def write(self, data):
+        raise Exception("can't write directly to .zip")
+
+
+class OutputFile:
+    def __init__(self, outfp=None):
+        self.toplevel = "xd"
+        self.outfp = outfp
+
+    def write_file(self, fn, contents, timet=None):
+        self.outfp.write("\n--- %s ---\n" % fn)
+        self.outfp.write(contents)
+
+    def write(self, data):
+        self.outfp.write(data)
+
 
 class OutputDirectory:
     def __init__(self, toplevel_dir):
-        self.toplevel_name = toplevel_dir
+        self.toplevel = toplevel_dir
 
-    def write_file(self, fn, contents, timet=None):
+    def write_file(self, fn, contents, timet=None, strip_toplevel=False):
         if not timet:
             timet = time.time()
 
-        fullfn = os.path.join(self.toplevel_name, fn)
+        if strip_toplevel:
+            fullfn = "/".join(fullfn.split("/")[1:])  # strip off leading directory
+
+        fullfn = os.path.join(self.toplevel, fn)  #  prepend our toplevel
+
+        # make parent dirs
+        try:
+            os.makedirs(parse_pathname(fullfn).path)
+        except Exception, e:
+            pass  # log("%s: %s" % (type(e), str(e)))
 
         file(fullfn, 'w').write(contents)
 
 
-def open_output():
+def open_output(fnout=None):
     assert g_args
 
-    if g_args.output.endswith(".zip"):
-        outf = OutputZipFile(g_args.output)
+    if not fnout:
+        fnout = g_args.output
+
+    if not fnout:
+        outf = OutputStdout()
+    elif fnout.endswith(".zip"):
+        outf = OutputZipFile(fnout, parse_pathname(fnout).base)
+    elif not parse_pathname(fnout).ext:  # extensionless assumed to be directories
+        outf = OutputDirectory(fnout)
     else:
-        outf = OutputDirectory(g_args.output)
+        outf = OutputFile(file(fnout, 'w'))
 
     return outf

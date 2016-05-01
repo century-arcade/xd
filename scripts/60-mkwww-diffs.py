@@ -215,7 +215,7 @@ def main():
 
     outf.write_file("style.css", style_css)
     outf.write_file("index.html", get_index_html(right_index_list))
-    outf.write_file(outf.toplevel_name + ".log", get_log())
+    outf.write_file("mkwww.log", get_log())
 
 if __name__ == "__main__":
     main()

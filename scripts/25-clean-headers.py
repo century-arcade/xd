@@ -8,11 +8,10 @@
 #
 
 import re
-import zipfile
 import datetime
 
 from xdfile import xdfile, HEADER_ORDER
-from xdfile.utils import get_args, find_files, log, get_log, zip_append, parse_pathname
+from xdfile.utils import get_args, find_files, log, get_log, parse_pathname, open_output
 
 
 # from original filename
@@ -161,15 +160,15 @@ def clean_headers(xd):
 def main():
     args = get_args(desc='clean metadata in a corpus of .xd puzzles')
 
-    outzf = zipfile.ZipFile(args.output, 'w', allowZip64=True)
+    outf = open_output()
 
     for input_source in args.inputs:
         for fn, contents in find_files(input_source, ext='.xd'):
             xd = xdfile(contents, fn)
             clean_headers(xd)
-            zip_append(outzf, xd.filename, xd.to_unicode().encode("utf-8"))
+            outf.write_file(xd.filename, xd.to_unicode().encode("utf-8"))
 
-    zip_append(outzf, "cleaned.log", get_log().encode("utf-8"))
+    outf.write_file("cleaned.log", get_log().encode("utf-8"))
 
 
 if __name__ == "__main__":

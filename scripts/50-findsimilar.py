@@ -54,6 +54,9 @@ def grid_similarity(a, b):
 
 def find_similar_to(needle, haystack, min_pct=0.3):
     ret = []
+    if not needle.grid:
+        return ret
+
     nsquares = len(needle.grid) * len(needle.grid[0])
     for xd in haystack:
         if xd.filename == needle.filename:

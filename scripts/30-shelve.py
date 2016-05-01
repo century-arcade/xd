@@ -8,11 +8,10 @@
 
 import string
 import re
-import zipfile
 
 from xdfile import xdfile
 from xdfile.metadatabase import xd_publications_meta
-from xdfile.utils import get_args, find_files, parse_pathname, log, debug, get_log, zip_append
+from xdfile.utils import get_args, find_files, parse_pathname, log, debug, get_log, open_output
 
 badchars = """ "'\\"""
 
@@ -34,6 +33,7 @@ def get_publication(xd):
 
     all_headers = "|".join(hdr for hdr in xd.headers.values()).lower()
 
+    # source filename/metadata must be the priority
     abbr = parse_pubid_from_filename(xd.filename)
 
     all_pubs = xd_publications_meta()
@@ -94,9 +94,9 @@ def get_target_basename(xd):
         elif publ:
             publabbr = "%s/%s" % (publ.PublisherAbbr, publ.PublicationAbbr)
     else:
-        return "crosswords/misc/%s" % clean_filename(xd.filename)
+        return "misc/%s" % clean_filename(xd.filename)
 
-    return "crosswords/%s%s" % (publabbr, seqnum)
+    return "%s%s" % (publabbr, seqnum)
 
 
 
@@ -104,10 +104,8 @@ def main():
     global args
     args = get_args(desc='shelve .xd files in proper location')
 
-    if args.output:
-        outzf = zipfile.ZipFile(args.output, 'w', allowZip64=True)
-    else:
-        outzf = None
+    outf = open_output()
+    outf.toplevel = "crosswords"
 
     all_filenames = set()
 
@@ -118,6 +116,8 @@ def main():
             try:
                 target_fn = get_target_basename(xd)
                 real_target_fn = target_fn + ".xd"
+
+                # append a, b, c, etc until finding one that hasn't been taken already
                 i = 0
                 while real_target_fn in all_filenames:
                     real_target_fn = target_fn + string.lowercase[i] + ".xd"
@@ -128,63 +128,15 @@ def main():
                     log("non-identical contents when re-encoded")
 
                 all_filenames.add(real_target_fn)
-                if outzf:
-                    zip_append(outzf, real_target_fn, contents)
-                else:
-                    log("would store to '%s'" % real_target_fn)
+                outf.write_file(real_target_fn, contents)
             except Exception, e:
                 log("unshelveable: " + str(e))
                 if args.debug:
                     raise
 
-    log("%d puzzles in misc/" % len([ fn for fn in all_filenames if "/misc/" in fn]))
-    if outzf:
-        zip_append(outzf, "cleaned.log", get_log().encode("utf-8"))
+    log("%d puzzles in misc/" % len([ fn for fn in all_filenames if "misc/" in fn]))
+    outf.write_file("cleaned.log", get_log().encode("utf-8"))
 
-"""
-def save_file(xd, outf):
-    outfn = xd.filename
-
-    xdstr = xd.to_unicode().encode("utf-8")
-
-    # check for duplicate filename and contents
-
-    xdhash = hash(xdstr)
-
-    while outfn in all_files:
-        if all_files[outfn] == xdhash:
-            log("exact duplicate")
-            return
-
-        log("same filename, different contents: '%s'" % outfn)
-        outfn += ".2"
-
-    all_files[outfn] = xdhash
-
-    if xdhash in all_hashes:
-        log("duplicate contents of %s" % all_hashes[xdhash])
-    else:
-        all_hashes[xdhash] = outfn
-
-    # write to output
-
-    if isinstance(outf, zipfile.ZipFile):
-        if year < 1980:
-            year = 1980
-        zi = zipfile.ZipInfo(outfn, (year, month, day, 9, 0, 0))
-        zi.external_attr = 0444 << 16L
-        zi.compress_type = zipfile.ZIP_DEFLATED
-        outf.writestr(zi, xdstr)
-    elif isinstance(outf, file):
-        outf.write(xdstr)
-    else:
-        try:
-            basedirs, fn = os.path.split(outfn)
-            os.makedirs(basedirs)
-        except:
-            pass
-        file(outfn, "w-").write(xdstr)
-"""
 
 if __name__ == "__main__":
     main()
