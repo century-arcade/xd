@@ -264,7 +264,10 @@ class xdfile:
 
                 if pos[0] in string.uppercase:
                     cluedir = pos[0]
-                    cluenum = int(pos[1:])
+                    try:
+                        cluenum = int(pos[1:])
+                    except:
+                        cluenum = pos[1:]  # fallback to strings for non-numeric clue "numbers"
                 else:
                     cluedir = ""
                     cluenum = int(pos)
@@ -360,7 +363,7 @@ g_corpus = None
 
 # get_args(...) should be called before corpus()
 def corpus():
-    from utils import log, progress, find_files, get_args
+    from utils import log, find_files, get_args
 
     global g_corpus
     if g_corpus is not None:
@@ -372,17 +375,8 @@ def corpus():
 
         args = get_args()
 
-        all_files = sorted(find_files(args.corpusdir))
-        log("%d puzzles" % len(all_files))
-
-        for fullfn, contents in all_files:
-            if not fullfn.endswith(".xd"):
-                continue
-
+        for fullfn, contents in find_files(args.corpusdir, ext='.xd'):
             try:
-                basefn = parse_pathname(fullfn).base
-                progress(basefn)
-
                 xd = xdfile(contents, fullfn)
 
                 g_corpus.append(xd)
@@ -393,4 +387,3 @@ def corpus():
                 if args.debug:
                     raise
 
-        progress()

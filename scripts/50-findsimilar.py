@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 
+# Usage:
+#    $0 [-c <corpus>] [-o similar.txt] <input_xd>
+#
+#  Searches through the corpus for similar grids.
+
+
 import sys
 import itertools
 
-import xdfile
+from xdfile.utils import progress, get_args, find_files, COLUMN_SEPARATOR, EOL
+from xdfile import xdfile, corpus
 
 
 # inverse of hamming distance
@@ -69,23 +76,24 @@ def find_similar_to(needle, haystack, min_pct=0.3, num_answers=0):
     return ret
 
 
+def xd_similar_row(xd1, xd2, pct):
+    return COLUMN_SEPARATOR.join([str(xd1), str(xd2), str(int(pct*100))]) + EOL
+
+
 def main():
-    corpus = xdfile.load_corpus(sys.argv[1])
-    needles = xdfile.load_corpus(*sys.argv[2:])
+    args = get_args(desc='find similar grids')
+    g_corpus = [ x for x in corpus() ]
 
-    for i, needle_pair in enumerate((sorted(needles.items()))):
-        name, needle = needle_pair
-        print >>sys.stderr, "\r% 3d/%d %s" % (i, len(needles), needle),
-        dups = find_similar_to(needle, corpus.values())
-        print needle,
+    if args.output:
+        outfp = file(args.output, 'w')
+    else:
+        outfp = sys.stdout
+
+    for fn, contents in find_files(*args.inputs):
+        needle = xdfile(contents, fn)
+        dups = find_similar_to(needle, g_corpus)
         for pct, a, b, answers in sorted(dups):
-            if needle == a:
-                print b,
-            else:
-                print a,
-        print
-
-    print >>sys.stderr, "done\n"
+            outfp.write(xd_similar_row(a, b, pct))
 
 if __name__ == "__main__":
     main()
