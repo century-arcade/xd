@@ -197,16 +197,16 @@ class OutputFile:
         self.outfp.write(data)
 
 
+def strip_toplevel(fn):
+    return "/".join(fn.split("/")[1:])  # strip off leading directory
+
 class OutputDirectory:
     def __init__(self, toplevel_dir):
         self.toplevel = toplevel_dir
 
-    def write_file(self, fn, contents, timet=None, strip_toplevel=False):
+    def write_file(self, fn, contents, timet=None):
         if not timet:
             timet = time.time()
-
-        if strip_toplevel:
-            fullfn = "/".join(fullfn.split("/")[1:])  # strip off leading directory
 
         fullfn = os.path.join(self.toplevel, fn)  #  prepend our toplevel
 

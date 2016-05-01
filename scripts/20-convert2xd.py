@@ -14,7 +14,7 @@ import zipfile
 from xdfile import IncompletePuzzleParse
 
 from xdfile.utils import log, debug, get_log
-from xdfile.utils import find_files, parse_pathname, replace_ext, filetime
+from xdfile.utils import find_files, parse_pathname, replace_ext, filetime, strip_toplevel
 from xdfile.utils import get_args, parse_tsv, iso8601, open_output
 
 from xdfile.metadatabase import xd_receipts_header, xd_receipts_row, append_receipts, get_last_receipt_id
@@ -99,7 +99,7 @@ def main():
                         xd.filename = replace_ext(fn, ".xd")
 
                         xdstr = xd.to_unicode()
-                        outf.write_file(xd.filename, xdstr.encode("utf-8"))
+                        outf.write_file(strip_toplevel(xd.filename), xdstr.encode("utf-8"))
                         debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
                         sources_row.Rejected = ""
                         break  # stop after first successful parsing

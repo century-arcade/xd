@@ -11,7 +11,7 @@ import re
 
 from xdfile import xdfile
 from xdfile.metadatabase import xd_publications_meta
-from xdfile.utils import get_args, find_files, parse_pathname, log, debug, get_log, open_output
+from xdfile.utils import get_args, find_files, parse_pathname, log, debug, get_log, open_output, strip_toplevel
 
 badchars = """ "'\\"""
 
@@ -128,7 +128,7 @@ def main():
                     log("non-identical contents when re-encoded")
 
                 all_filenames.add(real_target_fn)
-                outf.write_file(real_target_fn, contents)
+                outf.write_file(strip_toplevel(real_target_fn), contents)
             except Exception, e:
                 log("unshelveable: " + str(e))
                 if args.debug:
