@@ -57,7 +57,8 @@ xd_puzzles_header = COLUMN_SEPARATOR.join([
         "Title",            #
         "Author",           #
         "Editor",           #
-        "1Across_1Down"     # a useful hash of the grid
+        "Copyright",        #
+        "A1_D1"             # a useful hash of the grid
     ]) + EOL
 
 
@@ -124,10 +125,12 @@ def xd_puzzles_row(xd, ReceiptId=""):
         xd.publisher_id(),           # "nytimes"
         xd.publication_id(),         # "nyt"
         xd.get_header("Date"),
-        "%dx%d" % xd.size(),
+        "%dx%d %s%s" % (xd.width(), xd.height(), xd.get_header("Rebus") and "R" or "", xd.get_header("Special") and "S" or ""),
+
         xd.get_header("Title"),
         xd.get_header("Author") or xd.get_header("Creator"),
         xd.get_header("Editor"),
+        xd.get_header("Copyright"),
         "%s_%s" % (xd.get_answer("A1"), xd.get_answer("D1"))
     ]
 

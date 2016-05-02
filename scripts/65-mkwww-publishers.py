@@ -3,7 +3,7 @@
 import re
 
 from xdfile.metadatabase import xd_publications_meta, xd_puzzles_header, xd_puzzles_row
-from xdfile.utils import progress, open_output, get_args, COLUMN_SEPARATOR
+from xdfile.utils import find_files, parse_tsv, progress, open_output, get_args, args_parser, COLUMN_SEPARATOR
 from xdfile.html import html_header, html_footer
 import xdfile
 
@@ -92,9 +92,9 @@ def tally_to_dict(d, v):
     if v:
         d[v] = d.get(v, 0) + 1
 
-def clean_copyright(xd):
-    copyright = xd.get_header("Copyright")
-    author = xd.get_header("Author").strip()
+def clean_copyright(puzrow):
+    copyright = puzrow.Copyright
+    author = puzrow.Author.strip()
     if author:
         copyright = copyright.replace(author, "&lt;Author&gt;")
 
@@ -117,11 +117,11 @@ class Publication:
 
         self.puzzles_meta = []
 
-    def add(self, xd):
-        tally_to_dict(self.copyrights, clean_copyright(xd))
-        tally_to_dict(self.editors, xd.get_header("Editor"))
-        tally_to_dict(self.formats, "%sx%s %s%s" % (xd.width(), xd.height(), xd.get_header("Rebus") and "R" or "", xd.get_header("Special") and "S" or ""))
-        datestr = xd.get_header("Date")
+    def add(self, puzrow):
+        tally_to_dict(self.copyrights, clean_copyright(puzrow))
+        tally_to_dict(self.editors, puzrow.Editor)
+        tally_to_dict(self.formats, puzrow.Size)
+        datestr = puzrow.Date
         if datestr:
             if not self.mindate:
                 self.mindate = datestr
@@ -133,7 +133,7 @@ class Publication:
                 self.maxdate = max(self.maxdate, datestr)
         self.num_xd += 1
 
-        self.puzzles_meta.append(xd_puzzles_row(xd).split(COLUMN_SEPARATOR))
+        self.puzzles_meta.append(puzrow)
 
     def row(self):
         return [
@@ -162,8 +162,9 @@ def publication_header():
 
 
 def main():
-    parser = get_parser("generate publishers index html pages and index")
-    parser.add_option('-n', action=store_int, dest="pub_min", default=1, help="minimum number of puzzles for publication to be included")
+    parser = args_parser("generate publishers index html pages and index")
+#    parser.add_argument('-m', '--min', action='store_const', help="minimum number of puzzles for publication to be included")
+            #, dest="pub_min", default=1, 
     args = get_args(parser=parser)
 
     outf = open_output()
@@ -171,18 +172,19 @@ def main():
     all_pubs = {}  # [pubid] -> Publication
 
     total_xd = 0
-    for xd in xdfile.corpus():
-        pubid = xd.publication_id()
-        if pubid not in all_pubs:
-            all_pubs[pubid] = Publication(pubid)
+    for xsv, contents in find_files(*args.inputs):
+        for puzrow in parse_tsv(contents, "Puzzle"):
+            pubid = puzrow.PublicationAbbr
+            if pubid not in all_pubs:
+                all_pubs[pubid] = Publication(pubid)
 
-        all_pubs[pubid].add(xd)
-        total_xd += 1
+            all_pubs[pubid].add(puzrow)
+            total_xd += 1
 
-    pubrows = [pub.row() for pubid, pub in sorted(all_pubs.items()) if pub.num_xd >= args.pub_min]
+    pubrows = [pub.row() for pubid, pub in sorted(all_pubs.items()) if pub.num_xd >= 1]
 
     pub_index = html_header.format(title="Index of crossword publications")
-    pub_index += "<div>The dropdown boxes don't do anything.</div>"
+    pub_index += "<div>The dropdown boxes are only used for compact display.</div>"
     pub_index += table_to_html(pubrows, publication_header(), "Publication")
     pub_index += "<p>%d crosswords from %d publications</p>" % (total_xd, len(all_pubs))
     pub_index += html_footer
