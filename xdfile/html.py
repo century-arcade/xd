@@ -18,9 +18,14 @@ html_header = """
 
 html_footer = """
   <hr style="clear:both;"/>
-  <a href="http://saul.pw"><small>saul.pw</small></a>
+  <!--a href="http://saul.pw"><small>saul.pw</small></a-->
+  <a href="mailto:xd@saul.pw"><small>xd@saul.pw</small></a>
 
 </body>
 </html>
 """
+
+html_redirect = """<html><head><meta http-equiv="refresh" content="0; URL='{url}'" />
+<script>window.location.replace("{url}");</script></head><body>Redirecting to <a href="{url}">{url}</a></body></html>"""
+
 

@@ -102,15 +102,17 @@ def gendiff(xd1, xd2, pct):
     hd = difflib.HtmlDiff(linejunk=lambda x: False)
     diff_html = hd.make_table(s1.splitlines(), s2.splitlines(), fromdesc=desc1, todesc=desc2, numlines=False)
 
-    # it might be easier to see partial similarities this way, due to limitations of HtmlDiff
-    xdt1 = xd1.transpose()
-    xdt2 = xd2.transpose()
-    bothtrans_diff_html = hd.make_table(xdt1.to_unicode().splitlines(), xdt2.to_unicode().splitlines(), fromdesc=desc1, todesc=desc2, numlines=False)
-
     ret += '<div class="answers"><br/>Shared answers:<br/> %s</div>' % " ".join(shared)
 
     ret += diff_html
-    ret += bothtrans_diff_html
+
+    if int(pct) < 50:
+        # it might be easier to see partial similarities this way, due to limitations of HtmlDiff
+        xdt1 = xd1.transpose()
+        xdt2 = xd2.transpose()
+
+        diff_html += "<hr><p>With both puzzles transposed (may be easier to see vertical similarities)</p>"
+        diff_html += hd.make_table(xdt1.to_unicode().splitlines(), xdt2.to_unicode().splitlines(), fromdesc=desc1 + " (transposed)", todesc=desc2 + " (transposed)", numlines=False)
 
     ret += html_footer
 
@@ -118,29 +120,22 @@ def gendiff(xd1, xd2, pct):
 
 
 def get_list_band_html(index_list, lowpct, highpct):
-    matches = [(pct, L) for pct, L, b1, b2 in index_list.values() if pct >= lowpct and pct < highpct]
+    matches = [(b2, L) for pct, L, b1, b2 in index_list.values() if pct >= lowpct and pct < highpct]
 
     r = "\n<h3>%d puzzles match %d-%d%% of another grid</h3>" % (len(matches), lowpct, highpct)
-    for b1, L in sorted(matches, reverse=True):
+    for b1, L in sorted(matches):
         r += '\n<li>' + L + '</li>'
 
     r += '<hr/>'
     return r
 
 
-def get_index_html(index_list, publ=None):
-    if publ:
-        pubname = publ.name()
-    else:
-        pubname = ""
-    out = html_header.format(title="%s crossword similarity" % pubname)
+def get_index_html(index_list, subset=""):
+    out = html_header.format(title="%s crossword similarity" % subset)
 
     out += "The left side is always the earlier published puzzle. <b>Bold</b> highlights that the authors are different for the two puzzles.<br/>"
 
-    if publ:
-        out += "<br/>%s : %s crosswords from %s" % (pubname, publ.num_xd(), publ.years_active())
-
-    out += '<h2>%s grids that are similar to other puzzles</h2>'  % pubname
+    out += '<h2>%s grids that are similar to other puzzles</h2>' % subset
 
     out += '<ul>'
     out += get_list_band_html(index_list, 75, 100)
@@ -154,7 +149,9 @@ def get_index_html(index_list, publ=None):
 
 
 def main():
-    args = get_args(desc="make www pages from similarity query results")
+    parser = get_parser(desc="make www pages from similarity query results")
+    parser.add_option('-n', '--name', dest="subset", help="user-facing name of the given subset")
+    args = get_args(parser=parser)
 
     outf = open_output()
 
@@ -214,7 +211,7 @@ def main():
             outf.write_file(outfn, ret.encode("utf-8"))
 
     outf.write_file("style.css", style_css)
-    outf.write_file("index.html", get_index_html(right_index_list))
+    outf.write_file("index.html", get_index_html(right_index_list, args.subset))
     outf.write_file("mkwww.log", get_log())
 
 if __name__ == "__main__":

@@ -2,12 +2,15 @@
 
 import re
 
-from xdfile.metadatabase import xd_publications_meta
-from xdfile.utils import open_output, get_args
+from xdfile.metadatabase import xd_publications_meta, xd_puzzles_header, xd_puzzles_row
+from xdfile.utils import progress, open_output, get_args, COLUMN_SEPARATOR
 from xdfile.html import html_header, html_footer
 import xdfile
 
 style_css = """
+.ReceiptId, .PublisherAbbr, .PublicationAbbr, .Date {
+    display: none;
+}
 table {
 /*	font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif; */
 	font-size: 14px;
@@ -24,7 +27,13 @@ th {
 	padding: 10px 8px;
 	border-bottom: 2px solid #6678b1;
 }
-td, option, select {
+option, select {
+	border-bottom: 1px solid #ccc;
+	color: #669;
+    width: 100%;
+	padding: 2px 2px;
+}
+td {
 	border-bottom: 1px solid #ccc;
 	color: #669;
 	padding: 6px 8px;
@@ -41,7 +50,7 @@ def table_header(keys):
     out = '<tr class="hdr">'
 
     for k in keys:
-        out += '<th>'
+        out += '<th class="%s">' % k
         out += str(k)
         out += '</th>'  # end header cell
 
@@ -55,8 +64,12 @@ def table_row(row, keys, rowclass="row"):
 
     out = '<tr class="%s">' % rowclass
     for k, v in zip(keys, row):
-        v = unicode(v or "")
-        out += '<td class="%s">' % k
+        try:
+            v = unicode(v or "")
+        except UnicodeDecodeError:
+            v = "???"
+
+        out += '<td class="%s">' % k.strip()
         out += v
         out += '</td>'  # end cell
     out += '</tr>\n'  # end row
@@ -86,7 +99,10 @@ def clean_copyright(xd):
         copyright = copyright.replace(author, "&lt;Author&gt;")
 
     # and remove textual date
-    return re.sub(r"\s*(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER|JAN|FEB|MAR|APR|JUN|JUL|AUG|SEP|OCT|NOV|DEC)?\s*(\d{1,2})?,?\s*\d{4},?\s*", " &lt;Date&gt; ", copyright, flags=re.IGNORECASE)
+    ret = re.sub(r"\s*(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER|JAN|FEB|MAR|APR|JUN|JUL|AUG|SEP|OCT|NOV|DEC)?\s*(\d{1,2})?,?\s*\d{4},?\s*", " &lt;Date&gt; ", copyright, flags=re.IGNORECASE)
+
+    ret = re.sub(r"\d{2}[/\-]?\d{2}[/\-]?\d{2,4}", " &lt;Date&gt; ", ret)
+    return ret
 
 
 class Publication:
@@ -98,6 +114,8 @@ class Publication:
         self.mindate = ""
         self.maxdate = ""
         self.num_xd = 0
+
+        self.puzzles_meta = []
 
     def add(self, xd):
         tally_to_dict(self.copyrights, clean_copyright(xd))
@@ -115,11 +133,13 @@ class Publication:
                 self.maxdate = max(self.maxdate, datestr)
         self.num_xd += 1
 
+        self.puzzles_meta.append(xd_puzzles_row(xd).split(COLUMN_SEPARATOR))
+
     def row(self):
         return [
                 self.publication_id,
                 mkhref(str(self.num_xd), self.publication_id),
-                "%s - %s" % (self.mindate, self.maxdate),
+                "%s &mdash; %s" % (self.mindate, self.maxdate),
                 tally_to_cell(self.formats),
                 tally_to_cell(self.copyrights),
                 tally_to_cell(self.editors),
@@ -142,11 +162,11 @@ def publication_header():
 
 
 def main():
-    get_args("generate publishers html pages and index")
+    parser = get_parser("generate publishers index html pages and index")
+    parser.add_option('-n', action=store_int, dest="pub_min", default=1, help="minimum number of puzzles for publication to be included")
+    args = get_args(parser=parser)
 
     outf = open_output()
-
-    #publishers_index = html_header.format(title=time.strftime("Crossword publishers"))
 
     all_pubs = {}  # [pubid] -> Publication
 
@@ -159,43 +179,29 @@ def main():
         all_pubs[pubid].add(xd)
         total_xd += 1
 
-    pubrows = [pub.row() for pubid, pub in sorted(all_pubs.items()) if pub.num_xd >= 20]
+    pubrows = [pub.row() for pubid, pub in sorted(all_pubs.items()) if pub.num_xd >= args.pub_min]
 
-    pub_index = html_header.format(title="Index of crossword publishers")
-
+    pub_index = html_header.format(title="Index of crossword publications")
+    pub_index += "<div>The dropdown boxes don't do anything.</div>"
     pub_index += table_to_html(pubrows, publication_header(), "Publication")
-
     pub_index += "<p>%d crosswords from %d publications</p>" % (total_xd, len(all_pubs))
-
     pub_index += html_footer
+
+    for pubid, pub in all_pubs.items():
+        progress(pubid)
+        onepub_html = html_header.format(title="Metadata for '%s' puzzles" % pubid)
+        onepub_html += table_to_html(sorted(pub.puzzles_meta), xd_puzzles_header.split(COLUMN_SEPARATOR), "puzzle")
+        onepub_html += html_footer
+        outf.write_file("pubs/%s/index.html" % pubid, onepub_html)
+        outf.write_file("pubs/%s/style.css" % pubid, style_css)
+
+    progress("index")
 
     outf.write_file("pubs/index.html", pub_index)
     outf.write_file("pubs/style.css", style_css)
 
-"""
-outlines = []
-total_xd = 0
-    num_xd = publ.num_xd
-    total_xd += num_xd
-    dates = "%s - %s" % (publ.FirstIssueDate, publ.LastIssueDate)
-    pubid = publ.PublicationAbbr
+    progress()
 
-    outlines.append((publ.num_xd, '<li><a href="{pubid}"><b>{pubid}</b></a>: {num_xd} crosswords from {years}</li>'.format(**{
-                    'pubid': pubid,
-                    "num_xd": num_xd,
-                    "years": years
-                    })))
-
-out = mkwww.html_header.format(title=time.strftime("xd corpus grid similarity results [%Y-%m-%d]"))
-out += "The xd corpus has %d crosswords total:" % total_xd
-out += "<ul>"
-out += "\n".join(L for n, L in sorted(outlines, reverse=True))
-out += "</ul>"
-out += '<a href="xd-xdiffs.zip">xd-xdiffs.zip</a> (7MB) has raw data for all puzzles that are at least 25% similar.  Source code for using <a href="https://github.com/century-arcade/xd">the .xd format is available on Github.</a><br/>'
-out += mkwww.html_footer
-
-print out
-"""
 
 if __name__ == "__main__":
     main()

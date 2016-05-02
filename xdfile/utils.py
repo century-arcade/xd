@@ -45,10 +45,12 @@ def progress(rest="", every=1):
         g_currentProgress = rest
         if g_numProgress % every == every - 1:
             print("\r% 6d %s" % (g_numProgress, rest), end="")
+            sys.stdout.flush()
     else:
         g_currentProgress = ""
         g_numProgress = 0
         print()
+        sys.stdout.flush()
 
 
 def args_parser(desc=""):

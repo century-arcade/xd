@@ -152,6 +152,9 @@ $(CORPUS).zip:
 publishers.tsv: $(QUERYDIR)/enumpublishers.py
 	PYTHONPATH=. $(QUERYDIR)/enumpublishers.py > $@
 
+$(CORPUS)-meta.zip: crosswords/puzzles.tsv crosswords/publications.tsv
+	zip $@ $^
+
 findgrids: src/findgrids.c
 	gcc -std=c99 -ggdb -O3 -o $@ $<
 
