@@ -75,8 +75,11 @@ class xdfile:
             return "misc"
 
     def publication_id(self):  # "nyt"
-        pubid, dt = parse_xdid(self.xdid())
-        return pubid
+        xdid = self.xdid()
+        i = 0
+        while xdid[i] in string.ascii_letters:
+            i += 1
+        return xdid[:i].lower()
 
     def iterdiffs(self, other):
         for k in set(self.headers.keys()) | set(other.headers.keys()):

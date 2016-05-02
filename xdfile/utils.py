@@ -158,7 +158,14 @@ def parse_xdid(xdid):
     m = re.search(r'([a-z]+)(\d+)-(\d+)-(\d+)', xdid)
     if m:
         abbr, y, m, d = m.groups()
-        return abbr, datetime.date(int(y), int(m), int(d))
+        try:
+            dt = datetime.date(int(y), int(m), int(d))
+        except Exception, e:
+            debug(str(e))
+            if g_args.debug:
+                raise
+            dt = None
+        return abbr, dt
     else:
         log("no xdid found in '%s'" % xdid)
 

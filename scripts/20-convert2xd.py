@@ -68,7 +68,7 @@ def main():
                 sources_row.ExternalSource = srcrow.ExternalSource
                 sources_row.SourceFilename = srcrow.SourceFilename
             else:
-                log("%s not in sources.tsv, [0]=%s" % (fn, source_files.keys()[0]))
+                log("%s not in sources.tsv" % fn)
                 sources_row.DownloadTime = iso8601(filetime(fn))
                 sources_row.ExternalSource = input_source
                 sources_row.SourceFilename = fn

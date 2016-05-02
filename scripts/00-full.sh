@@ -28,6 +28,7 @@ scripts/30-shelve.py -o crosswords ${OUTBASE}-converted.zip
 scripts/50-findsimilar.py -o ${OUTBASE}-similar.tsv ${OUTBASE}-shelved.zip
 
 scripts/60-mkwww-diffs.py -o www/${BASE} ${OUTBASE}-similar.tsv
-#scripts/65-mkwww-publishers -o www/publishers/ ${BASE}-similar.tsv
+
+scripts/65-mkwww-publishers -o www/
 #scripts/65-mkwww-index.py -o www/${BASE} ${BASE}-similar.tsv
 
