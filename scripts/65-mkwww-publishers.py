@@ -184,7 +184,7 @@ def main():
     pubrows = [pub.row() for pubid, pub in sorted(all_pubs.items()) if pub.num_xd >= 1]
 
     pub_index = html_header.format(title="Index of crossword publications")
-    pub_index += "<div>The dropdown boxes are only used for compact display.</div>"
+    pub_index += "<div>[The dropdown boxes are only used for compact display.]</div>"
     pub_index += table_to_html(pubrows, publication_header(), "Publication")
     pub_index += "<p>%d crosswords from %d publications</p>" % (total_xd, len(all_pubs))
     pub_index += html_footer
