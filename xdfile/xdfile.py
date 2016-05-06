@@ -63,8 +63,7 @@ class xdfile:
         return parse_pathname(self.filename).base
 
     def date(self):
-        pubid, dt = parse_xdid(self.xdid())
-        return dt
+        return self.get_header("Date") or parse_xdid(self.xdid())[1]
 
     def publisher_id(self):  # "nytimes"
         try:
@@ -365,28 +364,31 @@ g_corpus = None
 
 
 # get_args(...) should be called before corpus()
-def corpus():
+def corpus(*inputs):
     from utils import log, find_files, get_args
 
     global g_corpus
     if g_corpus is not None:
         for xd in g_corpus:
             yield xd
+        return
 
-    else:
-        g_corpus = []
+    args = get_args()
 
-        args = get_args()
+    if not inputs:
+        inputs = [ args.corpusdir ]
 
-        for fullfn, contents in find_files(args.corpusdir, ext='.xd'):
-            try:
-                xd = xdfile(contents, fullfn)
+    g_corpus = []
 
-                g_corpus.append(xd)
+    for fullfn, contents in find_files(*inputs, ext='.xd'):
+        try:
+            xd = xdfile(contents, fullfn)
 
-                yield xd
-            except Exception, e:
-                log(unicode(e))
-                if args.debug:
-                    raise
+            g_corpus.append(xd)
+
+            yield xd
+        except Exception, e:
+            log(unicode(e))
+            if args.debug:
+                raise
 

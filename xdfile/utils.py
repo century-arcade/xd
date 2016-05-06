@@ -135,6 +135,18 @@ def iso8601(timet):
     return datetime.datetime.fromtimestamp(int(timet)).isoformat(' ').split(' ')[0]
 
 
+# YYYY-MM-DD to datetime.date
+def datestr_to_datetime(s):
+    try:
+        return datetime.date(*[int(x) for x in s.split("-")])
+    except Exception, e:
+        debug(str(e))
+        if g_args.debug:
+            raise
+        dt = None
+    return abbr, dt
+
+
 def parse_pathname(path):
     path, fn = os.path.split(path)
     base, ext = os.path.splitext(fn)
@@ -157,17 +169,10 @@ def parse_tsv(contents, objname):
 
 
 def parse_xdid(xdid):
-    m = re.search(r'([a-z]+)(\d+)-(\d+)-(\d+)', xdid)
+    m = re.search(r'([a-z]+)?(\d+-\d+-\d+)?', xdid)
     if m:
-        abbr, y, m, d = m.groups()
-        try:
-            dt = datetime.date(int(y), int(m), int(d))
-        except Exception, e:
-            debug(str(e))
-            if g_args.debug:
-                raise
-            dt = None
-        return abbr, dt
+        abbr, datestr = m.groups()
+        return abbr, datestr
     else:
         log("no xdid found in '%s'" % xdid)
 
@@ -203,6 +208,9 @@ class OutputFile:
 
     def write(self, data):
         self.outfp.write(data)
+
+    def write_row(self, fields):
+        self.write((COLUMN_SEPARATOR.join(fields) + EOL).encode("utf-8"))
 
 
 def strip_toplevel(fn):

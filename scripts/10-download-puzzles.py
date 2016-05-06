@@ -10,7 +10,7 @@ import urllib2
 import datetime
 import re
 
-from xdfile.utils import get_args, log, debug, get_log, find_files, parse_pathname, open_output, parse_xdid
+from xdfile.utils import get_args, log, debug, get_log, find_files, parse_pathname, open_output, parse_xdid, datestr_to_datetime
 from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sources
 
 
@@ -39,7 +39,7 @@ def main():
         for fn, contents in find_files(input_source):
             if parse_pathname(fn).ext not in [ ".log", ".tsv" ]:
                 pubid, dt = parse_xdid(fn)
-                most_recents[pubid] = max(dt, most_recents.get(pubid, nyd))
+                most_recents[pubid] = max(datestr_to_datetime(dt), most_recents.get(pubid, nyd))
    
 
     sources_tsv = xd_sources_header
