@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8
 
+from __future__ import print_function
+
 import string
 
 from utils import parse_pathname, parse_xdid
