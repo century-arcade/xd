@@ -127,11 +127,11 @@ def clean_headers(xd):
             d = parse_date_from_filename(xd.filename)
             if d:
                 xd.set_header("Date", d.strftime("%Y-%m-%d"))
-        except Exception, e:
+        except Exception as e:
             log(str(e))
 
     # make sure header fields are all known
-    for hdr in xd.headers.keys():
+    for hdr in list(xd.headers.keys()):
         if hdr in ["Source", "Identifier", "Acquired", "Issued", "Category"]:
             xd.set_header(hdr, None)
         else:
@@ -154,7 +154,7 @@ def parse_pubid_from_filename(fn):
 def get_publication(xd):
     matching_publications = set()
 
-    all_headers = "|".join(hdr for hdr in xd.headers.values()).lower()
+    all_headers = "|".join(hdr for hdr in list(xd.headers.values())).lower()
 
     # source filename/metadata must be the priority
     abbr = parse_pubid_from_filename(xd.filename)
@@ -194,7 +194,7 @@ def get_target_basename(xd):
     # determine publisher/publication
     try:
         publ = get_publication(xd)
-    except Exception, e:
+    except Exception as e:
         publ = None
         if args.debug:
             raise
@@ -271,7 +271,7 @@ def main():
                 all_filenames.add(real_target_fn)
 
                 outf.write_file(real_target_fn, xd.to_unicode().encode("utf-8"))
-            except Exception, e:
+            except Exception as e:
                 log("unshelveable: " + str(e))
                 if args.debug:
                     raise

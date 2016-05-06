@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Usage:
 #  $0 -o <output-zip> <input>
@@ -6,7 +6,7 @@
 #  Examines <input> filenames for each source and most recent date; downloads more recent puzzles and saves them to <output-zip>.
 #
 
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import datetime
 import re
 
@@ -49,7 +49,7 @@ def main():
     outf = open_output()
 
     # download new puzzles since most recent download
-    for pubid, latest_date in most_recents.items():
+    for pubid, latest_date in list(most_recents.items()):
         if pubid not in puzzle_sources:
             log("unknown puzzle source for '%s'" % pubid)
             continue
@@ -78,13 +78,13 @@ def main():
 
                 debug("downloading '%s' from '%s'" % (fn, url))
 
-                response = urllib2.urlopen(url)
+                response = urllib.request.urlopen(url)
                 content = response.read()
 
                 outf.write_file(fn, content)
-            except (urllib2.HTTPError, urllib2.URLError) as err:
+            except (urllib.error.HTTPError, urllib.error.URLError) as err:
                 log('%s [%s] %s: %s' % (xdid, err.code, err.reason, url))
-            except Exception, e:
+            except Exception as e:
                 log(str(e))
 
             sources_tsv += xd_sources_row(fn, url, today.strftime("%Y-%m-%d"))

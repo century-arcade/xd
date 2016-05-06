@@ -6,10 +6,10 @@
 import string
 import puz
 import crossword
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import time
 
-import xdfile
+from . import xdfile
 
 
 def reparse_date(s):
@@ -19,12 +19,12 @@ def reparse_date(s):
 
 
 def decode(s):
-    s = s.replace(u'\x92', "'")
-    s = s.replace(u'\x93', '"')
-    s = s.replace(u'\x94', '"')
-    s = s.replace(u'\x85', '...')
-    s = s.replace(u'\x86', u'†')
-    s = urllib.unquote(s)
+    s = s.replace('\x92', "'")
+    s = s.replace('\x93', '"')
+    s = s.replace('\x94', '"')
+    s = s.replace('\x85', '...')
+    s = s.replace('\x86', '†')
+    s = urllib.parse.unquote(s)
     return s
 
 
@@ -33,18 +33,18 @@ def is_block(puz, x, y):
 
 
 def parse_puz(contents, filename):
-    rebus_shorthands = list(u"⚷⚳♇♆⛢♄♃♂♁♀☿♹♸♷♶♵♴♳⅘⅗⅖⅕♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
+    rebus_shorthands = list("⚷⚳♇♆⛢♄♃♂♁♀☿♹♸♷♶♵♴♳⅘⅗⅖⅕♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
 
     try:
         puzobj = puz.load(contents)
         puzzle = crossword.from_puz(puzobj)
-    except puz.PuzzleFormatError, e:
+    except puz.PuzzleFormatError as e:
         emsg = e.message
         if "<html>" in contents.lower():
             emsg += " (looks like html)"
         raise xdfile.PuzzleParseError(emsg)
 
-    grid_dict = dict(zip(string.uppercase, string.uppercase))
+    grid_dict = dict(list(zip(string.uppercase, string.uppercase)))
 
     xd = xdfile.xdfile()
     xd.source = filename
@@ -138,10 +138,10 @@ def parse_puz(contents, filename):
 
 if __name__ == "__main__":
     import sys
-    from utils import get_args, find_files
+    from .utils import get_args, find_files
 
     args = get_args(desc='parse .puz files')
     for fn, contents in find_files(*sys.argv[1:]):
         xd = parse_puz(contents, fn)
-        print(xd.to_unicode().encode("utf-8"))
+        print(xd.to_unicode())
 

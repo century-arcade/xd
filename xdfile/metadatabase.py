@@ -1,8 +1,8 @@
 
 import os.path
 
-from utils import COLUMN_SEPARATOR, EOL, parse_tsv, parse_pathname
-from xdfile import corpus
+from .utils import COLUMN_SEPARATOR, EOL, parse_tsv, parse_pathname
+from .xdfile import corpus
 
 
 RECEIPTS_TSV = "receipts.tsv"
@@ -63,26 +63,23 @@ xd_puzzles_header = COLUMN_SEPARATOR.join([
 
 
 # yields dict corresponding to each row of receipts.tsv, in sequential order
-def xd_receipts_meta(data=None):
-    if not data:
-        data = file(RECEIPTS_TSV, 'r').read()
-
-    return parse_tsv(data, "Receipt")
+def xd_receipts_meta():
+    return parse_tsv(RECEIPTS_TSV, "Receipt")
 
 def xd_publications_meta():
-    return parse_tsv(file(PUBLICATIONS_TSV, 'r').read(), "Publication")
+    return parse_tsv(PUBLICATIONS_TSV, "Publication")
 
 def xd_puzzles_meta():
-    return parse_tsv(file(PUZZLES_TSV, 'r').read(), "Puzzle")
+    return parse_tsv(PUZZLES_TSV, "Puzzle")
 
 def xd_puzzles_append(tsv_rows):
-    file(PUZZLES_TSV, 'a').write(tsv_rows)
+    codecs.open(PUZZLES_TSV, 'a', encoding='utf-8').write(tsv_rows)
 
 def xd_puzzle_sources():
-    return parse_tsv(file(PUZZLE_SOURCES_TSV, 'r').read(), "PuzzleSource")
+    return parse_tsv(PUZZLE_SOURCES_TSV, "PuzzleSource")
 
 def append_receipts(receipts):
-    file(RECEIPTS_TSV, 'a').write(receipts)
+    codecs.open(RECEIPTS_TSV, 'a', encoding='utf-8').write(receipts)
 
 
 def get_last_receipt_id():
@@ -93,7 +90,7 @@ def get_last_receipt_id():
         else:
             return 0
     except IOError:
-        file(RECEIPTS_TSV, 'w').write(xd_receipts_header)
+        codecs.open(RECEIPTS_TSV, 'w', encoding='utf-8').write(xd_receipts_header)
         return 0
         
 
@@ -135,5 +132,5 @@ def xd_puzzles_row(xd, ReceiptId=""):
     ]
 
     assert COLUMN_SEPARATOR not in "".join(fields), fields
-    return COLUMN_SEPARATOR.join(fields).encode("utf-8") + EOL
+    return COLUMN_SEPARATOR.join(fields) + EOL
 

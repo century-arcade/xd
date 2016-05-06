@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import string
 import re
 from lxml import etree
 
-import xdfile
+from . import xdfile
 
 
 # content is unicode()
@@ -86,7 +86,7 @@ def get_solution(word_id, word_map, puzzle):
         # reduce 1 to stick to a 0-based index list
         start = start - 1
         end = end - 1
-        return range(start, end + 1)
+        return list(range(start, end + 1))
 
     x, y = word_map[word_id]
     word = ''

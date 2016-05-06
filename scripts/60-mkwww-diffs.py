@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Usage:
 #   $0 -o <www_dir> <similarities.xsv>
@@ -120,7 +120,7 @@ def gendiff(xd1, xd2, pct):
 
 
 def get_list_band_html(index_list, lowpct, highpct):
-    matches = [(b2, L) for pct, L, b1, b2 in index_list.values() if pct >= lowpct and pct < highpct]
+    matches = [(b2, L) for pct, L, b1, b2 in list(index_list.values()) if pct >= lowpct and pct < highpct]
 
     r = "\n<h3>%d puzzles match %d-%d%% of another grid</h3>" % (len(matches), lowpct, highpct)
     for b1, L in sorted(matches):
@@ -159,7 +159,7 @@ def main():
 
     # find all tsv/xsv/csv files
     for xsvfn, xsv in find_files(*args.inputs, ext='sv'):
-        for row in parse_tsv(xsv, "Similarity"):
+        for row in parse_tsv_data(xsv, "Similarity"):
             fn1, fn2 = row.needle, row.match
 
             progress("%s - %s" % (fn1, fn2))
@@ -208,7 +208,7 @@ def main():
 
             right_index_list[(fn1, fn2)] = (pct, index_line, b1, b2)
 
-            outf.write_file(outfn, ret.encode("utf-8"))
+            outf.write_file(outfn, ret)
 
     outf.write_file("style.css", style_css)
     outf.write_file("index.html", get_index_html(right_index_list, args.subset))

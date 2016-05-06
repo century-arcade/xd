@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Usage:
 #   $0 -o <output-zip> <toplevel-directory>
@@ -18,7 +18,7 @@ def main():
 
     log("importing from %s" % args.source)
 
-    outf = open_output():
+    outf = open_output()
 
     sources = []
 

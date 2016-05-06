@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Usage:
 #    $0 [-c <corpus>] [-o similar.txt] <input_xd>
@@ -20,8 +20,8 @@ def fast_grid_similarity(a, b):
         return 0
 
     r = 0
-    for row1, row2 in itertools.izip(a.grid, b.grid):
-        for i in xrange(len(row1)):
+    for row1, row2 in zip(a.grid, b.grid):
+        for i in range(len(row1)):
             if row1[i] == row2[i]:
                 r += 1
 
@@ -34,8 +34,8 @@ def grid_similarity(a, b):
 
     r = 0
     tot = 0
-    for row1, row2 in itertools.izip(a.grid, b.grid):
-        for i in xrange(len(row1)):
+    for row1, row2 in zip(a.grid, b.grid):
+        for i in range(len(row1)):
             if row1[i] != '#':
                 tot += 1
                 if row1[i] == row2[i]:
@@ -47,7 +47,7 @@ def grid_similarity(a, b):
         return 1
 
     # add in a little bit f
-    total_diffs = sum(itertools.imap(unicode.__eq__, astr, bstr)) / float(max(len(astr), len(bstr)))
+    total_diffs = sum(map(str.__eq__, astr, bstr)) / float(max(len(astr), len(bstr)))
 
     return (r + total_diffs) / float(tot + 1)
 

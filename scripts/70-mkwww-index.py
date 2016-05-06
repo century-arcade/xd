@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import time
 import sys
@@ -30,4 +30,4 @@ out += "</ul>"
 out += '<a href="xd-xdiffs.zip">xd-xdiffs.zip</a> (7MB) has raw data for all puzzles that are at least 25% similar.  Source code for using <a href="https://github.com/century-arcade/xd">the .xd format is available on Github.</a><br/>'
 out += mkwww.html_footer
 
-print out
+print(out)

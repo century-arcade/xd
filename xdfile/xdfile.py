@@ -1,11 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8
-
-from __future__ import print_function
 
 import string
 
-from utils import parse_pathname, parse_xdid
+from .utils import parse_pathname, parse_xdid
 
 
 class Error(Exception):
@@ -46,7 +44,7 @@ class xdfile:
         self.orig_contents = xd_contents
 
         if xd_contents:
-            self.parse_xd(xd_contents.decode("utf-8"))
+            self.parse_xd(xd_contents)
 
     def __str__(self):
         return self.filename or "<unknown xd puzzle>"
@@ -98,7 +96,7 @@ class xdfile:
 
     def get_header(self, fieldname):
         v = self.headers.get(fieldname)
-        assert v is None or isinstance(v, basestring), v
+        assert v is None or isinstance(v, str), v
         return (v or "").strip()
 
     def set_header(self, fieldname, newvalue=None):
@@ -107,7 +105,7 @@ class xdfile:
 #                log("%s[%s] '%s' -> '%s'" % (self.filename, fieldname, self.headers[fieldname], newvalue))
 
         if newvalue:
-            newvalue = unicode(newvalue).strip()
+            newvalue = str(newvalue).strip()
             newvalue = " ".join(newvalue.splitlines())
             newvalue = newvalue.replace("\t", "  ")
 
@@ -240,7 +238,7 @@ class xdfile:
                     k, v = k.strip(), v.strip()
 
                     if k in self.headers:
-                        if isinstance(self.headers[k], basestring):
+                        if isinstance(self.headers[k], str):
                             self.headers[k] = [self.headers[k], v]
                         else:
                             self.headers[k].append(v)
@@ -268,7 +266,7 @@ class xdfile:
                 pos = clue[:clue_idx].strip()
                 clue = clue[clue_idx + 1:]
 
-                if pos[0] in string.uppercase:
+                if pos[0] not in string.digits:
                     cluedir = pos[0]
                     try:
                         cluenum = int(pos[1:])
@@ -286,7 +284,7 @@ class xdfile:
     def to_unicode(self, emit_clues=True):
         # headers (section 1)
 
-        r = u""
+        r = ""
 
         def header_sort_key(item):
             if item[0].lower() not in HEADER_ORDER:
@@ -295,8 +293,8 @@ class xdfile:
             return HEADER_ORDER.index(item[0].lower())
 
         if self.headers:
-            for k, v in sorted(self.headers.items(), key=header_sort_key):
-                assert isinstance(v, basestring), v
+            for k, v in sorted(list(self.headers.items()), key=header_sort_key):
+                assert isinstance(v, str), v
 
                 r += "%s: %s" % (k, v)
                 r += EOL
@@ -319,7 +317,7 @@ class xdfile:
                     r += EOL
                 prevdir = cluedir
 
-                r += u"%s%s. %s ~ %s" % (cluedir, cluenum, (clue or "[XXX]").strip(), answer)
+                r += "%s%s. %s ~ %s" % (cluedir, cluenum, (clue or "[XXX]").strip(), answer)
                 r += EOL
 
             if self.notes:
@@ -329,12 +327,12 @@ class xdfile:
         r += EOL
 
         # some Postscript CE encodings can be caught here
-        r = r.replace(u'\x91', "'")
-        r = r.replace(u'\x92', "'")
-        r = r.replace(u'\x93', '"')
-        r = r.replace(u'\x94', '"')
-        r = r.replace(u'\x96', '___')
-        r = r.replace(u'\x85', '...')
+        r = r.replace('\x91', "'")
+        r = r.replace('\x92', "'")
+        r = r.replace('\x93', '"')
+        r = r.replace('\x94', '"')
+        r = r.replace('\x96', '___')
+        r = r.replace('\x85', '...')
 
         # these are always supposed to be double-quotes
         r = r.replace("''", '"')
@@ -350,7 +348,7 @@ class xdfile:
         flipxd.headers = self.headers.copy()
 
         g = []
-        for i in xrange(len(self.grid[0])):
+        for i in range(len(self.grid[0])):
             g.append(get_col(self.grid, i))
 
         flipxd.grid = g
@@ -367,7 +365,7 @@ g_corpus = None
 
 # get_args(...) should be called before corpus()
 def corpus(*inputs):
-    from utils import log, find_files, get_args
+    from .utils import log, find_files, get_args
 
     global g_corpus
     if g_corpus is not None:
@@ -389,8 +387,8 @@ def corpus(*inputs):
             g_corpus.append(xd)
 
             yield xd
-        except Exception, e:
-            log(unicode(e))
+        except Exception as e:
+            log(str(e))
             if args.debug:
                 raise
 

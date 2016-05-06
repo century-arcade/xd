@@ -1,18 +1,18 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import re
-from urllib import unquote
+from urllib.parse import unquote
 from lxml import etree
 
-import xdfile
+from . import xdfile
 
 
 def udecode(s):
     t = unquote(s)
     try:
-        return unicode(t.decode("utf-8"))
+        return str(t.decode("utf-8"))
     except:
-        return unicode(t)
+        return str(t)
 
 
 def parse_uxml(content, filename):
@@ -61,7 +61,7 @@ def parse_uxml(content, filename):
     index = 0
     while index < len(all_answers):
         row = all_answers[index:index + cols]
-        xd.grid.append(u"".join(row))
+        xd.grid.append("".join(row))
         index += cols
 
     # add clues

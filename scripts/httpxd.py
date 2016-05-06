@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # apt-get install python-cherrypy3
 
 import cherrypy
 import string
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 import mkwww
 import findsimilar
@@ -25,7 +25,7 @@ Paste the grid here in text format (use '#' as block):
 class httpxd(object):
     def __init__(self):
         self.corpus = xdfile.main_load()
-        self.example_grid = '<div class="fixed">%s</div>' % "<br/>".join(self.corpus.values()[0].grid)
+        self.example_grid = '<div class="fixed">%s</div>' % "<br/>".join(list(self.corpus.values())[0].grid)
 
     @cherrypy.expose
     def index(self):
@@ -50,19 +50,19 @@ class httpxd(object):
     @cherrypy.expose
     def find(self, grid="", xd=""):
         xdobj = self.corpus.get(xd) or httpxd.xd_from_grid(grid)
-        gridstr = "".join(filter(lambda x: x in string.uppercase, "".join(xdobj.grid).upper()))
+        gridstr = "".join([x for x in "".join(xdobj.grid).upper() if x in string.uppercase])
         if len(gridstr) < 15:  # one row, wouldn't really consider less than this a match anyway
             return self.error('please specify a more specific grid than "%s".  Example: <br/>%s' % (gridstr, self.example_grid))
 
         index_list = []
-        dups = findsimilar.find_similar_to(xdobj, self.corpus.values())
+        dups = findsimilar.find_similar_to(xdobj, list(self.corpus.values()))
         for pct, needle, other, same_answers in sorted(dups):
             pct *= 100
             if xd:
                 parms = {"left": xdfile.get_base_filename(other.filename), "right": xd}
             else:
                 parms = {"left": xdfile.get_base_filename(other.filename), "right": grid}
-            index_line = '%d%% <a href="/diff/?%s">%s</a> %s' % (pct, urllib.urlencode(parms), xdfile.get_base_filename(other.filename), other.get_header("Author") or "")
+            index_line = '%d%% <a href="/diff/?%s">%s</a> %s' % (pct, urllib.parse.urlencode(parms), xdfile.get_base_filename(other.filename), other.get_header("Author") or "")
 
             index_list.append((pct, index_line))
 

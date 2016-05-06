@@ -1,6 +1,4 @@
 
-from __future__ import print_function
-
 from collections import namedtuple
 import re
 import os
@@ -8,6 +6,7 @@ import stat
 import sys
 import zipfile
 import csv
+import codecs
 import datetime
 import time
 import argparse
@@ -29,13 +28,13 @@ def log(s, minverbose=0):
     g_logs.append("%s: %s" % (g_currentProgress or parse_pathname(sys.argv[0]).base, s))
 
     if not g_args or g_args.verbose >= minverbose:
-        print(" " + s.encode("utf-8"))
+        print(" " + s)
 
 
 # print without logging if -d
 def debug(s):
     if g_args.debug:
-        print(" " + s.encode("utf-8"))
+        print(" " + s)
 
 
 def progress(rest="", every=1):
@@ -98,7 +97,8 @@ def find_files(*paths, **kwargs):
                         log("ignoring dotfile")
                         continue
 
-                    yield fullfn, file(fullfn).read()
+                    contents = codecs.open(fullfn, encoding='utf-8').read()
+                    yield fullfn, contents
         else:
             try:
                 # handle .zip files
@@ -113,11 +113,11 @@ def find_files(*paths, **kwargs):
                         contents = zf.read(zi)
                         if should_strip_toplevel:
                             fullfn = strip_toplevel(fullfn)
-                        yield fullfn, contents
+                        yield fullfn, contents.decode("utf-8")
             except zipfile.BadZipfile:
                 # handle individual files
                 fullfn = path
-                contents = file(path).read()
+                contents = codecs.open(fullfn, encoding='utf-8').read()
                 yield fullfn, contents
 
     # reset progress indicator after processing all files
@@ -139,7 +139,7 @@ def iso8601(timet):
 def datestr_to_datetime(s):
     try:
         return datetime.date(*[int(x) for x in s.split("-")])
-    except Exception, e:
+    except Exception as e:
         debug(str(e))
         if g_args.debug:
             raise
@@ -160,17 +160,24 @@ def replace_ext(fn, newext):
     return base + newext
 
 
-# always includes header row
-#   returns a sequence of mappings
-def parse_tsv(contents, objname=None):
+# should always include header row
+#   returns a sequence of mappings or tuples, depending on whether objname is specified
+def parse_tsv_data(contents, objname=None):
+
     csvreader = csv.DictReader(contents.splitlines(), delimiter=COLUMN_SEPARATOR, quoting=csv.QUOTE_NONE, skipinitialspace=True)
     if objname:
         nt = namedtuple(objname, " ".join(csvreader.fieldnames))
+
     for row in csvreader:
         if objname:
             yield nt(**row)
         else:
             yield row
+
+
+def parse_tsv(fn, objname=None):
+    fp = codecs.open(fn, encoding='utf-8')
+    return parse_tsv_data(fp.read(), objname)
 
 
 def parse_xdid(xdid):
@@ -194,7 +201,7 @@ class OutputZipFile(zipfile.ZipFile):
         fullfn = os.path.join(self.toplevel, fn)
 
         zi = zipfile.ZipInfo(fullfn, datetime.datetime.fromtimestamp(timet).timetuple())
-        zi.external_attr = 0444 << 16L
+        zi.external_attr = 0o444 << 16
         zi.compress_type = zipfile.ZIP_DEFLATED
         self.writestr(zi, contents)
 
@@ -215,7 +222,7 @@ class OutputFile:
         self.outfp.write(data)
 
     def write_row(self, fields):
-        self.write((COLUMN_SEPARATOR.join(fields) + EOL).encode("utf-8"))
+        self.write(COLUMN_SEPARATOR.join(fields) + EOL)
 
 
 def strip_toplevel(fn):
@@ -234,10 +241,10 @@ class OutputDirectory:
         # make parent dirs
         try:
             os.makedirs(parse_pathname(fullfn).path)
-        except Exception, e:
+        except Exception as e:
             pass  # log("%s: %s" % (type(e), str(e)))
 
-        file(fullfn, 'w').write(contents)
+        codecs.open(fullfn, 'w', encoding='utf-8').write(contents)
 
 
 def open_output(fnout=None):
@@ -253,6 +260,6 @@ def open_output(fnout=None):
     elif not parse_pathname(fnout).ext:  # extensionless assumed to be directories
         outf = OutputDirectory(fnout)
     else:
-        outf = OutputFile(file(fnout, 'w'))
+        outf = OutputFile(codecs.open(fnout, 'w', encoding="utf-8"))
 
     return outf

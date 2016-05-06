@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 from xdfile import corpus, xdfile, BLOCK_CHAR
@@ -26,7 +26,7 @@ def boil(s):
 
 # picks a random clue from { 'boiledclue': set(clues) }
 def random_clue(s):
-    cluepair = random.choice(s.items())
+    cluepair = random.choice(list(s.items()))
     return random.choice(list(cluepair[1]))
 
 # yields across_word, down_word, i, j  (where across_word[i] and down_word[j] are the pivot characters
@@ -61,7 +61,7 @@ def splice(s, i, repl):
     return a + repl + b
 
 
-def mutate(xd, words):
+def mutate(xd, words, chance=1):
     nmutations = 0
     for hwd, vwd, i, j, r, c in each_word_cross(xd):
         hwd_a, pivot_char, hwd_b = hwd[:i], hwd[i], hwd[i:][1:]
@@ -83,7 +83,7 @@ def mutate(xd, words):
             most_common = sorted(mutations_this_square, key=lambda x: len(words[x[0]]) + len(words[x[1]]))[-1]
             new_hwd, new_vwd, best_replacement = most_common
 
-            if random.random() < 1:
+            if random.random() < chance:
                 nmutations += 1
                 xd.grid[r] = splice(xd.grid[r], c, best_replacement)
                 log("-> %s/%s (%s)" % (new_hwd, new_vwd, "".join(br for h, v, br in mutations_this_square)))
@@ -95,11 +95,16 @@ def load_clues():
     for r in parse_tsv(file("clues.tsv").read(), "AnswerClue"):
         try:
             pubid, dt, answer, clue = r
-        except Exception, e:
-            print str(e), r
-            raise
+        except Exception as e:
+            print(str(e), r)
+            continue
+
         progress(dt, every=100000)
+
         if not clue:
+            continue
+
+        if "Across" in clue or "Down" in clue:  # skip self-referential clues
             continue
 
         boiled_clue = boil(clue)
@@ -152,12 +157,13 @@ def main():
         xd = xdfile(contents, fn)
         if not xd.grid:
             continue
+        xd.set_header("Title", None)
         xd.set_header("Editor", "Timothy Parker Bot")
         xd.set_header("Author", "%s %s" % (random.choice(fake_first), random.choice(fake_last)))
         xd.set_header("Copyright", None)
 
         remixed = set()
-        for pubid, pub_clues in all_clues.items():
+        for pubid, pub_clues in list(all_clues.items()):
             try:
                 if pubid == xd.publication_id():
                     continue  # don't use same publisher's clues
@@ -167,7 +173,9 @@ def main():
                 outfn = "%s-%s.xd" % (xd.xdid(), pubid)
 
                 if nmissing == 0:
-                    nmutated = mutate(xd, pub_clues)
+                    nmutated = 0
+                    while nmutated < 100:
+                        nmutated += mutate(xd, pub_clues)
                     nmissing = reclue(xd, pub_clues)
                     log("%s missing %d clues after %d mutations" % (outfn, nmissing, nmutated))
 
@@ -178,14 +186,14 @@ def main():
 
                     missing_tsv += COLUMN_SEPARATOR.join([ xd.xdid(), pubid, str(nmissing) ]) + EOL
 
-            except Exception, e:
+            except Exception as e:
                 log("remix error %s" % str(e))
 
         if remixed:
             log("%d remixed: %s" % (len(remixed), " ".join(remixed))) 
             try:
                 outf.write_file(parse_pathname(fn).base + ".xd", contents.encode("utf-8"))
-            except Exception, e:
+            except Exception as e:
                 log("couldn't write: " + str(e))
 
     outf.write_file("remix.log", get_log().encode("utf-8"))

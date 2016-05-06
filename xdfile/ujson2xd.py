@@ -3,9 +3,9 @@
 import os
 import re
 import json
-from urllib import unquote
+from urllib.parse import unquote
 
-import xdfile
+from . import xdfile
 
 POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright']
 

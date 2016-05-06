@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # import string
@@ -7,7 +7,7 @@ import re
 
 from lxml import html
 
-import xdfile
+from . import xdfile
 
 SPLIT_REBUS_TITLES = "CRYPTOCROSSWORD TIC-TAC-TOE".split()
 
@@ -46,7 +46,7 @@ def parse_xwordinfo(content, filename):
                         # 'DASH': '-',
                         # 'DOT': '●'
                         }
-    rsh = u'♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321'
+    rsh = '♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321'
     REBUS_SHORT_HANDS = list(rsh)
 
     content = content.replace("<b>", "{*")
@@ -100,7 +100,7 @@ def parse_xwordinfo(content, filename):
     puzzle_table = root.cssselect(xwiprefix + 'PuzTable tr') or root.cssselect('#PuzTable tr')
 
     for row in puzzle_table:
-        row_data = u""
+        row_data = ""
         for cell in row.cssselect('td'):
             # check if the cell is special - with a shade or a circle
             cell_class = cell.get('class')
@@ -206,8 +206,8 @@ def _fetch_clues(xd, clueprefix, root, css_identifier, rebus):
 
 if __name__ == "__main__":
     import sys
-    from utils import find_files
+    from .utils import find_files
     for fn, contents in find_files(*sys.argv[1:]):
         xd = parse_xwordinfo(contents, fn)
-        print "--- %s ---" % fn
-        print xd.to_unicode().encode("utf-8")
+        print("--- %s ---" % fn)
+        print(xd.to_unicode())

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import re
 
@@ -65,7 +65,7 @@ def table_row(row, keys, rowclass="row"):
     out = '<tr class="%s">' % rowclass
     for k, v in zip(keys, row):
         try:
-            v = unicode(v or "")
+            v = str(v or "")
         except UnicodeDecodeError:
             v = "???"
 
@@ -147,7 +147,7 @@ class Publication:
 
 
 def tally_to_cell(d):
-    freq_sorted = sorted([(v, k) for k, v in d.items()], reverse=True)
+    freq_sorted = sorted([(v, k) for k, v in list(d.items())], reverse=True)
 
     if not freq_sorted:
         return ""
@@ -173,7 +173,7 @@ def main():
 
     total_xd = 0
     for xsv, contents in find_files(*args.inputs):
-        for puzrow in parse_tsv(contents, "Puzzle"):
+        for puzrow in parse_tsv_data(contents, "Puzzle"):
             pubid = puzrow.PublicationAbbr
             if pubid not in all_pubs:
                 all_pubs[pubid] = Publication(pubid)
@@ -189,7 +189,7 @@ def main():
     pub_index += "<p>%d crosswords from %d publications</p>" % (total_xd, len(all_pubs))
     pub_index += html_footer
 
-    for pubid, pub in all_pubs.items():
+    for pubid, pub in list(all_pubs.items()):
         progress(pubid)
         onepub_html = html_header.format(title="Metadata for '%s' puzzles" % pubid)
         onepub_html += table_to_html(sorted(pub.puzzles_meta), xd_puzzles_header.split(COLUMN_SEPARATOR), "puzzle")

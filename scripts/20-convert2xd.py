@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Usage: $0 [-o <output-xd.zip>] <input>
 #
@@ -50,7 +50,7 @@ def main():
         source_files = {}
         for fn, contents in find_files(input_source, ext='.tsv'):
             assert fn.endswith('sources.tsv'), fn
-            for row in parse_tsv(contents, "Source"):
+            for row in parse_tsv_data(contents, "Source"):
                 if row.SourceFilename in source_files:
                     log("%s: already in source_files!" % row.SourceFilename)
                     continue
@@ -100,11 +100,11 @@ def main():
                         xd.filename = replace_ext(strip_toplevel(fn), ".xd")
 
                         xdstr = xd.to_unicode()
-                        outf.write_file(xd.filename, xdstr.encode("utf-8"))
+                        outf.write_file(xd.filename, xdstr)
                         debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
                         sources_row.Rejected = ""
                         break  # stop after first successful parsing
-                    except Exception, e:
+                    except Exception as e:
                         debug("%s could not convert: %s" % (parsefunc.__name__, str(e)))
                         sources_row.Rejected += "[%s] %s  " % (parsefunc.__name__, str(e))
                         if args.debug:
@@ -116,8 +116,8 @@ def main():
             this_receipt = xd_receipts_row(sources_row)
             new_receipts += this_receipt
 
-    outf.write_file("receipts.tsv", new_receipts.encode("utf-8"))
-    outf.write_file("converted.log", get_log().encode("utf-8"))
+    outf.write_file("receipts.tsv", new_receipts)
+    outf.write_file("converted.log", get_log())
 
     # only append to global receipts.tsv if entire conversion process succeeded
     append_receipts(new_receipts)

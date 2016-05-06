@@ -164,5 +164,8 @@ transpose-diffs.txt:
 xd-xdiffs.zip:
 	zip $@ $(SIMILAR_TXT) `./src/zipsimilar.py $(SIMILAR_TXT)`
 
+clues.tsv:
+	./queries/enumclues.py
+
 .PHONY: always
 
