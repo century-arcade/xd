@@ -43,7 +43,7 @@ def progress(rest="", every=1):
     if rest:
         g_numProgress += 1
         g_currentProgress = rest
-        if g_numProgress % every == every - 1:
+        if g_numProgress % every == 0:
             print("\r% 6d %s" % (g_numProgress, rest), end="")
             sys.stdout.flush()
     else:
@@ -162,10 +162,15 @@ def replace_ext(fn, newext):
 
 # always includes header row
 #   returns a sequence of mappings
-def parse_tsv(contents, objname):
-    csvreader = csv.DictReader(contents.splitlines(), delimiter=COLUMN_SEPARATOR, quoting=csv.QUOTE_NONE)
-    nt = namedtuple(objname, " ".join(csvreader.fieldnames))
-    return [nt(**row) for row in csvreader]
+def parse_tsv(contents, objname=None):
+    csvreader = csv.DictReader(contents.splitlines(), delimiter=COLUMN_SEPARATOR, quoting=csv.QUOTE_NONE, skipinitialspace=True)
+    if objname:
+        nt = namedtuple(objname, " ".join(csvreader.fieldnames))
+    for row in csvreader:
+        if objname:
+            yield nt(**row)
+        else:
+            yield row
 
 
 def parse_xdid(xdid):
