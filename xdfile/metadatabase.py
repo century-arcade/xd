@@ -1,5 +1,6 @@
 
 import os.path
+import codecs
 
 from .utils import COLUMN_SEPARATOR, EOL, parse_tsv, parse_pathname
 from .xdfile import corpus
@@ -84,7 +85,7 @@ def append_receipts(receipts):
 
 def get_last_receipt_id():
     try:
-        all_receipts = xd_receipts_meta()
+        all_receipts = [ x for x in xd_receipts_meta() ]
         if all_receipts:
             return int(all_receipts[-1].ReceiptId)
         else:

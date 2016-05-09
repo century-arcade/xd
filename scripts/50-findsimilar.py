@@ -85,7 +85,7 @@ def main():
     outf.write(xd_similar_header)
 
     for fn, contents in find_files(*args.inputs, strip_toplevel=False):
-        needle = xdfile(contents, fn)
+        needle = xdfile(contents.decode("utf-8"), fn)
         for pct, a, b in find_similar_to(needle, g_corpus):
             outf.write(xd_similar_row(a, b, pct))
 

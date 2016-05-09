@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8
 
 # pip install crossword puzpy
@@ -9,7 +9,8 @@ import crossword
 import urllib.request, urllib.parse, urllib.error
 import time
 
-from . import xdfile
+import xdfile
+from .utils import log
 
 
 def reparse_date(s):
@@ -44,7 +45,7 @@ def parse_puz(contents, filename):
             emsg += " (looks like html)"
         raise xdfile.PuzzleParseError(emsg)
 
-    grid_dict = dict(list(zip(string.uppercase, string.uppercase)))
+    grid_dict = dict(list(zip(string.ascii_uppercase, string.ascii_uppercase)))
 
     xd = xdfile.xdfile()
     xd.source = filename
@@ -61,16 +62,16 @@ def parse_puz(contents, filename):
     rebus = {}  # [our_rebus_gridvalue] -> full_cell
     r = puzobj.rebus()
     if r.has_rebus():
-        grbs = puzobj.extensions["GRBS"]
-        if sum(ord(x) for x in grbs if ord(x) != 0) > 0:   # check for an actual rebus
-            for pair in puzobj.extensions["RTBL"].split(";"):
+        grbs = puzobj.extensions[b"GRBS"]
+        if sum(x for x in grbs if x != 0) > 0:   # check for an actual rebus
+            for pair in puzobj.extensions[b"RTBL"].decode("cp1252").split(";"):
                 pair = pair.strip()
                 if not pair:
                     continue
                 key, value = pair.split(":")
                 rebuskey = rebus_shorthands.pop()
                 used_rebuses[key] = rebuskey
-                rebus[rebuskey] = decode(value.decode("latin-1"))
+                rebus[rebuskey] = decode(value)
 
             rebustr = xdfile.REBUS_SEP.join([("%s=%s" % (k, v)) for k, v in sorted(rebus.items())])
             xd.set_header("Rebus", rebustr)
@@ -99,10 +100,10 @@ def parse_puz(contents, filename):
                         if ch in rebus_shorthands:
                             cellch = ch
                             rebus_shorthands.remove(ch)
-                            xdfile.log("unknown grid character '%s', assuming rebus of itself" % ch)
+                            log("unknown grid character '%s', assuming rebus of itself" % ch)
                         else:
                             cellch = rebus_shorthands.pop()
-                            xdfile.log("unknown grid character '%s', assuming rebus (as '%s')" % (ch, cellch))
+                            log("unknown grid character '%s', assuming rebus (as '%s')" % (ch, cellch))
 
                         xd.set_header("Rebus", xd.get_header("Rebus") + " %s=%s" % (cellch, ch))
 
@@ -138,7 +139,7 @@ def parse_puz(contents, filename):
 
 if __name__ == "__main__":
     import sys
-    from .utils import get_args, find_files
+    from utils import get_args, find_files
 
     args = get_args(desc='parse .puz files')
     for fn, contents in find_files(*sys.argv[1:]):

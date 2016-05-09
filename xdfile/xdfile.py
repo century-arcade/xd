@@ -74,7 +74,7 @@ class xdfile:
     def publication_id(self):  # "nyt"
         xdid = self.xdid()
         i = 0
-        while xdid[i] in string.ascii_letters:
+        while i < len(xdid) and xdid[i] in string.ascii_letters:
             i += 1
         return xdid[:i].lower()
 
@@ -382,7 +382,7 @@ def corpus(*inputs):
 
     for fullfn, contents in find_files(*inputs, ext='.xd'):
         try:
-            xd = xdfile(contents, fullfn)
+            xd = xdfile(contents.decode("utf-8"), fullfn)
 
             g_corpus.append(xd)
 

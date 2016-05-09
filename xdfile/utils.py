@@ -77,8 +77,13 @@ def get_args(desc="", parser=None):
     return g_args
 
 
-# walk all 'paths' recursively and yield (filename, contents) for non-hidden files
 def find_files(*paths, **kwargs):
+    for fn, data, dt in find_files_with_time(*paths, **kwargs):
+        yield fn, data
+
+
+# walk all 'paths' recursively and yield (filename, contents) for non-hidden files
+def find_files_with_time(*paths, **kwargs):
     ext = kwargs.get("ext")
     should_strip_toplevel = kwargs.get("strip_toplevel", True)
     for path in paths:
@@ -97,8 +102,7 @@ def find_files(*paths, **kwargs):
                         log("ignoring dotfile")
                         continue
 
-                    contents = codecs.open(fullfn, encoding='utf-8').read()
-                    yield fullfn, contents
+                    yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
         else:
             try:
                 # handle .zip files
@@ -113,12 +117,11 @@ def find_files(*paths, **kwargs):
                         contents = zf.read(zi)
                         if should_strip_toplevel:
                             fullfn = strip_toplevel(fullfn)
-                        yield fullfn, contents.decode("utf-8")
+                        yield fullfn, contents, time.mktime(datetime.datetime(*zi.date_time).timetuple())
             except zipfile.BadZipfile:
                 # handle individual files
                 fullfn = path
-                contents = codecs.open(fullfn, encoding='utf-8').read()
-                yield fullfn, contents
+                yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
 
     # reset progress indicator after processing all files
     progress()
@@ -131,6 +134,7 @@ def filetime(fn):
         return time.time()
 
 
+# date only
 def iso8601(timet):
     return datetime.datetime.fromtimestamp(int(timet)).isoformat(' ').split(' ')[0]
 

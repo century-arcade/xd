@@ -8,7 +8,7 @@
 import zipfile
 
 from xdfile.metadatabase import xd_sources_row, xd_sources_header
-from xdfile.utils import find_files, get_log, get_args, filetime, args_parser, parse_pathname, log, iso8601, open_output, strip_toplevel
+from xdfile.utils import find_files_with_time, get_log, get_args, filetime, args_parser, parse_pathname, log, iso8601, open_output, strip_toplevel
 
 
 def main():
@@ -23,12 +23,12 @@ def main():
     sources = []
 
     for input_source in args.inputs:
-        for fn, contents in find_files(input_source):
+        for fn, contents, dt in find_files_with_time(input_source):
             if len(contents) == 0:
                 log("ignoring empty file")
                 continue
 
-            outf.write_file(strip_toplevel(fn), contents, filetime(fn))
+            outf.write_file(strip_toplevel(fn), contents, dt)
 
             sources.append(xd_sources_row(fn, args.source or input_source, iso8601(dt)))
 

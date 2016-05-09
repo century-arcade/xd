@@ -13,8 +13,9 @@ from xdfile import corpus, xdfile, BLOCK_CHAR
 #    output the puzzle to .xd
 
 
-fake_first = "Mark John Paul Sam Alice Bob Carol Megan Lisa".split()
-fake_last = "Johnson Black Parker Lewis Fisher Baker Cook".split()
+fake_first = "James John Robert Michael William David Richard Charles Joseph Thomas Christopher Daniel Paul Mark Donald George Kenneth Steven Edward Brian Ronald Anthony Kevin Jason Matthew Gary Timothy Jose Mateo Maria Sofia Olivia Linda Barbara Beth Jennifer Susan Margaret Lisa Nancy Karen Betty Helen Sandra Donna Carol Ruth Sharon Michelle Shirley".split()
+
+fake_last = "Smith Johnson Williams Brown Jones Miller Davis Garcia Rodriguez Wilson Martinez Anderson Taylor Thomas Hernandez Moore Martin Jackson Thompson White Lopez Lee Gonzalez Harris Clark Lewis Robinson Walker Perez Hall Young Allen Sanchez Wright King Scott Green Baker Adams Nelson Hill Ramirez Campbell Mitchell Roberts Carter Phillips Evans Turner Torres Parker".split()
 
 import string
 import random

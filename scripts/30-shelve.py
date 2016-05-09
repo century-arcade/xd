@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8
 #
 # Usage: $0 [-o <output-location>] <input>
@@ -14,7 +14,7 @@ import re
 import datetime
 
 from xdfile.metadatabase import xd_publications_meta, xd_puzzles_row, xd_puzzles_header, xd_puzzles_append, xd_receipts_meta
-from xdfile.utils import get_args, find_files, parse_pathname, log, debug, get_log, open_output, strip_toplevel
+from xdfile.utils import get_args, find_files, parse_pathname, log, debug, get_log, open_output, strip_toplevel, parse_tsv_data
 from xdfile import xdfile, HEADER_ORDER
 
 
@@ -234,7 +234,7 @@ def main():
     all_filenames = set()  # shelved files
 
     for xsvfn, xsvdata in find_files(*args.inputs, ext='sv'):
-        for row in xd_receipts_meta(xsvdata):
+        for row in parse_tsv_data(xsvdata.decode("utf-8"), "SourceFile"):
             assert row.SourceFilename not in all_receipts, "double receipts?"
             all_receipts[parse_pathname(row.SourceFilename).base] = row
 
@@ -248,7 +248,7 @@ def main():
 
     for input_source in args.inputs:
         for fn, contents in find_files(input_source, ext='.xd'):
-            xd = xdfile(contents, fn)
+            xd = xdfile(contents.decode("utf-8"), fn)
 
             rcptid = all_receipts[parse_pathname(fn).base].ReceiptId
 
@@ -265,7 +265,7 @@ def main():
                 # append a, b, c, etc until finding one that hasn't been taken already
                 i = 0
                 while real_target_fn in all_filenames:
-                    real_target_fn = target_fn + string.lowercase[i] + ".xd"
+                    real_target_fn = target_fn + string.ascii_lowercase[i] + ".xd"
                     i += 1
 
                 all_filenames.add(real_target_fn)

@@ -44,9 +44,9 @@ def load_clues():
         if boiled_clue not in clues:
             clues[boiled_clue] = set()
 
-        clues[boiled_clue].add(clue)
+        clues[boiled_clue].add(r)
 
-    progress("done loading")
+    progress()
     return answers
 
 
@@ -72,26 +72,28 @@ def main():
     all_clues = load_clues()
 
     for fn, contents in find_files(*args.inputs, ext=".xd"):
-        xd = xdfile(contents, fn)
+        xd = xdfile(contents.decode('utf-8'), fn)
         if not xd.grid:
             continue
-        xd.set_header("Analyzer", "xd.saul.pw")
 
         try:
             new_clues = []
+            npriorclues = 0
             for pos, clue, answer in xd.clues:
                 bc = boil(clue)
-                if bc:
-                    newclue = sorted(all_clues[answer][bc])[0]
-                    if xd.date() not in newclue:  # this very puzzle
-                        new_clues.append((pos, newclue, answer))
-                        continue
+                if bc and (answer in all_clues) and (bc in all_clues[answer]):
+                    for pubid, dt, answer, clue in sorted(all_clues[answer][bc], key=1):  # oldest first
+                        if pubid == xd.publication_id() and dt == xd.date():
+                            # same clue as from this puzzle
+                            continue
+                        puzzle_html += "<option>[%s%s] %s [%s]</option>" % (pubid, dt, clue, len(all_clues[answer]))
+                        npriorclues += 1
 
                 new_clues.append((pos, clue, answer))
 
-            xd.clues = new_clues
+            puzzle_html += "%d%% recycled clues (%s/%s)" % (npriorclues*100/len(xd.clues), npriorclues, len(xd.clues)))
 
-            outfn = "%s-notes.xd" % xd.xdid()
+            outfn = "%s/index.html" % xd.xdid()
 
             outf.write_file(outfn, xd.to_unicode())
             outf.write_file(parse_pathname(fn).base + ".xd", contents)
@@ -100,7 +102,7 @@ def main():
             if args.debug:
                 raise
 
-
+    # write tsv rows for this batch
     outf.write_file("annotate.log", get_log())
 
 main()

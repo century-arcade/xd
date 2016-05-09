@@ -14,8 +14,8 @@ import zipfile
 from xdfile import IncompletePuzzleParse
 
 from xdfile.utils import log, debug, get_log
-from xdfile.utils import find_files, parse_pathname, replace_ext, filetime, strip_toplevel
-from xdfile.utils import get_args, parse_tsv, iso8601, open_output
+from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, strip_toplevel
+from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output
 
 from xdfile.metadatabase import xd_receipts_header, xd_receipts_row, append_receipts, get_last_receipt_id
 
@@ -37,7 +37,9 @@ def main():
         '.gif': []
     }
 
-    args = get_args(desc='convert crosswords to .xd format')
+    p = args_parser('convert crosswords to .xd format')
+    p.add_argument('--copyright', default=None, help='Default value for unspecified Copyright headers')
+    args = get_args(parser=p)
 
     outf = open_output()
 
@@ -48,30 +50,32 @@ def main():
     for input_source in args.inputs:
         # collect 'sources' metadata
         source_files = {}
-        for fn, contents in find_files(input_source, ext='.tsv'):
-            assert fn.endswith('sources.tsv'), fn
-            for row in parse_tsv_data(contents, "Source"):
-                if row.SourceFilename in source_files:
-                    log("%s: already in source_files!" % row.SourceFilename)
+        for fn, contents, dt in find_files_with_time(input_source, ext='.tsv'):
+#            assert fn.endswith('sources.tsv'), fn
+            for row in parse_tsv_data(contents.decode('utf-8'), "Source"):
+                innerfn = strip_toplevel(row.SourceFilename)
+                if innerfn in source_files:
+                    log("%s: already in source_files!" % innerfn)
                     continue
-                source_files[row.SourceFilename] = row
+                source_files[innerfn] = row
 
         # enumerate all files in this source
-        for fn, contents in find_files(input_source, strip_toplevel=False):
+        for fn, contents, dt in find_files_with_time(input_source, strip_toplevel=False):
             if fn.endswith(".tsv") or fn.endswith(".log"):
                 continue
 
             sources_row = namedtuple("Source", "ReceiptId DownloadTime ReceivedTime ExternalSource InternalSource SourceFilename Rejected")
-            if fn in source_files:
-                srcrow = source_files[fn]
+            innerfn = strip_toplevel(fn)
+            if innerfn in source_files:
+                srcrow = source_files[innerfn]
                 sources_row.DownloadTime = srcrow.DownloadTime
                 sources_row.ExternalSource = srcrow.ExternalSource
                 sources_row.SourceFilename = srcrow.SourceFilename
             else:
-                log("%s not in sources.tsv" % fn)
-                sources_row.DownloadTime = iso8601(filetime(fn))
+                log("%s not in sources.tsv" % innerfn)
+                sources_row.DownloadTime = iso8601(dt)
                 sources_row.ExternalSource = input_source
-                sources_row.SourceFilename = fn
+                sources_row.SourceFilename = innerfn
 
             sources_row.ReceiptId = nextReceiptId
             nextReceiptId += 1
@@ -98,9 +102,13 @@ def main():
                             continue
 
                         xd.filename = replace_ext(strip_toplevel(fn), ".xd")
+                        xd.set_header("Date", iso8601(dt))
+                        if not xd.get_header("Copyright"):
+                            if args.copyright:
+                                xd.set_header("Copyright", args.copyright)
 
                         xdstr = xd.to_unicode()
-                        outf.write_file(xd.filename, xdstr)
+                        outf.write_file(xd.filename, xdstr, dt)
                         debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
                         sources_row.Rejected = ""
                         break  # stop after first successful parsing
