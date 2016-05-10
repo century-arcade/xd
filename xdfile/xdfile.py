@@ -3,7 +3,11 @@
 
 import string
 
-from .utils import parse_pathname, parse_xdid
+from .utils import parse_pathname, parse_xdid, parse_tsv, progress
+
+
+g_corpus = None  # list of xdfile
+g_all_clues = [ ]  # list of ClueAnswer
 
 
 class Error(Exception):
@@ -281,19 +285,25 @@ class xdfile:
                 if line:
                     self.notes += line + EOL
 
-    def to_unicode(self, emit_clues=True):
-        # headers (section 1)
 
-        r = ""
-
+    def iterheaders(self):
         def header_sort_key(item):
             if item[0].lower() not in HEADER_ORDER:
                 return 1000
 
             return HEADER_ORDER.index(item[0].lower())
 
+        for k, v in sorted(list(self.headers.items()), key=header_sort_key):
+            yield k, v
+
+
+    def to_unicode(self, emit_clues=True):
+        # headers (section 1)
+
+        r = ""
+
         if self.headers:
-            for k, v in sorted(list(self.headers.items()), key=header_sort_key):
+            for k, v in self.iterheaders():
                 assert isinstance(v, str), v
 
                 r += "%s: %s" % (k, v)
@@ -360,9 +370,6 @@ class xdfile:
         return flipxd
 
 
-g_corpus = None
-
-
 # get_args(...) should be called before corpus()
 def corpus(*inputs):
     from .utils import log, find_files, get_args
@@ -391,4 +398,30 @@ def corpus(*inputs):
             log(str(e))
             if args.debug:
                 raise
+
+
+class ClueAnswer:
+    def __init__(self, pubid, dt, answer, clue):
+        self.pubid = pubid
+        self.date = dt
+        self.answer = answer
+        self.clue = clue
+
+    def __str__(self):
+        return '[%s%s] %s ~ %s' % (self.pubid, self.date, self.clue, self.answer)
+
+
+def clues():
+    if not g_all_clues:
+        for xd in corpus():  # r in parse_tsv("clues.tsv", "AnswerClue"):
+            pubid = xd.publication_id()
+            dt = xd.date()
+            progress(dt or str(xd), every=100000)
+            for pos, clue, answer in xd.clues:
+                ca = ClueAnswer(pubid, dt, answer, clue)
+                g_all_clues.append(ca)
+
+        progress()
+
+    return g_all_clues
 

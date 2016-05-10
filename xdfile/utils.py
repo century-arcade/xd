@@ -209,6 +209,8 @@ class OutputZipFile(zipfile.ZipFile):
         zi.compress_type = zipfile.ZIP_DEFLATED
         self.writestr(zi, contents)
 
+        log("wrote %s to .zip" % fullfn)
+
     def write(self, data):
         raise Exception("can't write directly to .zip")
 
@@ -249,6 +251,7 @@ class OutputDirectory:
             pass  # log("%s: %s" % (type(e), str(e)))
 
         codecs.open(fullfn, 'w', encoding='utf-8').write(contents)
+        log("wrote %s to %s" % (fullfn, self.toplevel))
 
 
 def open_output(fnout=None):
