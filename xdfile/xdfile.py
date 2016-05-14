@@ -389,6 +389,8 @@ def corpus(*inputs):
 
     for fullfn, contents in find_files(*inputs, ext='.xd'):
         try:
+            progress(fullfn)
+
             xd = xdfile(contents.decode("utf-8"), fullfn)
 
             g_corpus.append(xd)
@@ -399,6 +401,8 @@ def corpus(*inputs):
             if args.debug:
                 raise
 
+    progress()
+
 
 class ClueAnswer:
     def __init__(self, pubid, dt, answer, clue):
@@ -408,15 +412,15 @@ class ClueAnswer:
         self.clue = clue
 
     def __str__(self):
-        return '[%s%s] %s ~ %s' % (self.pubid, self.date, self.clue, self.answer)
+        return '[%s%s] %s' % (self.pubid, self.date, self.clue)
 
 
 def clues():
     if not g_all_clues:
         for xd in corpus():  # r in parse_tsv("clues.tsv", "AnswerClue"):
+            progress(xd.filename)
             pubid = xd.publication_id()
-            dt = xd.date()
-            progress(dt or str(xd), every=100000)
+            dt = xd.date() or "?"
             for pos, clue, answer in xd.clues:
                 ca = ClueAnswer(pubid, dt, answer, clue)
                 g_all_clues.append(ca)

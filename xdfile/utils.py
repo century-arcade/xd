@@ -37,7 +37,7 @@ def debug(s):
         print(" " + s)
 
 
-def progress(rest="", every=1):
+def progress(rest=None, every=1):
     global g_currentProgress, g_numProgress
     if rest:
         g_numProgress += 1
@@ -135,7 +135,9 @@ def filetime(fn):
 
 
 # date only
-def iso8601(timet):
+def iso8601(timet=None):
+    if not timet:
+        timet = time.time()
     return datetime.datetime.fromtimestamp(int(timet)).isoformat(' ').split(' ')[0]
 
 
@@ -238,9 +240,7 @@ class OutputDirectory:
     def __init__(self, toplevel_dir):
         self.toplevel = toplevel_dir
 
-    def write_file(self, fn, contents, timet=None):
-        if not timet:
-            timet = time.time()
+    def open_file(self, fn, mode='w'):
 
         fullfn = os.path.join(self.toplevel, fn)  #  prepend our toplevel
 
@@ -250,8 +250,14 @@ class OutputDirectory:
         except Exception as e:
             pass  # log("%s: %s" % (type(e), str(e)))
 
-        codecs.open(fullfn, 'w', encoding='utf-8').write(contents)
-        log("wrote %s to %s" % (fullfn, self.toplevel))
+        return codecs.open(fullfn, mode, encoding='utf-8')
+
+    def write_file(self, fn, contents, timet=None):
+        self.open_file(fn, 'w').write(contents)
+        log("wrote %s to %s" % (fn, self.toplevel))
+
+    def append_tsv(self, fn, headerstr, *values):
+        self.open_file(fn, 'a').write(COLUMN_SEPARATOR.join(str(x) for x in values) + EOL)
 
 
 def open_output(fnout=None):

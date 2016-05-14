@@ -162,6 +162,7 @@ def main():
         xd.set_header("Editor", "Timothy Parker Bot")
         xd.set_header("Author", "%s %s" % (random.choice(fake_first), random.choice(fake_last)))
         xd.set_header("Copyright", None)
+        xd.set_header("Date", iso8601())
 
         remixed = set()
         for pubid, pub_clues in list(all_clues.items()):

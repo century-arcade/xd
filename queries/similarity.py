@@ -8,8 +8,9 @@
 
 import sys
 import string
+import re
 
-from xdfile.utils import progress, get_args, find_files, open_output, COLUMN_SEPARATOR, EOL
+from xdfile.utils import progress, get_args, find_files, open_output, COLUMN_SEPARATOR, EOL, debug
 from xdfile import xdfile, corpus, clues
 
 
@@ -75,15 +76,16 @@ def find_similar_to(needle, haystack, min_pct=0.3):
             yield grid_similarity(needle, xd), needle, xd
 
 
-SIMPLE_CHARS = string.ascii_letters + string.digits
+SIMPLE_CHARS = string.ascii_letters + string.digits + '_'
 
 # boil a clue down to its letters and numbers only
 def boil(s):
     if "Across" in s or "Down" in s or s == "No Clue":  # skip self-referential clues
         return ""
 
-    return "".join(c for c in s if c in SIMPLE_CHARS).lower()
-
+    boiled = "".join(c for c in s if c in SIMPLE_CHARS).lower()
+    boiled = re.sub('[_\-]+','_', boiled)
+    return boiled
 
 def load_clues():
     if not g_boiled_clues:

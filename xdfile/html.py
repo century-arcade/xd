@@ -28,6 +28,12 @@ html_footer = """
 html_redirect = """<html><head><meta http-equiv="refresh" content="0; URL='{url}'" />
 <script>window.location.replace("{url}");</script></head><body>Redirecting to <a href="{url}">{url}</a></body></html>"""
 
-def th(*cols):
-    return '<tr><th>' + '</th><th>'.join(cols) + '</th></tr>'
+def th(*cols, rowclass=''):
+    r = '<tr class="%s"><th>' % rowclass
+    r += '</th><th>'.join(str(x) for x in cols) + '</th></tr>'
+    return r
 
+def td(*cols, rowclass=''):
+    r = '<tr class="%s"><td>' % rowclass
+    r += '</td><td>'.join(str(x) for x in cols) + '</td></tr>'
+    return r
