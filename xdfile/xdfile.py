@@ -69,6 +69,9 @@ class xdfile:
     def date(self):
         return self.get_header("Date") or parse_xdid(self.xdid())[1]
 
+    def year(self):
+        return self.date().split('-')[0]
+
     def publisher_id(self):  # "nytimes"
         try:
             return parse_pathname(self.filename).path.split("/")[1]

@@ -11,6 +11,8 @@ import datetime
 import time
 import argparse
 
+from .html import html_header, html_footer
+
 EOL = '\n'
 COLUMN_SEPARATOR = '\t'
 
@@ -169,7 +171,6 @@ def replace_ext(fn, newext):
 # should always include header row
 #   returns a sequence of mappings or tuples, depending on whether objname is specified
 def parse_tsv_data(contents, objname=None):
-
     csvreader = csv.DictReader(contents.splitlines(), delimiter=COLUMN_SEPARATOR, quoting=csv.QUOTE_NONE, skipinitialspace=True)
     if objname:
         nt = namedtuple(objname, " ".join(csvreader.fieldnames))
@@ -240,6 +241,10 @@ class OutputDirectory:
     def __init__(self, toplevel_dir):
         self.toplevel = toplevel_dir
 
+    def exists(self, fn):
+        fullfn = os.path.join(self.toplevel, fn)  #  prepend our toplevel
+        return os.path.exists(fullfn)
+
     def open_file(self, fn, mode='w'):
 
         fullfn = os.path.join(self.toplevel, fn)  #  prepend our toplevel
@@ -256,8 +261,20 @@ class OutputDirectory:
         self.open_file(fn, 'w').write(contents)
         log("wrote %s to %s" % (fn, self.toplevel))
 
-    def append_tsv(self, fn, headerstr, *values):
-        self.open_file(fn, 'a').write(COLUMN_SEPARATOR.join(str(x) for x in values) + EOL)
+    def write_html(self, fn, innerhtml, title=""):
+        htmlstr = html_header.format(title=title) + innerhtml + html_footer
+        self.write_file(fn, htmlstr.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
+
+
+    def write_row(self, fn, headerstr, values):
+        write_header = not self.exists(fn)
+            
+        fp = self.open_file(fn, 'a')
+
+        if write_header:
+            fp.write(COLUMN_SEPARATOR.join(headerstr.split()) + EOL)
+
+        fp.write(COLUMN_SEPARATOR.join(str(x) for x in values) + EOL)
 
 
 def open_output(fnout=None):

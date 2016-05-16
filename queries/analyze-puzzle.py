@@ -2,7 +2,7 @@
 
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, grid_similarity
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
-from xdfile.html import html_header, html_footer, th
+from xdfile.html import html_header, html_footer, th, html_select_options
 from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 import time
 import cgi
@@ -33,7 +33,7 @@ style_css = """
     text-align: center;
     border-top: 1px solid black;
     border-left: 1px solid black;
-    width: 8px;
+    width: 10px;
     height: 8px;
     padding: 4px;
 }
@@ -73,7 +73,7 @@ table div {
 .clues {
     clear: both;
 }
-.actuals { width: 85%; }
+.options { width: 85%; }
 select { width: 100%; }
 .other-answers {
     text-align: center;
@@ -83,19 +83,23 @@ select { width: 100%; }
 def grid_to_html(xd, compare_with=None):
     "htmlify this puzzle's grid"
 
-    # headers
+    similarity_pct = ''
+    if compare_with:
+        real_pct = grid_similarity(xd, compare_with)
+        if real_pct < 25:
+            return ''
 
+        similarity_pct = " (%d%%)" % real_pct
+
+    # headers
     grid_html = '<div class="fullgrid">'
     grid_html += '<div class="xdheaders"><ul class="xdheaders">'
     for k, v in xd.iterheaders():
         grid_html += '<li class="%s">%s: <b>%s</b></li>' % (k, k, v)
     grid_html += '</ul></div>'
 
-    similarity_pct = ""
-    if compare_with:
-        similarity_pct = " (%d%%)" % grid_similarity(xd, compare_with)
 
-    grid_html += '<div class="xdid"><a href="/%s" title="%s">%s %s</a></div>' % (xd.filename, "", xd.xdid(), similarity_pct)
+    grid_html += '<div class="xdid"><a href="/pub/%s/%s/%s" title="%s">%s %s</a></div>' % (xd.publication_id(), xd.year(), xd.xdid(), "", xd.xdid(), similarity_pct)
     grid_html += '<div class="xdgrid">'
     for r, row in enumerate(xd.grid):
         grid_html += '<div class="xdrow">'
@@ -160,22 +164,26 @@ def main():
         log("finding similar clues")
         clues_html = '<table class="clues">' + th('grid', 'original clue and previous uses', 'answers for this clue', 'other clues for this answer')
 
+        mainpubid = mainxd.publication_id()
+        maindate = mainxd.date()
+
         nstaleclues = 0
+        nstaleanswers = 0
         ntotalclues = 0
+
         for pos, mainclue, mainanswer in mainxd.clues:
             progress(mainanswer)
 
-            clues_html += '<tr><td class="pos">%s%s.</td>' % pos
-
-            poss_answers =  { }
+            poss_answers = []
             pub_uses = { }  # [pubid] -> set(ClueAnswer)
 
-            # insert our own clue
-            mainpubid = mainxd.publication_id()
-            maindate = mainxd.date()
+            mainca = ClueAnswer(mainpubid, maindate, mainanswer, mainclue)
+
+            clues_html += '<tr><td class="pos">%s%s.</td>' % pos
 
             for clueans in find_clue_variants(mainclue):
-                poss_answers[clueans.answer] = poss_answers.get(clueans.answer, 0) + 1
+                if clueans.answer != mainanswer:
+                    poss_answers.append(clueans)
 
                 if clueans.answer == mainanswer:
                     if clueans.pubid in pub_uses:
@@ -200,24 +208,22 @@ def main():
                             else:
                                 stale = True
                                 sortable_uses.append((u.date, u, 1))
+
                 clues_html += html_select([ (clue, nuses) for dt, clue, nuses in sorted(sortable_uses, key=lambda x: x[0], reverse=True) ], top_option=mainclue)
 
             else:
                 clues_html += '<div class="original">%s</div>' % esc(mainclue)
         
             clues_html += '</td>'
-            if stale:
-                nstaleclues += 1
-            ntotalclues += 1
-
             clues_html += '<td class="other-answers">'
-            clues_html += html_select([ (k, n) for k, n in poss_answers.items() if k != mainanswer ], top_option=mainanswer)
+            clues_html += html_select_options(poss_answers, strmaker=lambda ca: ca.answer, force_top=mainca)
             clues_html += '</td>'
 
             clues_html += '<td class="other-clues">'
 
             # bclues is all boiled clues for this particular answer: { [bc] -> #uses }
             bclues = load_answers().get(mainanswer, [])
+            stale_answer = False
             if bclues:
                 uses = []
                 for bc, nuses in bclues.items():
@@ -225,6 +231,7 @@ def main():
                     clue_usages = [ ca for ca in load_clues().get(bc, []) if ca.answer == mainanswer and ca.date < maindate ]
 
                     if clue_usages:
+                        stale_answer = True
                         if nuses > 1:
                             # only use one (the most recent) ClueAnswer per boiled clue
                             # but use the clue only (no xdid)
@@ -232,12 +239,20 @@ def main():
                         else:
                             ca = sorted(clue_usages, key=lambda ca: ca.date or "z")[-1]
                         uses.append((ca, nuses))
+
                 if uses:
                     clues_html += html_select(uses)
+
             clues_html += '</td>'
 
-
             clues_html += '</tr>'
+
+            if stale_answer:
+                nstaleanswers += 1
+            if stale:
+                nstaleclues += 1
+            ntotalclues += 1
+
             
         clues_html += '</table>'
 
@@ -268,14 +283,25 @@ def main():
 
         main_html += '</div>'
 
-        # summary.tsv row
-        outf.append_tsv('summary.tsv', 'xdid stale_clues_pct similar_grids Title Author Editor',
-                mainxd.xdid(), int(nstaleclues*100.0/ntotalclues), " ".join("(%d%%) %s" % (pct, xd2.xdid()) for pct, xd1, xd2 in similar_grids),
-                mainxd.get_header("Title"), mainxd.get_header("Author"), mainxd.get_header("Editor"))
+        # summary row
+        outf.write_row('similar.tsv', 'xdid similar_grid_pct reused_clues reused_answers total_clues', [
+            mainxd.xdid(),
+            int(100*sum(pct/100.0 for pct, xd1, xd2 in similar_grids)),
+            nstaleclues,
+            nstaleanswers,
+            ntotalclues
+            ])
 
-        outf.write_file("%s/style.css" % mainxd.xdid(), style_css)
-        outf.write_file("%s/index.html" % mainxd.xdid(), main_html.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
+#        outf.write_file("%s/style.css" % mainxd.xdid(), style_css)
+        outf.write_file("pub/%s/%s/%s/index.html" % (mainxd.publication_id(), mainxd.year(), mainxd.xdid()), main_html.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
     outf.write_file("analyze.log", get_log())
-#        outf.write_file("stats.tsv", stats_tsv)
 
 main()
+
+
+
+# output.tsv: one row per puzzle
+#   multiple .tsv can be joined (both rows and columns)
+#   
+# PublicationAbbr
+#k

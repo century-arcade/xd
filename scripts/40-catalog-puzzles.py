@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Usage: $0 [-o <puzzles.tsv>] <input>
 #
@@ -18,7 +18,7 @@ def main():
 
     for input_source in args.inputs:
         for fn, contents in find_files(input_source, ext='.xd'):
-            xd = xdfile(contents, fn)
+            xd = xdfile(contents.decode('utf-8'), fn)
             outf.write(xd_puzzles_row(xd))
 
 

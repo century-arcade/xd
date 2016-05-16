@@ -2,8 +2,8 @@
 
 import re
 
-from xdfile.metadatabase import xd_publications_meta, xd_puzzles_header, xd_puzzles_row
-from xdfile.utils import find_files, parse_tsv, progress, open_output, get_args, args_parser, COLUMN_SEPARATOR
+from xdfile.metadatabase import xd_publications_meta, xd_puzzles_header, xd_puzzles_row, Publication
+from xdfile.utils import find_files, parse_tsv_data, progress, open_output, get_args, args_parser, COLUMN_SEPARATOR
 from xdfile.html import html_header, html_footer
 import xdfile
 
@@ -46,45 +46,7 @@ tbody tr:hover td {
 def mkhref(text, link, title=""):
     return '<a href="%s" title="%s">%s</a>' % (link, title, text)
 
-def table_header(keys):
-    out = '<tr class="hdr">'
 
-    for k in keys:
-        out += '<th class="%s">' % k
-        out += str(k)
-        out += '</th>'  # end header cell
-
-    out += '</tr>\n'
-    return out
-
-
-def table_row(row, keys, rowclass="row"):
-    if isinstance(row, dict):
-        row = [ row[k] for k in keys ]
-
-    out = '<tr class="%s">' % rowclass
-    for k, v in zip(keys, row):
-        try:
-            v = str(v or "")
-        except UnicodeDecodeError:
-            v = "???"
-
-        out += '<td class="%s">' % k.strip()
-        out += v
-        out += '</td>'  # end cell
-    out += '</tr>\n'  # end row
-    return out
-
-
-def table_to_html(rows, colnames, rowclass="row"):
-    out = '<table>'
-    out += table_header(colnames)
-
-    for r in rows:
-        out += table_row(r, colnames, rowclass)
-
-    out += '</table>'  # end table
-    return out.encode("ascii", 'xmlcharrefreplace')
 
 
 def tally_to_dict(d, v):
@@ -92,58 +54,6 @@ def tally_to_dict(d, v):
     if v:
         d[v] = d.get(v, 0) + 1
 
-def clean_copyright(puzrow):
-    copyright = puzrow.Copyright
-    author = puzrow.Author.strip()
-    if author:
-        copyright = copyright.replace(author, "&lt;Author&gt;")
-
-    # and remove textual date
-    ret = re.sub(r"\s*(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER|JAN|FEB|MAR|APR|JUN|JUL|AUG|SEP|OCT|NOV|DEC)?\s*(\d{1,2})?,?\s*\d{4},?\s*", " &lt;Date&gt; ", copyright, flags=re.IGNORECASE)
-
-    ret = re.sub(r"\d{2}[/\-]?\d{2}[/\-]?\d{2,4}", " &lt;Date&gt; ", ret)
-    return ret
-
-
-class Publication:
-    def __init__(self, pubid):
-        self.publication_id = pubid
-        self.copyrights = {}  # [copyright_text] -> number of xd
-        self.editors = {}  # [editor_name] -> number of xd
-        self.formats = {}  # ["15x15 RS"] -> number of xd
-        self.mindate = ""
-        self.maxdate = ""
-        self.num_xd = 0
-
-        self.puzzles_meta = []
-
-    def add(self, puzrow):
-        tally_to_dict(self.copyrights, clean_copyright(puzrow))
-        tally_to_dict(self.editors, puzrow.Editor)
-        tally_to_dict(self.formats, puzrow.Size)
-        datestr = puzrow.Date
-        if datestr:
-            if not self.mindate:
-                self.mindate = datestr
-            else:
-                self.mindate = min(self.mindate, datestr)
-            if not self.maxdate:
-                self.maxdate = datestr
-            else:
-                self.maxdate = max(self.maxdate, datestr)
-        self.num_xd += 1
-
-        self.puzzles_meta.append(puzrow)
-
-    def row(self):
-        return [
-                self.publication_id,
-                mkhref(str(self.num_xd), self.publication_id),
-                "%s &mdash; %s" % (self.mindate, self.maxdate),
-                tally_to_cell(self.formats),
-                tally_to_cell(self.copyrights),
-                tally_to_cell(self.editors),
-               ]
 
 
 def tally_to_cell(d):
@@ -173,7 +83,7 @@ def main():
 
     total_xd = 0
     for xsv, contents in find_files(*args.inputs):
-        for puzrow in parse_tsv_data(contents, "Puzzle"):
+        for puzrow in parse_tsv_data(contents.decode('utf-8'), "Puzzle"):
             pubid = puzrow.PublicationAbbr
             if pubid not in all_pubs:
                 all_pubs[pubid] = Publication(pubid)
@@ -185,7 +95,7 @@ def main():
 
     pub_index = html_header.format(title="Index of crossword publications")
     pub_index += "<div>[The dropdown boxes are only used for compact display.]</div>"
-    pub_index += table_to_html(pubrows, publication_header(), "Publication")
+    pub_index += html_table(pubrows, publication_header(), "Publication")
     pub_index += "<p>%d crosswords from %d publications</p>" % (total_xd, len(all_pubs))
     pub_index += html_footer
 
@@ -199,7 +109,7 @@ def main():
 
     progress("index")
 
-    outf.write_file("pubs/index.html", pub_index)
+    outf.write_file("pubs/index.html", pub_index.encode('ascii', 'xmlcharrefreplace'))
     outf.write_file("pubs/style.css", style_css)
 
     progress()

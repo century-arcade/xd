@@ -1,7 +1,9 @@
 
 import os.path
 import codecs
+from collections import Counter
 
+from .html import mkhref, html_select_options
 from .utils import COLUMN_SEPARATOR, EOL, parse_tsv, parse_pathname
 from .xdfile import corpus
 
@@ -134,4 +136,63 @@ def xd_puzzles_row(xd, ReceiptId=""):
 
     assert COLUMN_SEPARATOR not in "".join(fields), fields
     return COLUMN_SEPARATOR.join(fields) + EOL
+
+
+def clean_copyright(puzrow):
+    import re
+    copyright = puzrow.Copyright
+    author = puzrow.Author.strip()
+    if author:
+        copyright = copyright.replace(author, "&lt;Author&gt;")
+
+    # and remove textual date
+    ret = re.sub(r"\s*(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER|JAN|FEB|MAR|APR|JUN|JUL|AUG|SEP|OCT|NOV|DEC)?\s*(\d{1,2})?,?\s*\d{4},?\s*", " &lt;Date&gt; ", copyright, flags=re.IGNORECASE)
+
+    ret = re.sub(r"\d{2}[/\-]?\d{2}[/\-]?\d{2,4}", " &lt;Date&gt; ", ret)
+    return ret
+
+
+class Publication:
+    def __init__(self, pubid):
+        self.publication_id = pubid
+        self.copyrights = Counter()  # [copyright_text] -> number of xd
+        self.editors = Counter()  # [editor_name] -> number of xd
+        self.formats = Counter()  # ["15x15 RS"] -> number of xd
+        self.mindate = ""
+        self.maxdate = ""
+        self.num_xd = 0
+
+        self.puzzles_meta = []
+
+    def add(self, puzrow):
+        self.copyrights[clean_copyright(puzrow).strip()] += 1
+        self.editors[puzrow.Editor.strip()] += 1
+        self.formats[puzrow.Size] += 1
+        datestr = puzrow.Date
+        if datestr:
+            if not self.mindate:
+                self.mindate = datestr
+            else:
+                self.mindate = min(self.mindate, datestr)
+            if not self.maxdate:
+                self.maxdate = datestr
+            else:
+                self.maxdate = max(self.maxdate, datestr)
+        self.num_xd += 1
+
+        self.puzzles_meta.append(puzrow)
+
+    def meta(self):
+        return 'pubid num dates formats copyrights editors'.split()
+
+    def row(self):
+        return [
+                self.publication_id,
+                mkhref(str(self.num_xd), self.publication_id),
+                "%s &mdash; %s" % (self.mindate, self.maxdate),
+                html_select_options(self.formats),
+                html_select_options(self.copyrights),
+                html_select_options(self.editors),
+               ]
+
 
