@@ -43,18 +43,6 @@ tbody tr:hover td {
 }
 """
 
-def mkhref(text, link, title=""):
-    return '<a href="%s" title="%s">%s</a>' % (link, title, text)
-
-
-
-
-def tally_to_dict(d, v):
-    v = v.strip()
-    if v:
-        d[v] = d.get(v, 0) + 1
-
-
 
 def tally_to_cell(d):
     freq_sorted = sorted([(v, k) for k, v in list(d.items())], reverse=True)
