@@ -93,9 +93,14 @@ def find_files(*paths, **kwargs):
 
 
 def generate_zip_files(data):
-    zf = zipfile.ZipFile(io.BytesIO(data))
-    for zi in zf.infolist():
-        yield zi.filename, zf.read(zi), time.mktime(datetime.datetime(*zi.date_time).timetuple())
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(data))
+        for zi in sorted(zf.infolist(), key=lambda x: x.filename):
+            zipdt = time.mktime(datetime.datetime(*zi.date_time).timetuple())
+            yield zi.filename, zf.read(zi), zipdt
+
+    except zipfile.BadZipfile as e:
+        log(str(e))
 
 
 # walk all 'paths' recursively and yield (filename, contents) for non-hidden files
@@ -103,44 +108,50 @@ def find_files_with_time(*paths, **kwargs):
     ext = kwargs.get("ext")
     should_strip_toplevel = kwargs.get("strip_toplevel", True)
     for path in paths:
-        if ext and not path.endswith(ext):
-            continue
-
         if stat.S_ISDIR(os.stat(path).st_mode):
             # handle directories
             for thisdir, subdirs, files in os.walk(path):
                 for fn in sorted(files):
-
-                    if ext and not fn.endswith(ext):  # only looking for one particular ext, don't log
-                        continue
-
                     fullfn = os.path.join(thisdir, fn)
-                    progress(fullfn)
 
-                    if fn[0] == ".":
-                        log("ignoring dotfile")
+                    if fn.endswith('.zip'):
+                        for zipfn, zipdata, zipdt in generate_zip_files(open(fullfn, 'rb').read()):
+                            if ext and not zipfn.endswith(ext):
+                                continue
+                            yield fn + ":" + zipfn, zipdata, zipdt
+
+                    elif ext and not fn.endswith(ext):  # only looking for one particular ext, don't log
                         continue
 
-                    yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
-        else:
-            try:
-                # handle .zip files
-                with zipfile.ZipFile(path, 'r') as zf:
-                    for zi in sorted(zf.infolist(), key=lambda x: x.filename):
-                        if ext and not zi.filename.endswith(ext):  # as above
-                            continue
-
-                        fullfn = zi.filename
+                    else:
                         progress(fullfn)
 
-                        contents = zf.read(zi)
-                        if should_strip_toplevel:
-                            fullfn = strip_toplevel(fullfn)
-                        yield fullfn, contents, time.mktime(datetime.datetime(*zi.date_time).timetuple())
-            except zipfile.BadZipfile:
-                # handle individual files
-                fullfn = path
-                yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
+                        if fn[0] == ".":
+                            log("ignoring dotfile")
+                            continue
+
+                        yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
+
+        elif path.endswith('.zip'):
+            for zipfn, zipdata, zipdt in generate_zip_files(open(path, 'rb').read()):
+                if ext and not zipfn.endswith(ext):  # as above
+                    continue
+
+                progress(zipfn)
+
+                if should_strip_toplevel:
+                    zipfn = strip_toplevel(zipfn)
+
+                yield zipfn, zipdata, zipdt
+
+        else: 
+            if ext and not path.endswith(ext):
+                continue
+
+            # handle individual files
+            fullfn = path
+            yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
+
 
     # reset progress indicator after processing all files
     progress()
