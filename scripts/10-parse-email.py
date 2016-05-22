@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from xdfile.utils import open_output, log, find_files, get_args
+from xdfile.utils import open_output, log, find_files, get_args, parse_pathname, generate_zip_files, iso8601
 from xdfile.metadatabase import xd_sources_header, xd_sources_row
 
 import email
@@ -18,7 +18,7 @@ def xd_send_email(destaddr, subject='', body=''):
     log("sending email to %s (subject '%s')" % (destaddr, subject))
     try:
         response = client.send_email(
-                Source='sys@xd.saul.pw',
+                Source='upload+received@xd.saul.pw',
                 Destination= {'ToAddresses': [ destaddr ] },
                 Message={ 'Subject': { 'Data': subject },
                 'Body': { 'Text': { 'Data': body } } })
@@ -30,6 +30,7 @@ def xd_send_email(destaddr, subject='', body=''):
 
 def generate_files(msg):
     counter = 1
+    upload_date = parse_date(msg["Date"])
     for part in msg.walk():
         # multipart/* are just containers
         if part.get_content_maintype() == 'multipart':
@@ -45,7 +46,12 @@ def generate_files(msg):
             filename = 'part-%03d%s' % (counter, ext)
         counter += 1
 
-        yield filename, part.get_payload(decode=True)
+        data = part.get_payload(decode=True)
+        if parse_pathname(filename).ext == '.zip':
+            for zipfn, zipdata, zipdt in generate_zip_files(data):
+                yield zipfn, zipdata, zipdt
+        else:
+            yield filename, data, upload_date
 
 def main():
     args = get_args('parse downloaded emails')
@@ -54,29 +60,31 @@ def main():
     sources_tsv = ''
     for emailfn, emailcontents in find_files(*args.inputs):
         msg = email.message_from_bytes(emailcontents)
-        upload_date = parse_date(msg["Date"])
         upload_src = msg["From"]
 
+        if not upload_src:
+            continue
+
         email_sources_tsv = []
-        for puzfn, puzdata in generate_files(msg):
+        for puzfn, puzdata, puzdt in generate_files(msg):
             # a basic sanity check of filesize
             # accommodate small puzzles and .pdf
-            log("%s: %s from %s" % (puzfn, upload_date, upload_src))
+            log("%s: %s from %s" % (puzfn, puzdt, upload_src))
 
             if len(puzdata) > 1000 and len(puzdata) < 100000:
-                email_sources_tsv.append(xd_sources_row(puzfn, upload_src, upload_date))
+                email_sources_tsv.append(xd_sources_row(puzfn, upload_src, iso8601(puzdt)))
 
                 outf.write_file(puzfn, puzdata)
 
-                
-            # generate receipt row, send receipt email with ReceiptId/URL?
-            # save file to `date`-email.zip
+        # generate receipt row, send receipt email
 
         if email_sources_tsv:
-            xd_send_email(upload_src, subject='%d files received' % len(email_sources_tsv), body='Check this out')
+            xd_send_email(upload_src,
+                    subject='Upload successful: %d files received' % len(email_sources_tsv),
+                    body="These files were received:\n" + email_sources_tsv)
             sources_tsv += "".join(email_sources_tsv)
         else:
-            xd_send_email(upload_src, subject='nothing uploaded', body='failed due to error')
+            xd_send_email(upload_src, subject='Upload error', body='No files were received')
 
     outf.write_file("sources.tsv", xd_sources_header + sources_tsv)
 

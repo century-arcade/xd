@@ -112,7 +112,7 @@ def xd_receipts_row(nt):
 
 def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
     return COLUMN_SEPARATOR.join([
-		""  # ReceiptId
+		"",  # ReceiptId
         SourceFilename,
         DownloadTime,
         ExternalSource

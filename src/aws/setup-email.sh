@@ -2,7 +2,7 @@
 
 ACCOUNTID=165509303398
 DOMAIN=xd.saul.pw
-BUCKET=$DOMAIN
+BUCKET=xd-private
 UPLOAD_EMAIL=upload@$DOMAIN
 REGION=us-west-2
 
@@ -34,7 +34,7 @@ $aws sns delete-topic --name $TOPICNAME
 
 ## one-time manual config
 
-$aws ses verify-domain-identity --domain $BUCKET
+$aws ses verify-domain-identity --domain $DOMAIN
 # MANUAL: add returned VerificationToken to DNS for domain as TXT
 
 # MANUAL: set MX record to inbound-smtp.us-west-2.amazonaws.com

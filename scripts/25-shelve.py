@@ -223,17 +223,21 @@ def main():
 
     outf = open_output()
     assumed_toplevel = outf.toplevel
-    outf.toplevel = "crosswords"
+    outf.toplevel = "gxd"
 
     all_receipts = {}  # input files
     all_filenames = set()  # shelved files
 
     for xsvfn, xsvdata in find_files(*args.inputs, ext='sv'):
         for row in parse_tsv_data(xsvdata.decode("utf-8"), "SourceFile"):
-            assert row.SourceFilename not in all_receipts, "double receipts?"
+            if row.SourceFilename in all_receipts:
+                log("WARNING: double receipts!  not replacing.")
+                continue 
             all_receipts[parse_pathname(row.SourceFilename).base] = row
 
-    assert all_receipts, all_receipts
+    if not all_receipts:
+        log("no files to shelve")
+        return
 
     # to compare raw/cleaned headers side-by-side
     raw_tsv = ''

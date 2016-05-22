@@ -5,6 +5,7 @@ import os
 import stat
 import sys
 import zipfile
+import io
 import csv
 import codecs
 import datetime
@@ -33,7 +34,7 @@ def get_log():
 def log(s, minverbose=0):
     if g_logfp:
         g_logfp.write(s + "\n")
-    g_logs.append("%s: %s" % (g_currentProgress or parse_pathname(sys.argv[0]).base, s))
+    g_logs.append("%s: %s" % (g_currentProgress or g_scriptname, s))
 
 #    if not g_args or g_args.verbose >= minverbose:
 #        print(" " + s)
@@ -67,7 +68,7 @@ def args_parser(desc=""):
 
 def get_args(desc="", parser=None):
     global g_args, g_scriptname
-    g_scriptname = sys.argv[0]
+    g_scriptname = parse_pathname(sys.argv[0]).base
 
     if g_args:
         return g_args
@@ -91,11 +92,20 @@ def find_files(*paths, **kwargs):
         yield fn, data
 
 
+def generate_zip_files(data):
+    zf = zipfile.ZipFile(io.BytesIO(data))
+    for zi in zf.infolist():
+        yield zi.filename, zf.read(zi), time.mktime(datetime.datetime(*zi.date_time).timetuple())
+
+
 # walk all 'paths' recursively and yield (filename, contents) for non-hidden files
 def find_files_with_time(*paths, **kwargs):
     ext = kwargs.get("ext")
     should_strip_toplevel = kwargs.get("strip_toplevel", True)
     for path in paths:
+        if ext and not path.endswith(ext):
+            continue
+
         if stat.S_ISDIR(os.stat(path).st_mode):
             # handle directories
             for thisdir, subdirs, files in os.walk(path):
@@ -155,11 +165,11 @@ def datestr_to_datetime(s):
     try:
         return datetime.date(*[int(x) for x in s.split("-")])
     except Exception as e:
-        debug(str(e))
+        log(str(e))
         if g_args.debug:
             raise
         dt = None
-    return abbr, dt
+    return dt
 
 
 def parse_pathname(path):
@@ -199,15 +209,6 @@ def parse_tsv(fn, objname=None):
     return parse_tsv_data(fp.read(), objname)
 
 
-def parse_xdid(xdid):
-    m = re.search(r'([a-z]+)?(\d+-\d+-\d+)?', xdid)
-    if m:
-        abbr, datestr = m.groups()
-        return abbr, datestr
-    else:
-        log("no xdid found in '%s'" % xdid)
-
-
 class OutputZipFile(zipfile.ZipFile):
     def __init__(self, fnzip, toplevel=""):
         zipfile.ZipFile.__init__(self, fnzip, 'w', allowZip64=True)
@@ -230,8 +231,7 @@ class OutputZipFile(zipfile.ZipFile):
         raise Exception("can't write directly to .zip")
 
     def __del__(self):
-        scriptname = parse_pathname(g_scriptname).base
-        self.write_file(scriptname + ".log", get_log().encode('utf-8'))
+        self.write_file(g_scriptname + ".log", get_log().encode('utf-8'))
         zipfile.ZipFile.__del__(self)
 
 
@@ -310,7 +310,7 @@ def open_output(fnout=None):
         outf = OutputZipFile(fnout, parse_pathname(fnout).base)
     elif not parse_pathname(fnout).ext:  # extensionless assumed to be directories
         outf = OutputDirectory(fnout)
-        g_logfp = outf.open_file(parse_pathname(sys.argv[0]).base + ".log")
+        g_logfp = outf.open_file(g_scriptname + ".log")
     else:
         outf = OutputFile(codecs.open(fnout, 'w', encoding="utf-8"))
 

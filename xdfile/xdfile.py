@@ -3,7 +3,7 @@
 
 import string
 
-from .utils import parse_pathname, parse_xdid, parse_tsv, progress, parse_pubid_from_filename
+from .utils import parse_pathname, parse_tsv, progress, parse_pubid_from_filename
 
 g_corpus = None  # list of xdfile
 g_all_clues = [ ]  # list of ClueAnswer

@@ -10,7 +10,7 @@ import urllib.request, urllib.error, urllib.parse
 import datetime
 import re
 
-from xdfile.utils import get_args, log, debug, get_log, find_files, parse_pathname, open_output, parse_xdid, datestr_to_datetime
+from xdfile.utils import get_args, log, debug, get_log, find_files, parse_pathname, open_output, parse_tsv, datestr_to_datetime
 from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sources
 
 
@@ -29,27 +29,20 @@ def get_dates_between(before_date, after_date, days_to_advance=1):
 def main():
     args = get_args(desc='download recent puzzles')
 
+    outf = open_output()
+
     today = datetime.date.today()
+    todaystr=today.strftime("%Y-%m-%d")
 
-    # find most recent for previously given downloads
-    nyd = datetime.date(today.year-1, 1, 1)  # new year's day of last year
-    most_recents = {}
-
-    for input_source in args.inputs:
-        for fn, contents in find_files(input_source):
-            if parse_pathname(fn).ext not in [ ".log", ".tsv" ]:
-                pubid, dt = parse_xdid(fn)
-                most_recents[pubid] = max(datestr_to_datetime(dt), most_recents.get(pubid, nyd))
-   
-
-    sources_tsv = xd_sources_header
+    sources_tsv = ''
 
     puzzle_sources = dict((s.PublicationAbbr, s) for s in xd_puzzle_sources())
 
-    outf = open_output()
-
     # download new puzzles since most recent download
-    for pubid, latest_date in list(most_recents.items()):
+    for row in parse_tsv('recents.tsv'):
+        pubid = row["pubid"]
+        latest_date = datestr_to_datetime(row["date"])
+
         if pubid not in puzzle_sources:
             log("unknown puzzle source for '%s'" % pubid)
             continue
@@ -82,16 +75,16 @@ def main():
                 content = response.read()
 
                 outf.write_file(fn, content)
+
+                most_recent[pubid] = todaystr
             except (urllib.error.HTTPError, urllib.error.URLError) as err:
                 log('%s [%s] %s: %s' % (xdid, err.code, err.reason, url))
             except Exception as e:
                 log(str(e))
 
-            sources_tsv += xd_sources_row(fn, url, today.strftime("%Y-%m-%d"))
+            sources_tsv += xd_sources_row(fn, url, todaystr)
 
-    outf.write_file("sources.tsv", sources_tsv)
-    outf.write_file("download.log", get_log())
-
+    outf.write_file("sources.tsv", xd_sources_header + sources_tsv)
 
 
 if __name__ == "__main__":
