@@ -52,3 +52,77 @@ td {
 tbody tr:hover td {
 	background: #ccf;
 }
+
+
+/* --- analyze-puzzle --- */
+.fullgrid {
+    margin-left: 20px;
+    margin-bottom: 20px;
+}
+
+.xdgrid {
+    margin: auto;
+    display: table;
+    border-bottom: 1px solid black;
+    border-right: 1px solid black;
+}
+
+.xdrow {
+    display: table-row;
+}
+
+.xdcell.same {
+    background: lightgreen;
+}
+
+.xdcell {
+    display: table-cell;
+    text-align: center;
+    border-top: 1px solid black;
+    border-left: 1px solid black;
+    width: 10px;
+    height: 8px;
+    padding: 4px;
+}
+
+.xdcell.block {
+    background: black;
+}
+
+.clues td {
+    border-left: 1px solid grey;
+    border-bottom: 1px solid grey;
+    padding: 2px;
+    padding-left: 6px;
+}
+
+.original {
+    background:white;
+}
+
+.num { 
+    width: 8%; 
+    text-align: right;
+    padding-right: 4px;
+}
+table div {
+    float: left;
+}
+
+.grids .xdid {
+    text-align: center;
+}
+
+.grids > div {
+    float: left;
+}
+
+.clues {
+    clear: both;
+}
+.options { width: 85%; }
+select { width: 100%; }
+.other-answers {
+    text-align: center;
+    }
+

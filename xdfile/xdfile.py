@@ -3,8 +3,7 @@
 
 import string
 
-from .utils import parse_pathname, parse_xdid, parse_tsv, progress
-
+from .utils import parse_pathname, parse_xdid, parse_tsv, progress, parse_pubid_from_filename
 
 g_corpus = None  # list of xdfile
 g_all_clues = [ ]  # list of ClueAnswer
@@ -34,7 +33,7 @@ OPEN_CHAR = '_'
 NON_ANSWER_CHARS = [BLOCK_CHAR, OPEN_CHAR]  # UNKNOWN_CHAR is a wildcard answer character
 EOL = '\n'
 SECTION_SEP = EOL + EOL
-HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'date',
+HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'number', 'date',
                 'relation', 'special', 'rebus', 'cluegroup', 'description', 'notes']
 
 
@@ -45,7 +44,11 @@ class xdfile:
         self.grid = []  # list of string rows
         self.clues = []  # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
         self.notes = ""
-        self.orig_contents = xd_contents
+
+        if filename:
+            self._publication_id = parse_pubid_from_filename(filename)
+        else:
+            self._publication_id = None
 
         if xd_contents:
             self.parse_xd(xd_contents)
@@ -64,26 +67,16 @@ class xdfile:
         return (self.width(), self.height())
 
     def xdid(self):
-        return parse_pathname(self.filename).base
+        return self._publication_id + (self.get_header("Number") or self.date())
 
     def date(self):
-        return self.get_header("Date") or parse_xdid(self.xdid())[1]
+        return self.get_header("Date")
 
     def year(self):
         return self.date().split('-')[0]
 
-    def publisher_id(self):  # "nytimes"
-        try:
-            return parse_pathname(self.filename).path.split("/")[1]
-        except:
-            return "misc"
-
     def publication_id(self):  # "nyt"
-        xdid = self.xdid()
-        i = 0
-        while i < len(xdid) and xdid[i] in string.ascii_letters:
-            i += 1
-        return xdid[:i].lower()
+        return self._publication_id
 
     def iterdiffs(self, other):
         for k in set(self.headers.keys()) | set(other.headers.keys()):

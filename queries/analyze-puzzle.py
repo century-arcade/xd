@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+# Usage:
+#   $0 [-c corpus] -o output_dir <input.xd> <sources.tsv>
+#
+# outputs html analysis page with similar grids/clues/answers
+#
+
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, grid_similarity
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 from xdfile.html import html_header, html_footer, th, html_select_options
@@ -7,81 +13,8 @@ from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 import time
 import cgi
 
-style_css = """
-.fullgrid {
-    margin-left: 20px;
-    margin-bottom: 20px;
-}
-
-.xdgrid {
-    margin: auto;
-    display: table;
-    border-bottom: 1px solid black;
-    border-right: 1px solid black;
-}
-
-.xdrow {
-    display: table-row;
-}
-
-.xdcell.same {
-    background: lightgreen;
-}
-
-.xdcell {
-    display: table-cell;
-    text-align: center;
-    border-top: 1px solid black;
-    border-left: 1px solid black;
-    width: 10px;
-    height: 8px;
-    padding: 4px;
-}
-
-.xdcell.block {
-    background: black;
-}
-
-.clues td {
-    border-left: 1px solid grey;
-    border-bottom: 1px solid grey;
-    padding: 2px;
-    padding-left: 6px;
-}
-
-.original {
-    background:white;
-}
-
-.num { 
-    width: 8%; 
-    text-align: right;
-    padding-right: 4px;
-}
-table div {
-    float: left;
-}
-
-.grids .xdid {
-    text-align: center;
-}
-
-.grids > div {
-    float: left;
-}
-
-.clues {
-    clear: both;
-}
-.options { width: 85%; }
-select { width: 100%; }
-.other-answers {
-    text-align: center;
-    }
-"""
-
-def grid_to_html(xd, compare_with=None):
-    "htmlify this puzzle's grid"
+def xd_to_html(xd, compare_with=None):
+    r = '<div class="fullgrid">'
 
     similarity_pct = ''
     if compare_with:
@@ -91,15 +24,25 @@ def grid_to_html(xd, compare_with=None):
 
         similarity_pct = " (%d%%)" % real_pct
 
+    r += '<div class="xdid"><a href="/pub/%s/%s/%s">%s %s</a></div>' % (xd.publication_id(), xd.year(), xd.xdid(), xd.xdid(), similarity_pct)
+    r += headers_to_html(xd)
+    r += grid_to_html(xd, compare_with)
+
+    r += '</div>' # solution
+    return r
+
+def headers_to_html(xd):
     # headers
-    grid_html = '<div class="fullgrid">'
-    grid_html += '<div class="xdheaders"><ul class="xdheaders">'
+    r += '<div class="xdheaders"><ul class="xdheaders">'
     for k, v in xd.iterheaders():
-        grid_html += '<li class="%s">%s: <b>%s</b></li>' % (k, k, v)
-    grid_html += '</ul></div>'
+        r += '<li class="%s">%s: <b>%s</b></li>' % (k, k, v)
+    r += '</ul></div>'
+    return r
 
 
-    grid_html += '<div class="xdid"><a href="/pub/%s/%s/%s" title="%s">%s %s</a></div>' % (xd.publication_id(), xd.year(), xd.xdid(), "", xd.xdid(), similarity_pct)
+def grid_to_html(xd, compare_with=None):
+    "htmlify this puzzle's grid"
+
     grid_html += '<div class="xdgrid">'
     for r, row in enumerate(xd.grid):
         grid_html += '<div class="xdrow">'
@@ -118,7 +61,6 @@ def grid_to_html(xd, compare_with=None):
             grid_html += '</div>' # xdcell
         grid_html += '</div>' #  xdrow
     grid_html += '</div>' # xdgrid
-    grid_html += '</div>' # solution
 
     return grid_html
 
@@ -264,11 +206,11 @@ def main():
 
         # similar grids
         main_html += '<div class="grids">'
-        main_html += grid_to_html(mainxd)
+        main_html += xd_to_html(mainxd)
 
         # dump miniature grids with highlights of similarities
         for pct, xd1, xd2 in similar_grids:
-            main_html += '<div class="similar-grid">' + grid_to_html(xd2, mainxd)
+            main_html += '<div class="similar-grid">' + xd_to_html(xd2, mainxd)
             main_html += '</div>'
             main_html += '</div>'
 
@@ -292,16 +234,9 @@ def main():
             ntotalclues
             ])
 
-#        outf.write_file("%s/style.css" % mainxd.xdid(), style_css)
         outf.write_file("pub/%s/%s/%s/index.html" % (mainxd.publication_id(), mainxd.year(), mainxd.xdid()), main_html.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
     outf.write_file("analyze.log", get_log())
 
 main()
 
 
-
-# output.tsv: one row per puzzle
-#   multiple .tsv can be joined (both rows and columns)
-#   
-# PublicationAbbr
-#k

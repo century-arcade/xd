@@ -74,14 +74,14 @@ def main():
             else:
                 log("%s not in sources.tsv" % innerfn)
                 sources_row.DownloadTime = iso8601(dt)
-                sources_row.ExternalSource = input_source
+                sources_row.ExternalSource = parse_pathname(input_source).filename
                 sources_row.SourceFilename = innerfn
 
             sources_row.ReceiptId = nextReceiptId
             nextReceiptId += 1
 
             sources_row.ReceivedTime = iso8601(time.time())
-            sources_row.InternalSource = input_source
+            sources_row.InternalSource = parse_pathname(input_source).filename
 
             # try each parser by extension
             possible_parsers = parsers.get(parse_pathname(fn).ext.lower(), parsers[".puz"])
@@ -102,7 +102,6 @@ def main():
                             continue
 
                         xd.filename = replace_ext(strip_toplevel(fn), ".xd")
-                        xd.set_header("Date", iso8601(dt))
                         if not xd.get_header("Copyright"):
                             if args.copyright:
                                 xd.set_header("Copyright", args.copyright)
@@ -125,7 +124,6 @@ def main():
             new_receipts += this_receipt
 
     outf.write_file("receipts.tsv", new_receipts)
-    outf.write_file("converted.log", get_log())
 
     # only append to global receipts.tsv if entire conversion process succeeded
     append_receipts(new_receipts)

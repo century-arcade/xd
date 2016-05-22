@@ -21,16 +21,22 @@ g_args = None  # get with args()
 g_currentProgress = None
 g_numProgress = 0
 
+g_logfp = sys.stderr
+
+# save on start to auto-log at end
+g_scriptname = None
 
 def get_log():
-    return EOL.join(g_logs)
+    return EOL.join(g_logs) + EOL
 
 
 def log(s, minverbose=0):
+    if g_logfp:
+        g_logfp.write(s + "\n")
     g_logs.append("%s: %s" % (g_currentProgress or parse_pathname(sys.argv[0]).base, s))
 
-    if not g_args or g_args.verbose >= minverbose:
-        print(" " + s)
+#    if not g_args or g_args.verbose >= minverbose:
+#        print(" " + s)
 
 
 # print without logging if -d
@@ -45,7 +51,7 @@ def progress(rest=None, every=1):
         g_numProgress += 1
         g_currentProgress = rest
         if g_numProgress % every == 0:
-            print("\r% 6d %s" % (g_numProgress, rest), end="")
+            print("\r% 6d %s " % (g_numProgress, rest), end="")
             sys.stdout.flush()
     else:
         g_currentProgress = ""
@@ -60,7 +66,8 @@ def args_parser(desc=""):
 
 
 def get_args(desc="", parser=None):
-    global g_args
+    global g_args, g_scriptname
+    g_scriptname = sys.argv[0]
 
     if g_args:
         return g_args
@@ -158,8 +165,13 @@ def datestr_to_datetime(s):
 def parse_pathname(path):
     path, fn = os.path.split(path)
     base, ext = os.path.splitext(fn)
-    nt = namedtuple('Pathname', 'path base ext')
-    return nt(path=path, base=base, ext=ext)
+    nt = namedtuple('Pathname', 'path base ext filename')
+    return nt(path=path, base=base, ext=ext, filename=fn)
+
+
+def parse_pubid_from_filename(fn):
+    m = re.search("(^[A-Za-z]*)", parse_pathname(fn).base)
+    return m.group(1).lower()
 
 
 # newext always includes the '.' so it can be removed entirely with newext=""
@@ -212,10 +224,15 @@ class OutputZipFile(zipfile.ZipFile):
         zi.compress_type = zipfile.ZIP_DEFLATED
         self.writestr(zi, contents)
 
-        log("wrote %s to .zip" % fullfn)
+        log("wrote %s to %s" % (fullfn, self.filename))
 
     def write(self, data):
         raise Exception("can't write directly to .zip")
+
+    def __del__(self):
+        scriptname = parse_pathname(g_scriptname).base
+        self.write_file(scriptname + ".log", get_log().encode('utf-8'))
+        zipfile.ZipFile.__del__(self)
 
 
 class OutputFile:
@@ -235,7 +252,10 @@ class OutputFile:
 
 
 def strip_toplevel(fn):
-    return "/".join(fn.split("/")[1:])  # strip off leading directory
+    if "/" in fn:
+        return "/".join(fn.split("/")[1:])  # strip off leading directory
+    else:
+        return fn
 
 class OutputDirectory:
     def __init__(self, toplevel_dir):
@@ -279,6 +299,7 @@ class OutputDirectory:
 
 def open_output(fnout=None):
     assert g_args
+    global g_logfp
 
     if not fnout:
         fnout = g_args.output
@@ -289,7 +310,9 @@ def open_output(fnout=None):
         outf = OutputZipFile(fnout, parse_pathname(fnout).base)
     elif not parse_pathname(fnout).ext:  # extensionless assumed to be directories
         outf = OutputDirectory(fnout)
+        g_logfp = outf.open_file(parse_pathname(sys.argv[0]).base + ".log")
     else:
         outf = OutputFile(codecs.open(fnout, 'w', encoding="utf-8"))
 
     return outf
+

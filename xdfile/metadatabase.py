@@ -14,10 +14,11 @@ PUZZLES_TSV = "puzzles.tsv"
 PUZZLE_SOURCES_TSV = "puzzle_sources.tsv"
 
 
-# <source>-source-YYYY-MM-DD.zip/.tsv
+g_pubs = {}
 
 # Each delivery from an extractor should have a 'sources' table, to preserve the precise external sources.
 xd_sources_header = COLUMN_SEPARATOR.join([
+        "ReceiptId",        # simple numeric row id (filled when approved)
         "SourceFilename",   # filename in the containing .zip; ideally referenceable by the ExternalSource
         "DownloadTime",     # '2016-04-11' (ISO8601; can be truncated)
         "ExternalSource",   # URL or email
@@ -32,7 +33,7 @@ xd_receipts_header = COLUMN_SEPARATOR.join([
         "ExternalSource",   # URL or email [as above]
         "InternalSource",   # 'src/2016/xd-download-2016-04-11.zip'
         "SourceFilename",   # filename in the containing .zip [as above]
-        "Rejected"          # reason for immediate rejection: obviously not a valid puzzle file; 
+        "Rejected"          # reason for immediate rejection: obviously not a valid puzzle file; etc
     ]) + EOL
 
 
@@ -53,7 +54,6 @@ xd_publications_header = COLUMN_SEPARATOR.join([
 xd_puzzles_header = COLUMN_SEPARATOR.join([
         "xdid",             # filename base ('nyt1994-10-02'), unique across all xd files
         "ReceiptId",        # references 'receipts' table
-        "PublisherAbbr",    # 'nytimes', toplevel directory (or 'self/quigley')
         "PublicationAbbr",  # 'nyt', unique across all publications to support xdid format
         "Date",             # '1994-10-02'
         "Size",             # '15x15'; append 'R' for rebus
@@ -112,6 +112,7 @@ def xd_receipts_row(nt):
 
 def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
     return COLUMN_SEPARATOR.join([
+		""  # ReceiptId
         SourceFilename,
         DownloadTime,
         ExternalSource
@@ -120,9 +121,8 @@ def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
 
 def xd_puzzles_row(xd, ReceiptId=""):
     fields = [
-        parse_pathname(xd.filename).base,  # xdid
+        xd.xdid(),                   # xdid
         str(ReceiptId),              # ReceiptId
-        xd.publisher_id(),           # "nytimes"
         xd.publication_id(),         # "nyt"
         xd.get_header("Date"),
         "%dx%d %s%s" % (xd.width(), xd.height(), xd.get_header("Rebus") and "R" or "", xd.get_header("Special") and "S" or ""),
@@ -153,8 +153,13 @@ def clean_copyright(puzrow):
 
 
 class Publication:
-    def __init__(self, pubid):
+    def __init__(self, pubid, **row):
         self.publication_id = pubid
+        self.row = row
+
+class PublicationStats:
+    def __init__(self, pubid):
+        self.pubid = pubid
         self.copyrights = Counter()  # [copyright_text] -> number of xd
         self.editors = Counter()  # [editor_name] -> number of xd
         self.formats = Counter()  # ["15x15 RS"] -> number of xd
@@ -187,12 +192,20 @@ class Publication:
 
     def row(self):
         return [
-                self.publication_id,
-                mkhref(str(self.num_xd), self.publication_id),
+                self.pubid,
+                mkhref(str(self.num_xd), self.pubid),
                 "%s &mdash; %s" % (self.mindate, self.maxdate),
                 html_select_options(self.formats),
                 html_select_options(self.copyrights),
                 html_select_options(self.editors),
                ]
 
+def publications():
+    if not g_pubs:
+        for pubrow in xd_publications_meta():
+            pubid = pubrow.PublicationAbbr
+            p = Publication(pubid, **pubrow)
+            g_pubs[pubid] = p
+
+    return g_pubs
 

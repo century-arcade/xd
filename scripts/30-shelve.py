@@ -14,7 +14,7 @@ import re
 import datetime
 
 from xdfile.metadatabase import xd_publications_meta, xd_puzzles_row, xd_puzzles_header, xd_puzzles_append, xd_receipts_meta
-from xdfile.utils import get_args, find_files, parse_pathname, log, debug, get_log, open_output, strip_toplevel, parse_tsv_data
+from xdfile.utils import get_args, find_files, parse_pathname, log, debug, get_log, open_output, strip_toplevel, parse_tsv_data, parse_pubid_from_filename
 from xdfile import xdfile, HEADER_ORDER
 
 
@@ -146,11 +146,6 @@ def clean_filename(fn):
     return basefn
 
 
-def parse_pubid_from_filename(fn):
-    m = re.search("(^[A-Za-z]*)", parse_pathname(fn).base)
-    return m.group(1)
-
-
 def get_publication(xd):
     matching_publications = set()
 
@@ -200,7 +195,7 @@ def get_target_basename(xd):
             raise
 
     # determine date (or at least year if possible)
-    seqnum = xd.get_header("Date")
+    seqnum = xd.get_header("Number") or xd.get_header("Date")
     if seqnum:
         year = seqnum.split("-")[0]
     else:
@@ -241,10 +236,10 @@ def main():
     assert all_receipts, all_receipts
 
     # to compare raw/cleaned headers side-by-side
-    raw_tsv = xd_puzzles_header
+    raw_tsv = ''
 
     # local puzzles.tsv for newly shelved files (rows can simply be appended to global puzzles.tsv)
-    puzzles_tsv = xd_puzzles_header
+    puzzles_tsv = ''
 
     for input_source in args.inputs:
         for fn, contents in find_files(input_source, ext='.xd'):
@@ -285,8 +280,7 @@ def main():
         xd_puzzles_append(puzzles_tsv)
 
     outf.write_file("cleaned-puzzles.tsv", xd_puzzles_header + puzzles_tsv)
-    outf.write_file("raw-puzzles.tsv", raw_tsv)
-    outf.write_file("shelved.log", get_log().encode("utf-8"))
+    outf.write_file("raw-puzzles.tsv", xd_puzzles_header + raw_tsv)
 
 
 if __name__ == "__main__":
