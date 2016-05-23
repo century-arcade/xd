@@ -11,7 +11,7 @@ import datetime
 import re
 
 from xdfile.utils import get_args, log, debug, get_log, find_files, parse_pathname, open_output, parse_tsv, datestr_to_datetime
-from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sources
+from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sources, xd_recent_download, xd_recent_header
 
 
 def construct_xdid(pubabbr, dt):
@@ -63,6 +63,8 @@ def main():
 
         log("*** %s: downloading %d puzzles from %s to %s" % (pubid, len(dates_to_get), from_date, to_date))
 
+        most_recent = {}
+
         for dt in dates_to_get:
             try:
                 xdid = construct_xdid(pubid, dt)
@@ -84,7 +86,12 @@ def main():
 
             sources_tsv += xd_sources_row(fn, url, todaystr)
 
+    new_recents_tsv = ''
+    for k, v in most_recent.items():
+        new_recents_tsv += xd_recent_download(k, v)
+
     outf.write_file("sources.tsv", xd_sources_header + sources_tsv)
+#    outf.write_file("recents.tsv", xd_recent_header + new_recents_tsv)
 
 
 if __name__ == "__main__":

@@ -8,10 +8,10 @@ from .utils import COLUMN_SEPARATOR, EOL, parse_tsv, parse_pathname
 from .xdfile import corpus
 
 
-RECEIPTS_TSV = "receipts.tsv"
-PUBLICATIONS_TSV = "publications.tsv"
-PUZZLES_TSV = "puzzles.tsv"
-PUZZLE_SOURCES_TSV = "puzzle_sources.tsv"
+RECEIPTS_TSV = "gxd/receipts.tsv"
+PUBLICATIONS_TSV = "gxd/publications.tsv"
+PUZZLES_TSV = "gxd/puzzles.tsv"
+PUZZLE_SOURCES_TSV = "gxd/puzzle_sources.tsv"
 
 
 g_pubs = {}
@@ -34,6 +34,13 @@ xd_receipts_header = COLUMN_SEPARATOR.join([
         "InternalSource",   # 'src/2016/xd-download-2016-04-11.zip'
         "SourceFilename",   # filename in the containing .zip [as above]
         "Rejected"          # reason for immediate rejection: obviously not a valid puzzle file; etc
+    ]) + EOL
+
+
+# Each delivery from an extractor should have a 'sources' table, to preserve the precise external sources.
+xd_recent_header = COLUMN_SEPARATOR.join([
+        "pubid",
+        "date",
     ]) + EOL
 
 
@@ -118,6 +125,10 @@ def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
         DownloadTime,
         ExternalSource
     ]) + EOL
+
+
+def xd_recent_download(pubid, dt):
+    return COLUMN_SEPARATOR.join([ pubid, dt ]) + EOL
 
 
 def xd_puzzles_row(xd, ReceiptId=""):

@@ -17,3 +17,16 @@ def xd_send_email(destaddr, fromaddr='admin@xd.saul.pw', subject='', body=''):
         return None
 
 
+def create_merge_request():
+    import urllib.request
+    import urllib.parse
+    parms = {
+        'id': '',
+        'source_branch': '',
+        'target_branch': '',
+        'title': '',
+    }
+
+    url = 'https://gitlab.com/projects/:id/merge_requests'
+    r = urllib.request.urlopen(url, urllib.parse.urlencode(parms))
+    log('create_merge_request POST: %s' % r.getcode())

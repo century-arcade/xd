@@ -4,7 +4,7 @@ import re
 from urllib.parse import unquote
 from lxml import etree
 
-from . import xdfile
+import xdfile
 
 
 def udecode(s):
@@ -34,6 +34,8 @@ def parse_uxml(content, filename):
 
     content = re.sub(r'=""(\S)', r'="&quot;\1', content)  # one case has c=""foo"".  sheesh
     content = re.sub(r'(\.)""', r'\1&quot;"', content)
+
+    content = content.encode("utf-8")
 
     try:
         root = etree.fromstring(content)

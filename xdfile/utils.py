@@ -331,7 +331,7 @@ def open_output(fnout=None):
         outf = OutputZipFile(fnout, parse_pathname(fnout).base)
     elif not parse_pathname(fnout).ext:  # extensionless assumed to be directories
         outf = OutputDirectory(fnout)
-        g_logfp = outf.open_file(g_scriptname + ".log")
+#        g_logfp = outf.open_file(g_scriptname + ".log")
     else:
         # make parent dirs
         try:

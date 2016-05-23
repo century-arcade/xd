@@ -9,6 +9,8 @@ source scripts/config-vars.sh
 mkdir -p ${OUTBASEDIR}
 mkdir -p ${OUTWWWDIR}
 
+set -x
+
 # check for email and parse out attachments
 mkdir -p ${OUTBASEDIR}/incoming
 aws s3 sync ${S3PRIV}/incoming $OUTBASEDIR/incoming/
@@ -24,7 +26,7 @@ RECENTS=$OUTBASEDIR/recents.tsv
 aws s3 cp ${S3PRIV}/recent-downloads.tsv $RECENTS
 scripts/10-download-puzzles.py -o ${OUTBASE}-www.zip $RECENTS
 aws s3 cp ${OUTBASE}-www.zip ${S3PRIV}/sources/
-#unzip ${OUTBASE}-www.zip recents.tsv
+unzip ${OUTBASE}-www.zip recents.tsv
 aws s3 cp $RECENTS ${S3PRIV}/recent-downloads.tsv
 
 # 2x: convert everything to .xd, shelve in the proper location, and commit

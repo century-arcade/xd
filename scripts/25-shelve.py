@@ -14,7 +14,7 @@ import re
 import datetime
 
 from xdfile.metadatabase import xd_publications_meta, xd_puzzles_row, xd_puzzles_header, xd_puzzles_append, xd_receipts_meta
-from xdfile.utils import get_args, find_files, parse_pathname, log, debug, get_log, open_output, strip_toplevel, parse_tsv_data, parse_pubid_from_filename
+from xdfile.utils import get_args, find_files, parse_pathname, log, debug, open_output, strip_toplevel, parse_tsv_data, parse_pubid_from_filename
 from xdfile import xdfile, HEADER_ORDER
 
 
@@ -283,8 +283,8 @@ def main():
         # shelving directly into corpus
         xd_puzzles_append(puzzles_tsv)
 
-    outf.write_file("cleaned-puzzles.tsv", xd_puzzles_header + puzzles_tsv)
-    outf.write_file("raw-puzzles.tsv", xd_puzzles_header + raw_tsv)
+#    outf.write_file("cleaned-puzzles.tsv", xd_puzzles_header + puzzles_tsv)
+#    outf.write_file("raw-puzzles.tsv", xd_puzzles_header + raw_tsv)
 
 
 if __name__ == "__main__":

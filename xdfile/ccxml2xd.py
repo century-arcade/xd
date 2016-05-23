@@ -4,11 +4,12 @@ import string
 import re
 from lxml import etree
 
-from . import xdfile
+import xdfile
 
 
-# content is unicode()
-def parse_ccxml(content, filename):
+# data is bytes()
+def parse_ccxml(data, filename):
+    content = data.decode('utf-8')
     content = content.replace("<b>", "{*")
     content = content.replace("</b>", "*}")
     content = content.replace("<i>", "{/")
@@ -19,6 +20,7 @@ def parse_ccxml(content, filename):
     content = content.replace("</u>", "_}")
     content = content.replace("<strike>", "{-")
     content = content.replace("</strike>", "-}")
+    content = content.encode('utf-8')
 
     ns = {
         'puzzle': 'http://crossword.info/xml/rectangular-puzzle'
@@ -67,7 +69,7 @@ def parse_ccxml(content, filename):
 
     for clues in root.xpath('//puzzle:crossword/puzzle:clues', namespaces=ns):
         type = clues.xpath('./puzzle:title', namespaces=ns)[0]
-        type = "".join(x for x in etree.tostring(type, method='text').upper() if x in string.uppercase)
+        type = "".join(chr(x) for x in etree.tostring(type, method='text').upper() if chr(x) in string.ascii_uppercase)
         type = type[0]
 
         for clue in clues.xpath('./puzzle:clue', namespaces=ns):
