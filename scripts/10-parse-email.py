@@ -2,6 +2,8 @@
 
 from xdfile.utils import open_output, log, find_files, get_args, parse_pathname, generate_zip_files, iso8601
 from xdfile.metadatabase import xd_sources_header, xd_sources_row
+from xdfile.cloud import xd_send_email
+
 
 import email
 import mimetypes
@@ -10,22 +12,6 @@ def parse_date(datestr):
     import timestring
     dt = timestring.Date(datestr)
     return "%d-%02d-%02d" % (dt.year, dt.month, dt.day)
-
-
-def xd_send_email(destaddr, subject='', body=''):
-    import boto3
-    client = boto3.client('ses')
-    log("sending email to %s (subject '%s')" % (destaddr, subject))
-    try:
-        response = client.send_email(
-                Source='upload+received@xd.saul.pw',
-                Destination= {'ToAddresses': [ destaddr ] },
-                Message={ 'Subject': { 'Data': subject },
-                'Body': { 'Text': { 'Data': body } } })
-        return response
-    except Exception as e:
-        log(str(e))
-        return None
 
 
 def generate_files(msg):
@@ -80,11 +66,15 @@ def main():
 
         if email_sources_tsv:
             xd_send_email(upload_src,
+                    fromaddr='upload+received@xd.saul.pw',
                     subject='Upload successful: %d files received' % len(email_sources_tsv),
                     body="These files were received:\n" + email_sources_tsv)
             sources_tsv += "".join(email_sources_tsv)
         else:
-            xd_send_email(upload_src, subject='Upload error', body='No files were received')
+            xd_send_email(upload_src,
+                    fromaddr='upload+failed@xd.saul.pw',
+                    subject='Upload error',
+                    body='No puzzle files received')
 
     outf.write_file("sources.tsv", xd_sources_header + sources_tsv)
 

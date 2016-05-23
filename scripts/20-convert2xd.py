@@ -43,7 +43,7 @@ def main():
 
     outf = open_output()
 
-    new_receipts = xd_receipts_header
+    new_receipts = ''
 
     nextReceiptId = get_last_receipt_id() + 1
 

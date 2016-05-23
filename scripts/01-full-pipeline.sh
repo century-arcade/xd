@@ -4,39 +4,28 @@
 #  $0 <base>
 #   produces a similarity check for a bunch of raw crosswords, creating several artifacts along the way
 
-set -e
-set -x
-
-TODAY=`date +"%Y%m%d"`
-NOW=`date +"%Y%m%d-%H%M%S"`
-OUTBASEDIR=products/$TODAY
-INCOMING_S3PATH=s3://xd-private/incoming/
-OUTBASE=${OUTBASEDIR}/${TODAY}
-
-#if [ -d ${OUTBASEDIR} ] ; then
-#    echo ${OUTBASEDIR} already exists!  remove first.
-#    exit 1
-#fi
+source scripts/config-vars.sh
 
 mkdir -p ${OUTBASEDIR}
+mkdir -p ${OUTWWWDIR}
 
 # check for email and parse out attachments
 mkdir -p ${OUTBASEDIR}/incoming
-aws s3 sync $INCOMING_S3PATH $OUTBASEDIR/incoming/
-if find "$INCOMING_S3PATH" -mindepth 1 -print -quit | grep -q .; then
+aws s3 sync ${S3PRIV}/incoming $OUTBASEDIR/incoming/
+if find $OUTBASEDIR/incoming -mindepth 1 -print -quit | grep -q .; then
     scripts/10-parse-email.py -o ${OUTBASE}-email.zip $OUTBASEDIR/incoming
-    aws s3 cp ${OUTBASE}-email.zip s3://xd-private/sources/
-    aws s3 rm --recursive $INCOMING_S3PATH
+    aws s3 cp ${OUTBASE}-email.zip ${S3PRIV}/sources/
+    aws s3 rm --recursive ${S3PRIV}/incoming
     rm -rf $OUTBASEDIR/incoming
 fi
 
 # 1x: download more recent puzzles from www
 RECENTS=$OUTBASEDIR/recents.tsv
-aws s3 cp s3://xd-private/recent-downloads.tsv $RECENTS
+aws s3 cp ${S3PRIV}/recent-downloads.tsv $RECENTS
 scripts/10-download-puzzles.py -o ${OUTBASE}-www.zip $RECENTS
-aws s3 cp ${OUTBASE}-www.zip s3://xd-private/sources/
+aws s3 cp ${OUTBASE}-www.zip ${S3PRIV}/sources/
 #unzip ${OUTBASE}-www.zip recents.tsv
-aws s3 cp $RECENTS s3://xd-private/recent-downloads.tsv
+aws s3 cp $RECENTS ${S3PRIV}/recent-downloads.tsv
 
 # 2x: convert everything to .xd, shelve in the proper location, and commit
 scripts/20-convert2xd.py -o ${OUTBASE}-converted.zip ${OUTBASE}-email.zip ${OUTBASE}-www.zip
@@ -51,7 +40,6 @@ scripts/29-git-commit.sh gxd
 # 4x: individual puzzle/grid/clue/answer analyses
 # 5x: fun facts (one-off interesting queries)
 # 6x: mkwww
-# 9x: deploy
 
 #scripts/40-catalog-puzzles.py -o ${BASE}/puzzles.tsv ${BASE}
 #scripts/50-findsimilar.py -o ${OUTBASE}-similar.tsv ${OUTBASE}-shelved.zip
@@ -61,9 +49,9 @@ scripts/29-git-commit.sh gxd
 #scripts/65-mkwww-publishers -o www/
 #scripts/65-mkwww-index.py -o www/${BASE} ${BASE}-similar.tsv
 
-scripts/95-mkwww-logs.py -o ${OUTBASE}-log.html ${OUTBASEDIR}
-aws s3 cp ${OUTBASE}-log.html s3://xd.saul.pw/${NOW}/index.html
+# 9x: deploy
 
-scripts/96-cat-logs.py -o log.txt ${OUTBASEDIR}
-#aws ses send-email xd@saul.pw log.txt
+scripts/95-mkwww-logs.py -o ${OUTWWWDIR}/${NOW}/log.html ${OUTBASEDIR}
+
+aws s3 sync ${OUTWWWDIR} ${S3WWW}/ --acl public-read
 

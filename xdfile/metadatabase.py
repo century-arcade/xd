@@ -82,7 +82,8 @@ def xd_puzzle_sources():
     return parse_tsv(PUZZLE_SOURCES_TSV, "PuzzleSource")
 
 def append_receipts(receipts):
-    codecs.open(RECEIPTS_TSV, 'a', encoding='utf-8').write(receipts)
+    if receipts:
+        codecs.open(RECEIPTS_TSV, 'a', encoding='utf-8').write(receipts)
 
 
 def get_last_receipt_id():

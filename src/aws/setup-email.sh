@@ -1,10 +1,6 @@
 #!/bin/sh
 
-ACCOUNTID=165509303398
-DOMAIN=xd.saul.pw
-BUCKET=xd-private
-UPLOAD_EMAIL=upload@$DOMAIN
-REGION=us-west-2
+source scripts/config-vars.sh
 
 # Run this script without parameters.  It creates config/ directory and
 # populates it with config files.  Modify the configs in this script, and
@@ -55,7 +51,7 @@ cat <<EOF > $config/create-receipt-rule.json
             {
                 "S3Action": {
                     "TopicArn": "$TOPICARN", 
-                    "BucketName": "$BUCKET", 
+                    "BucketName": "$PRIVATE_BUCKET", 
                     "ObjectKeyPrefix": "incoming", 
                     "KmsKeyArn": ""
                 }
@@ -80,7 +76,7 @@ cat <<EOF > $config/s3-email-policy.json
             "Action": [
                 "s3:PutObject"
             ],
-            "Resource": "arn:aws:s3:::$BUCKET/*",
+            "Resource": "arn:aws:s3:::$PRIVATE_BUCKET/*",
             "Condition": {
                 "StringEquals": {
                     "aws:Referer": "$ACCOUNTID"
@@ -92,7 +88,7 @@ cat <<EOF > $config/s3-email-policy.json
 EOF
 
 # these before creating the rule
-$aws s3api put-bucket-policy --bucket $BUCKET --policy file://$config/s3-email-policy.json
+$aws s3api put-bucket-policy --bucket $PRIVATE_BUCKET --policy file://$config/s3-email-policy.json
 $aws sns create-topic --name $TOPICNAME
 
 

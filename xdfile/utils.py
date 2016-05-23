@@ -108,6 +108,7 @@ def find_files_with_time(*paths, **kwargs):
     ext = kwargs.get("ext")
     should_strip_toplevel = kwargs.get("strip_toplevel", True)
     for path in paths:
+      try:
         if stat.S_ISDIR(os.stat(path).st_mode):
             # handle directories
             for thisdir, subdirs, files in os.walk(path):
@@ -152,6 +153,8 @@ def find_files_with_time(*paths, **kwargs):
             fullfn = path
             yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
 
+      except FileNotFoundError as e:
+          log(str(e))
 
     # reset progress indicator after processing all files
     progress()
@@ -206,6 +209,9 @@ def replace_ext(fn, newext):
 def parse_tsv_data(contents, objname=None):
     csvreader = csv.DictReader(contents.splitlines(), delimiter=COLUMN_SEPARATOR, quoting=csv.QUOTE_NONE, skipinitialspace=True)
     if objname:
+        if not csvreader.fieldnames:
+            return
+
         nt = namedtuple(objname, " ".join(csvreader.fieldnames))
 
     for row in csvreader:
@@ -260,6 +266,10 @@ class OutputFile:
 
     def write_row(self, fields):
         self.write(COLUMN_SEPARATOR.join(fields) + EOL)
+
+    def write_html(self, fn, innerhtml, title=""):
+        htmlstr = html_header.format(title=title) + innerhtml + html_footer
+        self.write(htmlstr.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
 
 
 def strip_toplevel(fn):
@@ -323,6 +333,11 @@ def open_output(fnout=None):
         outf = OutputDirectory(fnout)
         g_logfp = outf.open_file(g_scriptname + ".log")
     else:
+        # make parent dirs
+        try:
+            os.makedirs(parse_pathname(fnout).path)
+        except Exception as e:
+            pass  # log("%s: %s" % (type(e), str(e)))
         outf = OutputFile(codecs.open(fnout, 'w', encoding="utf-8"))
 
     return outf
