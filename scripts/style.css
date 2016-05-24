@@ -7,27 +7,29 @@
         .diff_chg {background-color:#ffff77}
         .diff_sub {background-color:#ffaaaa}
 
+/*
 span.visible { color: blue; }
 .fixed {font-family:Courier; }
 div, textarea { margin-top: 1em; }
 
-body { 
+body, body div { 
     padding: 10px;
     background-color: #ffeeee 
 }
+*/
+/* mkwww-publishers */
+/*
 body div { padding: 10px; background-color: #ffeeee }
 
-/* mkwww-publishers */
 
 .ReceiptId, .PublisherAbbr, .PublicationAbbr, .Date {
     display: none;
 }
 table {
-/*	font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif; */
+	font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif; 
 	font-size: 14px;
 	background: #fff;
 	margin: 25px;
-/*	width: 480px; */
 	border-collapse: collapse;
 	text-align: left;
 }
@@ -52,7 +54,11 @@ td {
 tbody tr:hover td {
 	background: #ccf;
 }
+*/
 
+.theme {
+    color: #333;
+}
 
 /* --- analyze-puzzle --- */
 .fullgrid {

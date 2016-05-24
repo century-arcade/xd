@@ -50,6 +50,7 @@ scripts/29-git-commit.sh gxd
 
 #scripts/65-mkwww-publishers -o www/
 #scripts/65-mkwww-index.py -o www/${BASE} ${BASE}-similar.tsv
+scripts/67-mkwww-clues.py -o wwwroot/
 
 # 9x: deploy
 
