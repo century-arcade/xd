@@ -1,8 +1,15 @@
 import cgi
+import time
 from collections import Counter
+import xdfile
 
 
-html_header = """
+def html_header(**kwargs):
+    kwargs['date'] = time.strftime('%F')
+    npuzzles = len(xdfile.g_corpus)
+    kwargs['npuzzles'] = npuzzles
+
+    h = """
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
           "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -18,8 +25,11 @@ html_header = """
 </head>
 
 <body>
-<h1>{title}</h1>
-"""
+<i>Generated on {date}""".format(**kwargs)
+    if npuzzles:
+        h += ' from a corpus of {npuzzles} puzzles'.format(**kwargs)
+    h += '.</i><h1>{title}</h1>'.format(**kwargs)
+    return h
 
 html_footer = """
   <hr style="clear:both;"/>
@@ -57,7 +67,7 @@ def td(*cols, rowclass='', href='', tag='td'):
     return r
 
 
-# list of options, possibly duplicate 
+# list of options, possibly duplicate.  presents and groups by strmaker(option)
 def html_select_options(options, strmaker=str, force_top=""):
     def strnum(s, n):
         assert n > 0
@@ -134,5 +144,4 @@ def html_table(rows, colnames, rowclass="row"):
 
     out += '</table>'  # end table
     return out
-
 

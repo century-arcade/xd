@@ -1,7 +1,7 @@
 
 import os.path
 import codecs
-from collections import Counter
+from collections import Counter, namedtuple
 
 from .html import mkhref, html_select_options
 from .utils import COLUMN_SEPARATOR, EOL, parse_tsv, parse_pathname
@@ -73,13 +73,13 @@ xd_puzzles_header = COLUMN_SEPARATOR.join([
 
 
 # yields dict corresponding to each row of receipts.tsv, in sequential order
-def xd_receipts_meta():
+def xd_receipts():
     return parse_tsv(RECEIPTS_TSV, "Receipt")
 
-def xd_publications_meta():
+def xd_publications():
     return parse_tsv(PUBLICATIONS_TSV, "Publication")
 
-def xd_puzzles_meta():
+def xd_puzzles():
     return parse_tsv(PUZZLES_TSV, "Puzzle")
 
 def xd_puzzles_append(tsv_rows):
@@ -165,7 +165,7 @@ def clean_copyright(puzrow):
 
 
 class Publication:
-    def __init__(self, pubid, **row):
+    def __init__(self, pubid, row):
         self.publication_id = pubid
         self.row = row
 
@@ -216,8 +216,16 @@ def publications():
     if not g_pubs:
         for pubrow in xd_publications_meta():
             pubid = pubrow.PublicationAbbr
-            p = Publication(pubid, **pubrow)
+            p = Publication(pubid, pubrow)
             g_pubs[pubid] = p
 
     return g_pubs
 
+
+def get_publication(pubid):
+    pubs = publications()
+    if pubid in pubs:
+        return pubs[pubid]
+
+    p = Publication(pubid, namedtuple("Publication", xd_publications_header)(pubid, pubid, pubid, pubid, "", "", ""))
+    return p

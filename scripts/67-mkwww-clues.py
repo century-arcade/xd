@@ -2,7 +2,7 @@
 
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
-from xdfile.html import html_header, html_footer, th, td, mkhref, html_select_options
+from xdfile.html import th, td, mkhref, html_select_options
 from xdfile import corpus, clues
 
 from collections import Counter
@@ -17,34 +17,6 @@ def maybe_multstr(n):
 def unboil(bc):
     return random.choice(boiled_clues[bc]).clue
 
-def pubyear_table(pubyears):
-    pubs = {}
-    for pubid, year in pubyears:
-        if pubid not in pubs:
-            pubs[pubid] = Counter()
-        try:
-            pubs[pubid][int(year)] += 1
-        except:
-            pass
-
-    minyear = min(min(years.keys()) for pubid, years in pubs.items() if years)
-    maxyear = max(max(years.keys()) for pubid, years in pubs.items() if years)
-
-    ret = '<table class="pubyears">'
-
-    ret += th('pub', *[ str(y)[2:] for y in range(minyear, maxyear+1) ])
-
-    for pubid, years in sorted(pubs.items()):
-        # TODO: indicate how many puzzles in the corpus by background-color
-        #  groups: >=350 puzzles, >=50, >=12, >=1
-        ret += td(pubid, *[(years[y] or "") for y in range(minyear, maxyear+1)])
-
-    ret += '</table>'
-    return ret
-
-def year_from_date(dt):
-    return dt.split('-')[0]
-
 def mkwww_cluepage(bc):
     bcs = boiled_clues[bc]
 
@@ -53,7 +25,7 @@ def mkwww_cluepage(bc):
     clue_html += '<hr/>'
     clue_html += '<div>Answers for this clue: ' + html_select_options([ ca.answer for ca in bcs ]) + '</div>'
     clue_html += '<hr/>'
-    clue_html += pubyear_table((ca.pubid, year_from_date(ca.date)) for ca in bcs)
+    clue_html += pubyear_table(ca.pubyear for ca in bcs)
     
     return clue_html 
 

@@ -126,9 +126,69 @@ table div {
 .clues {
     clear: both;
 }
+
 .options { width: 85%; }
-select { width: 100%; }
+div.actuals { width: 85%; }
+select {width: 100%; }
 .other-answers {
     text-align: center;
     }
 
+
+.pubyears {
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+.pubyears div {
+    text-align: center;
+}
+.pubyears th, .pubyears td {
+    font-size: 10px;
+    margin: 0;
+    padding: 0;
+}
+
+.pubyears .block {
+    background: #333333;
+}
+
+.pubyears .daily {
+    background: #00ff00;
+}
+.pubyears .semidaily {
+    background: #66ff66;
+}
+.pubyears .weekly{
+    background: #99ff99;
+}
+.pubyears .monthly {
+    background: #ddffdd;
+}
+
+.pubyears td {
+    width: 20px;
+    height: 20px;
+    border-right: 1px solid #333333;
+    border-bottom: 1px solid #333333;
+    border-top: 1px solid #333333;
+}
+
+.pubyears tr:hover td {
+    background: pink;
+}
+
+.pubyears tr:hover td.block {
+    background: #555555; 
+}
+
+.pubyears a {
+    text-decoration: none;
+}
+
+.pubyears tr:hover td:hover {
+}
+
+.pubyears td.decade {
+    table-layout: fixed;
+    width: 50px;
+}

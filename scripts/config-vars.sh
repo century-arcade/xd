@@ -11,6 +11,9 @@ export UPLOAD_EMAIL=upload@${DOMAIN}
 # the address to send logs
 export ADMIN_EMAIL=xd@saul.pw
 
+# local directory structure
+export CORPUSDIR=gxd
+
 # dependent variables (should not need to be set)
 
 export S3WWW=s3://${DOMAIN}
@@ -19,6 +22,7 @@ export S3PRIV=s3://${PRIVATE_BUCKET}
 export TODAY=${TODAY:=`date +"%Y%m%d"`}
 export NOW=${NOW:=`date +"%Y%m%d-%H%M%S"`}
 
-export OUTBASEDIR=products/${NOW}
-export OUTWWWDIR=products/${NOW}/wwwroot
+
+export OUTBASEDIR=pub/${NOW}
+export OUTWWWDIR=wwwroot
 export OUTBASE=${OUTBASEDIR}/${TODAY}

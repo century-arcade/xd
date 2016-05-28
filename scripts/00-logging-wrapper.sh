@@ -15,7 +15,10 @@ export LOGFILE=${OUTBASE}-pipeline.log
 
 exec > >(tee -i ${LOGFILE}) 2>&1
 
-/bin/bash scripts/01-full-pipeline.sh
+/bin/bash scripts/01-extract.sh
+/bin/bash scripts/02-analyze.sh
+/bin/bash scripts/03-mkwww.sh
+/bin/bash scripts/04-deploy.sh
 
 aws s3 cp --region ${REGION} ${LOGFILE} ${S3PRIV}/logs/
 

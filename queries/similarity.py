@@ -105,6 +105,7 @@ def load_clues():
     return g_boiled_clues
 
 
+# bclues is all boiled clues for this particular answer: { [bc] -> #uses }
 def load_answers():
     if not g_answers:
         for ca in clues():

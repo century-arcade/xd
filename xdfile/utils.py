@@ -15,7 +15,8 @@ import argparse
 from .html import html_header, html_footer
 
 EOL = '\n'
-COLUMN_SEPARATOR = '\t'
+COLSEP = '\t'
+COLUMN_SEPARATOR = COLSEP
 
 g_logs = []   # get with get_log()
 g_args = None  # get with args()
@@ -216,14 +217,15 @@ def parse_tsv_data(contents, objname=None):
 
     for row in csvreader:
         if objname:
-            yield nt(**row)
+            r = nt(**row)
         else:
-            yield row
+            r = row
 
+        yield r
 
 def parse_tsv(fn, objname=None):
     fp = codecs.open(fn, encoding='utf-8')
-    return parse_tsv_data(fp.read(), objname)
+    return dict((r[0], r) for r in parse_tsv_data(fp.read(), objname))
 
 
 class OutputZipFile(zipfile.ZipFile):
@@ -268,7 +270,7 @@ class OutputFile:
         self.write(COLUMN_SEPARATOR.join(fields) + EOL)
 
     def write_html(self, fn, innerhtml, title=""):
-        htmlstr = html_header.format(title=title) + innerhtml + html_footer
+        htmlstr = html_header(title=title) + innerhtml + html_footer
         self.write(htmlstr.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
 
 
@@ -281,12 +283,15 @@ def strip_toplevel(fn):
 class OutputDirectory:
     def __init__(self, toplevel_dir):
         self.toplevel = toplevel_dir
+        self.files = {}
 
     def exists(self, fn):
         fullfn = os.path.join(self.toplevel, fn)  #  prepend our toplevel
         return os.path.exists(fullfn)
 
     def open_file(self, fn, mode='w'):
+        if fn in self.files:
+            return self.files[fn]
 
         fullfn = os.path.join(self.toplevel, fn)  #  prepend our toplevel
 
@@ -296,14 +301,16 @@ class OutputDirectory:
         except Exception as e:
             pass  # log("%s: %s" % (type(e), str(e)))
 
-        return codecs.open(fullfn, mode, encoding='utf-8')
+        f = codecs.open(fullfn, mode, encoding='utf-8')
+        self.files[fn] = f
+        return f
 
     def write_file(self, fn, contents, timet=None):
         self.open_file(fn, 'w').write(contents)
         log("wrote %s to %s" % (fn, self.toplevel))
 
     def write_html(self, fn, innerhtml, title=""):
-        htmlstr = html_header.format(title=title) + innerhtml + html_footer
+        htmlstr = html_header(title=title) + innerhtml + html_footer
         self.write_file(fn, htmlstr.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
 
 

@@ -5,8 +5,8 @@ import string
 
 from .utils import parse_pathname, parse_tsv, progress, parse_pubid_from_filename
 
-g_corpus = None  # list of xdfile
-g_all_clues = [ ]  # list of ClueAnswer
+g_corpus = []  # list of xdfile
+g_all_clues = []  # list of ClueAnswer
 
 
 class Error(Exception):
@@ -70,7 +70,10 @@ class xdfile:
         return self._publication_id + (self.get_header("Number") or self.date())
 
     def date(self):
-        return self.get_header("Date")
+        dt = self.get_header("Date")
+        if not dt and self._publication_id:
+            dt = parse_pathname(self.filename).base[len(self._publication_id):]
+        return dt
 
     def year(self):
         return self.date().split('-')[0]
@@ -266,16 +269,12 @@ class xdfile:
                 pos = clue[:clue_idx].strip()
                 clue = clue[clue_idx + 1:]
 
-                if pos[0] not in string.digits:
+                try:
                     cluedir = pos[0]
-                    try:
-                        cluenum = int(pos[1:])
-                    except:
-                        cluenum = pos[1:]  # fallback to strings for non-numeric clue "numbers"
-                else:
+                    cluenum = int(pos[1:])
+                except:
                     cluedir = ""
-                    cluenum = int(pos)
-
+                    cluenum = pos  # fallback to strings for non-numeric clue "numbers"
                 self.clues.append(((cluedir, cluenum), clue.strip(), answer.strip()))
             else:  # anything remaining
                 if line:
@@ -370,8 +369,7 @@ class xdfile:
 def corpus(*inputs):
     from .utils import log, find_files, get_args
 
-    global g_corpus
-    if g_corpus is not None:
+    if len(g_corpus) > 0:
         for xd in g_corpus:
             yield xd
         return
@@ -380,8 +378,6 @@ def corpus(*inputs):
 
     if not inputs:
         inputs = [ args.corpusdir ]
-
-    g_corpus = []
 
     for fullfn, contents in find_files(*inputs, ext='.xd'):
         try:
@@ -399,6 +395,12 @@ def corpus(*inputs):
 
     progress()
 
+def year_from_date(dt):
+    try:
+        return int(dt.split('-')[0])
+    except:
+        return 0
+
 
 class ClueAnswer:
     def __init__(self, pubid, dt, answer, clue):
@@ -406,6 +408,12 @@ class ClueAnswer:
         self.date = dt
         self.answer = answer
         self.clue = clue
+
+    def pubyear(self):
+        return (self.pubid, year_from_date(self.date))
+
+    def xdid(self):
+        return self.pubid + self.date
 
     def __str__(self):
         return '[%s%s] %s' % (self.pubid, self.date, self.clue)
@@ -416,7 +424,7 @@ def clues():
         for xd in corpus():  # r in parse_tsv("clues.tsv", "AnswerClue"):
             progress(xd.filename)
             pubid = xd.publication_id()
-            dt = xd.date() or "?"
+            dt = xd.date() or ""
             for pos, clue, answer in xd.clues:
                 ca = ClueAnswer(pubid, dt, answer, clue)
                 g_all_clues.append(ca)

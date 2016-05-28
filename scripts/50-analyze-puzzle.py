@@ -8,7 +8,7 @@
 
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, grid_similarity
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
-from xdfile.html import html_header, html_footer, th, html_select_options
+from xdfile.html import th, html_select_options
 from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 import time
 import cgi
@@ -33,7 +33,7 @@ def xd_to_html(xd, compare_with=None):
 
 def headers_to_html(xd):
     # headers
-    r += '<div class="xdheaders"><ul class="xdheaders">'
+    r = '<div class="xdheaders"><ul class="xdheaders">'
     for k, v in xd.iterheaders():
         r += '<li class="%s">%s: <b>%s</b></li>' % (k, k, v)
     r += '</ul></div>'
@@ -43,7 +43,7 @@ def headers_to_html(xd):
 def grid_to_html(xd, compare_with=None):
     "htmlify this puzzle's grid"
 
-    grid_html += '<div class="xdgrid">'
+    grid_html = '<div class="xdgrid">'
     for r, row in enumerate(xd.grid):
         grid_html += '<div class="xdrow">'
         for c, cell in enumerate(row):
@@ -198,14 +198,8 @@ def main():
             
         clues_html += '</table>'
 
-
-        main_html = html_header.format(title="xd analysis of %s" % mainxd.xdid())
-
-        main_html += '<i>Generated on %s ' % time.strftime('%F')
-        main_html += "from a corpus of %s puzzles.</i>" % len([ x for x in corpus() ])
-
         # similar grids
-        main_html += '<div class="grids">'
+        main_html = '<div class="grids">'
         main_html += xd_to_html(mainxd)
 
         # dump miniature grids with highlights of similarities
@@ -221,8 +215,6 @@ def main():
         main_html += '<div class="clues">'
         main_html += '<h2>%d%% reused clues (%s/%s)</h2>' % (nstaleclues*100.0/ntotalclues, nstaleclues, ntotalclues)
         main_html += '<ul>' + clues_html + '</ul>'
-        main_html += html_footer
-
         main_html += '</div>'
 
         # summary row
@@ -234,8 +226,8 @@ def main():
             ntotalclues
             ])
 
-        outf.write_file("pub/%s/%s/%s/index.html" % (mainxd.publication_id(), mainxd.year(), mainxd.xdid()), main_html.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
-    outf.write_file("analyze.log", get_log())
+        outf.write_html("pub/%s/%s/%s/index.html" % (mainxd.publication_id(), mainxd.year(), mainxd.xdid()), main_html, title="xd analysis of %s" % mainxd.xdid())
+
 
 main()
 
