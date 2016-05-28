@@ -227,6 +227,9 @@ class xdfile:
                 continue
             else:
                 if nblanklines >= 2:
+                    if section == 3:
+                        self.clues.append((("", ""), "", ""))
+
                     section += 1
                     subsection = 1
                     nblanklines = 0
@@ -311,15 +314,17 @@ class xdfile:
 
         # grid (section 2)
         r += EOL.join(self.grid)
-        r += EOL + EOL
+        r += EOL + EOL + EOL
 
         # clues (section 3)
         if emit_clues:
             prevdir = None
             for pos, clue, answer in self.clues:
-                cluedir, cluenum = pos
-                if cluedir != prevdir:
+                if not answer:
                     r += EOL
+                    continue
+
+                cluedir, cluenum = pos
                 prevdir = cluedir
 
                 r += "%s%s. %s ~ %s" % (cluedir, cluenum, (clue or "[XXX]").strip(), answer)

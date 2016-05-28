@@ -4,20 +4,21 @@ import codecs
 from collections import Counter, namedtuple
 
 from .html import mkhref, html_select_options
-from .utils import COLUMN_SEPARATOR, EOL, parse_tsv, parse_pathname
+from .utils import COLSEP, EOL, parse_tsv, parse_pathname
 from .xdfile import corpus
 
 
 RECEIPTS_TSV = "gxd/receipts.tsv"
 PUBLICATIONS_TSV = "gxd/publications.tsv"
-PUZZLES_TSV = "gxd/puzzles.tsv"
-PUZZLE_SOURCES_TSV = "gxd/puzzle_sources.tsv"
+PUZZLES_TSV = "priv/puzzles.tsv"
+PUZZLE_SOURCES_TSV = "gxd/sources.tsv"
+RECENTS_TSV = "gxd/recents.tsv"
 
 
 g_pubs = {}
 
 # Each delivery from an extractor should have a 'sources' table, to preserve the precise external sources.
-xd_sources_header = COLUMN_SEPARATOR.join([
+xd_sources_header = COLSEP.join([
         "ReceiptId",        # simple numeric row id (filled when approved)
         "SourceFilename",   # filename in the containing .zip; ideally referenceable by the ExternalSource
         "DownloadTime",     # '2016-04-11' (ISO8601; can be truncated)
@@ -26,26 +27,26 @@ xd_sources_header = COLUMN_SEPARATOR.join([
 
 
 # Each row from every 'sources' table appends an expanded version to the global 'receipts' table.
-xd_receipts_header = COLUMN_SEPARATOR.join([
+xd_receipts_header = COLSEP.join([
         "ReceiptId",        # simple numeric row id (empty if Rejected)
         "DownloadTime",     # '2016-04-11' [as above, copied from xd-downloads.tsv]
         "ReceivedTime",     # '2016-04-14' [date of entry into receipts]
         "ExternalSource",   # URL or email [as above]
         "InternalSource",   # 'src/2016/xd-download-2016-04-11.zip'
         "SourceFilename",   # filename in the containing .zip [as above]
-        "Rejected"          # reason for immediate rejection: obviously not a valid puzzle file; etc
+        "PubYear"           # Shelf location (check log for error if empty)
     ]) + EOL
 
 
 # Each delivery from an extractor should have a 'sources' table, to preserve the precise external sources.
-xd_recent_header = COLUMN_SEPARATOR.join([
+xd_recents_header = COLSEP.join([
         "pubid",
         "date",
     ]) + EOL
 
 
 # xd-publications.tsv is curated manually or via some other process
-xd_publications_header = COLUMN_SEPARATOR.join([
+xd_publications_header = COLSEP.join([
         "PublicationAbbr",  # 'nyt', should be unique across all publications; same as xdid prefix
         "PublisherAbbr",    # 'nytimes', toplevel directory (or 'self/quigley', or 'misc')
         "PublicationName",  # 'The New York Times'
@@ -58,7 +59,7 @@ xd_publications_header = COLUMN_SEPARATOR.join([
 
 # xd-puzzles.tsv
 # if ReceiptId's are preserved, generating a sorted list from all .xd files should result in an identical .tsv file.
-xd_puzzles_header = COLUMN_SEPARATOR.join([
+xd_puzzles_header = COLSEP.join([
         "xdid",             # filename base ('nyt1994-10-02'), unique across all xd files
         "ReceiptId",        # references 'receipts' table
         "PublicationAbbr",  # 'nyt', unique across all publications to support xdid format
@@ -95,7 +96,7 @@ def append_receipts(receipts):
 
 def get_last_receipt_id():
     try:
-        all_receipts = [ x for x in xd_receipts_meta() ]
+        all_receipts = list(xd_receipts().values())
         if all_receipts:
             return int(all_receipts[-1].ReceiptId)
         else:
@@ -106,20 +107,20 @@ def get_last_receipt_id():
         
 
 # for each row in fnDownloadZip:*.tsv, assigns ReceiptId, ReceivedTime, and appends to receipts.tsv.  
-def xd_receipts_row(nt):
-    return COLUMN_SEPARATOR.join([
-        str(nt.ReceiptId),
-        nt.DownloadTime,
-        nt.ReceivedTime,
-        nt.ExternalSource,
-        nt.InternalSource,
-        nt.SourceFilename,
-        str(nt.Rejected)
-   ]) + EOL
+def xd_receipts_row(**nt):
+    return COLSEP.join([
+        str(nt.get("ReceiptId", "")),
+        nt.get("DownloadTime", ""),
+        nt.get("ReceivedTime", ""),
+        nt.get("ExternalSource", ""),
+        nt.get("InternalSource", ""),
+        nt.get("SourceFilename", ""),
+        nt.get("PubYear", "")
+    ]) + EOL
 
 
 def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
-    return COLUMN_SEPARATOR.join([
+    return COLSEP.join([
 		"",  # ReceiptId
         SourceFilename,
         DownloadTime,
@@ -128,7 +129,7 @@ def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
 
 
 def xd_recent_download(pubid, dt):
-    return COLUMN_SEPARATOR.join([ pubid, dt ]) + EOL
+    return COLSEP.join([ pubid, dt ]) + EOL
 
 
 def xd_puzzles_row(xd, ReceiptId=""):
@@ -146,8 +147,8 @@ def xd_puzzles_row(xd, ReceiptId=""):
         "%s_%s" % (xd.get_answer("A1"), xd.get_answer("D1"))
     ]
 
-    assert COLUMN_SEPARATOR not in "".join(fields), fields
-    return COLUMN_SEPARATOR.join(fields) + EOL
+    assert COLSEP not in "".join(fields), fields
+    return COLSEP.join(fields) + EOL
 
 
 def clean_copyright(puzrow):
@@ -214,7 +215,7 @@ class PublicationStats:
 
 def publications():
     if not g_pubs:
-        for pubrow in xd_publications_meta():
+        for pubrow in xd_publications():
             pubid = pubrow.PublicationAbbr
             p = Publication(pubid, pubrow)
             g_pubs[pubid] = p

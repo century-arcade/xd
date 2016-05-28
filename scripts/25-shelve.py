@@ -13,7 +13,7 @@ import string
 import re
 import datetime
 
-from xdfile.metadatabase import xd_publications_meta, xd_puzzles_row, xd_puzzles_header, xd_puzzles_append, xd_receipts_meta
+from xdfile.metadatabase import xd_publications, xd_puzzles_row, xd_puzzles_header, xd_puzzles_append, xd_receipts
 from xdfile.utils import get_args, find_files, parse_pathname, log, debug, open_output, strip_toplevel, parse_tsv_data, parse_pubid_from_filename
 from xdfile import xdfile, HEADER_ORDER
 
@@ -154,9 +154,9 @@ def get_publication(xd):
     # source filename/metadata must be the priority
     abbr = parse_pubid_from_filename(xd.filename)
 
-    all_pubs = xd_publications_meta()
+    all_pubs = xd_publications()
 
-    for publ in all_pubs:
+    for publ in all_pubs.values():
         if publ.PublicationAbbr == abbr.lower():
             matching_publications.add((1, publ))
 
@@ -269,7 +269,7 @@ def main():
 
                 all_filenames.add(real_target_fn)
 
-                outf.write_file(real_target_fn, xd.to_unicode().encode("utf-8"))
+                outf.write_file(real_target_fn, xd.to_unicode())
             except Exception as e:
                 log("unshelveable: " + str(e))
                 if args.debug:

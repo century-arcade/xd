@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
 
-from xdfile.utils import open_output, log, find_files, get_args, parse_pathname, generate_zip_files, iso8601
+from xdfile.utils import open_output, log, find_files, get_args, parse_pathname, generate_zip_files, iso8601, to_timet
 from xdfile.metadatabase import xd_sources_header, xd_sources_row
 from xdfile.cloud import xd_send_email
 
 
+import email.utils
 import email
 import mimetypes
-
-def parse_date(datestr):
-    import timestring
-    dt = timestring.Date(datestr)
-    return "%d-%02d-%02d" % (dt.year, dt.month, dt.day)
+import time
 
 
-def generate_files(msg):
+def generate_email_files(msg):
     counter = 1
-    upload_date = parse_date(msg["Date"])
+    upload_date = time.mktime(email.utils.parsedate(msg["Date"]))
     for part in msg.walk():
         # multipart/* are just containers
         if part.get_content_maintype() == 'multipart':
@@ -52,10 +49,10 @@ def main():
             continue
 
         email_sources_tsv = []
-        for puzfn, puzdata, puzdt in generate_files(msg):
+        for puzfn, puzdata, puzdt in generate_email_files(msg):
             # a basic sanity check of filesize
             # accommodate small puzzles and .pdf
-            log("%s: %s from %s" % (puzfn, puzdt, upload_src))
+            log("%s: %s from %s" % (puzfn, iso8601(puzdt), upload_src))
 
             if len(puzdata) > 1000 and len(puzdata) < 100000:
                 email_sources_tsv.append(xd_sources_row(puzfn, upload_src, iso8601(puzdt)))
@@ -68,7 +65,7 @@ def main():
             xd_send_email(upload_src,
                     fromaddr='upload+received@xd.saul.pw',
                     subject='Upload successful: %d files received' % len(email_sources_tsv),
-                    body="These files were received:\n" + email_sources_tsv)
+                    body="These files were received:\n" + "\n".join(email_sources_tsv))
             sources_tsv += "".join(email_sources_tsv)
         else:
             xd_send_email(upload_src,

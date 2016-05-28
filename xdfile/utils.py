@@ -92,12 +92,14 @@ def find_files(*paths, **kwargs):
     for fn, data, dt in find_files_with_time(*paths, **kwargs):
         yield fn, data
 
+def to_timet(y, mon=1, d=1, h=0, m=0, s=0):
+    return time.mktime(datetime.datetime(y, mon, d, h, m, s).timetuple())
 
 def generate_zip_files(data):
     try:
         zf = zipfile.ZipFile(io.BytesIO(data))
         for zi in sorted(zf.infolist(), key=lambda x: x.filename):
-            zipdt = time.mktime(datetime.datetime(*zi.date_time).timetuple())
+            zipdt = to_timet(*zi.date_time)
             yield zi.filename, zf.read(zi), zipdt
 
     except zipfile.BadZipfile as e:

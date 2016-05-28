@@ -24,7 +24,7 @@ def split_year(y):
     return "%s<br/>%s" % (msy, lsy)
 
 def pubyear_html():
-    pubyears = xdfile.utils.parse_tsv("gxd/pubyears.tsv", "pubyear")
+    pubyears = xdfile.utils.parse_tsv("pub/pubyears.tsv", "pubyear")
 
     pubs = {}
     for pubid, year, num in pubyears:
