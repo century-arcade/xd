@@ -121,10 +121,10 @@ def main():
                             if args.copyright:
                                 xd.set_header("Copyright", args.copyright)
 
+                        catalog.deduce_set_seqnum(xd)
+                        xdid = xd.xdid()
                         xdstr = xd.to_unicode()
-                        path = catalog.get_target_basename(xd, args.pubid)
-                        xdid = parse_pathname(path).base
-                        outf.write_file(path + ".xd", xdstr, dt)
+                        outf.write_file(catalog.get_shelf_path(xd, args.pubid) + ".xd", xdstr, dt)
                         debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
                         rejected = ""
                         break  # stop after first successful parsing

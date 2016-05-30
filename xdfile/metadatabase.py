@@ -62,10 +62,8 @@ xd_publications_header = COLSEP.join([
 # if ReceiptId's are preserved, generating a sorted list from all .xd files should result in an identical .tsv file.
 xd_puzzles_header = COLSEP.join([
         "xdid",             # filename base ('nyt1994-10-02'), unique across all xd files
-        "ReceiptId",        # references 'receipts' table
-        "PublicationAbbr",  # 'nyt', unique across all publications to support xdid format
         "Date",             # '1994-10-02'
-        "Size",             # '15x15'; append 'R' for rebus
+        "Size",             # '15x15'; append 'R' for rebus, 'S' for shaded squares
         "Title",            #
         "Author",           #
         "Editor",           #
@@ -83,9 +81,6 @@ def xd_publications():
 
 def xd_puzzles():
     return parse_tsv(PUZZLES_TSV, "Puzzle")
-
-def xd_puzzles_append(tsv_rows):
-    codecs.open(PUZZLES_TSV, 'a', encoding='utf-8').write(tsv_rows)
 
 def xd_puzzle_sources():
     return parse_tsv(PUZZLE_SOURCES_TSV, "PuzzleSource")
@@ -133,13 +128,11 @@ def xd_recent_download(pubid, dt):
     return COLSEP.join([ pubid, dt ]) + EOL
 
 
-def xd_puzzles_row(xd, ReceiptId=""):
+def xd_puzzles_row(xd):
     fields = [
         xd.xdid(),                   # xdid
-        str(ReceiptId),              # ReceiptId
-        xd.publication_id(),         # "nyt"
         xd.get_header("Date"),
-        "%dx%d %s%s" % (xd.width(), xd.height(), xd.get_header("Rebus") and "R" or "", xd.get_header("Special") and "S" or ""),
+        "%dx%d%s%s" % (xd.width(), xd.height(), xd.get_header("Rebus") and "R" or "", xd.get_header("Special") and "S" or ""),
 
         xd.get_header("Title"),
         xd.get_header("Author") or xd.get_header("Creator"),
@@ -152,67 +145,11 @@ def xd_puzzles_row(xd, ReceiptId=""):
     return COLSEP.join(fields) + EOL
 
 
-def clean_copyright(puzrow):
-    import re
-    copyright = puzrow.Copyright
-    author = puzrow.Author.strip()
-    if author:
-        copyright = copyright.replace(author, "&lt;Author&gt;")
-
-    # and remove textual date
-    ret = re.sub(r"\s*(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER|JAN|FEB|MAR|APR|JUN|JUL|AUG|SEP|OCT|NOV|DEC)?\s*(\d{1,2})?,?\s*\d{4},?\s*", " &lt;Date&gt; ", copyright, flags=re.IGNORECASE)
-
-    ret = re.sub(r"\d{2}[/\-]?\d{2}[/\-]?\d{2,4}", " &lt;Date&gt; ", ret)
-    return ret
-
-
 class Publication:
     def __init__(self, pubid, row):
         self.publication_id = pubid
         self.row = row
 
-class PublicationStats:
-    def __init__(self, pubid):
-        self.pubid = pubid
-        self.copyrights = Counter()  # [copyright_text] -> number of xd
-        self.editors = Counter()  # [editor_name] -> number of xd
-        self.formats = Counter()  # ["15x15 RS"] -> number of xd
-        self.mindate = ""
-        self.maxdate = ""
-        self.num_xd = 0
-
-        self.puzzles_meta = []
-
-    def add(self, puzrow):
-        self.copyrights[clean_copyright(puzrow).strip()] += 1
-        self.editors[puzrow.Editor.strip()] += 1
-        self.formats[puzrow.Size] += 1
-        datestr = puzrow.Date
-        if datestr:
-            if not self.mindate:
-                self.mindate = datestr
-            else:
-                self.mindate = min(self.mindate, datestr)
-            if not self.maxdate:
-                self.maxdate = datestr
-            else:
-                self.maxdate = max(self.maxdate, datestr)
-        self.num_xd += 1
-
-        self.puzzles_meta.append(puzrow)
-
-    def meta(self):
-        return 'pubid num dates formats copyrights editors'.split()
-
-    def row(self):
-        return [
-                self.pubid,
-                mkhref(str(self.num_xd), self.pubid),
-                "%s &mdash; %s" % (self.mindate, self.maxdate),
-                html_select_options(self.formats),
-                html_select_options(self.copyrights),
-                html_select_options(self.editors),
-               ]
 
 def publications():
     if not g_pubs:

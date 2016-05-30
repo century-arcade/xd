@@ -38,7 +38,7 @@ HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'number', 'date',
 
 
 class xdfile:
-    def __init__(self, xd_contents=None, filename=None):
+    def __init__(self, xd_contents=None, filename=None, pubid=None):
         self.filename = filename
         self.headers = {}  # [key] -> value or list of values
         self.grid = []  # list of string rows
@@ -46,9 +46,9 @@ class xdfile:
         self.notes = ""
 
         if filename:
-            self._publication_id = parse_pubid_from_filename(filename)
+            self._publication_id = pubid or parse_pubid_from_filename(filename)
         else:
-            self._publication_id = None
+            self._publication_id = pubid
 
         if xd_contents:
             self.parse_xd(xd_contents)
@@ -67,7 +67,12 @@ class xdfile:
         return (self.width(), self.height())
 
     def xdid(self):
-        return self._publication_id + (self.get_header("Number") or self.date())
+        num = self.get_header("Number")
+        if num:
+            return '%s-%03d' % (self._publication_id, int(num))
+
+        assert self.date()
+        return '%s%s' % (self._publication_id, self.date())
 
     def date(self):
         dt = self.get_header("Date")

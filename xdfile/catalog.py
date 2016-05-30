@@ -41,50 +41,45 @@ def get_publication(xd):
 
 
 # all but extension
-def get_target_basename(xd, pubid):
-    # determine publisher/publication
-    try:
-        publ = get_publication(xd)
-    except Exception as e:
-        publ = None
-        if utils.get_args().debug:
-            raise
+def deduce_set_seqnum(xd):
+    # look to filename
+    base = utils.parse_pathname(xd.filename).base
 
-    year = ""
-
-    dt = xd.get_header("Date")  # string
+    # check for date
+    dt = utils.parse_date_from_filename(base)  # datetime object
     if dt:
-        year = xdfile.year_from_date(dt)
-
-    if xd.get_header("Number"):
-        seqnum = xd.get_header("Number")
+        xd.set_header("Date", dt)
     else:
-        seqnum = dt
+        # check for number in full path (eltana dir had number)
+        m = re.search(r'(\d+)', xd.filename)
+        if m:
+            xd.set_header("Number", int(m.group(1)))
 
-    if not seqnum:  # no number or date in metadata
-        # look to filename
-        base = utils.parse_pathname(xd.filename).base
 
-        # check for date
-        dt = utils.parse_date_from_filename(base)  # datetime object
-        if dt:
-            seqnum = dt
-        else:
-            # check for number in full path (eltana dir had number)
-            m = re.search(r'(\d+)', xd.filename)
-            if m:
-                seqnum = int(m.group(1))
-            else:
-                seqnum = None
+def get_shelf_path(xd, pubid):
+    if not pubid:
+        # determine publisher/publication
+        try:
+            publ = get_publication(xd)
+        except Exception as e:
+            publ = None
+            if utils.get_args().debug:
+                raise
 
-    if publ and not pubid:
-        pubid = publ.PublisherAbbr
+        if publ and not pubid:
+            pubid = publ.PublisherAbbr
 
-    if pubid and seqnum:
-        if year:
-            return "%s/%s/%s%s" % (pubid, year, pubid, seqnum)
-        return "%s/%s-%03d" % (pubid, pubid, seqnum)
+        if not pubid:
+            raise Exception("unknown pubid for '%s'" % xd.filename)
 
-    utils.log("pubid='%s', seqnum='%s'" % (pubid, seqnum))
-    raise Exception("unknown shelf for '%s'" % xd.filename)
+    num = xd.get_header("Number")
+    if num:
+        return "%s/%s-%03d" % (pubid, pubid, int(num))
+
+    dt = xd.get_header("Date")
+    if not dt:
+        raise Exception("neither Number nor Date for '%s'" % xd.filename)
+
+    year = xdfile.year_from_date(dt)
+    return "%s/%s/%s%s" % (pubid, year, pubid, dt)
 
