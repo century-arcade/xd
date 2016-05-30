@@ -25,9 +25,12 @@ from xdfile.ujson2xd import parse_ujson
 from xdfile.puz2xd import parse_puz
 from xdfile.xwordinfo2xd import parse_xwordinfo
 
+from xdfile import catalog
+
 import xdfile
 
 def main():
+    global args
     parsers = {
         '.xml': [parse_ccxml, parse_uxml],
         '.json': [parse_ujson],
@@ -41,11 +44,11 @@ def main():
 
     p = args_parser('convert crosswords to .xd format')
     p.add_argument('--copyright', default=None, help='Default value for unspecified Copyright headers')
+    p.add_argument('--source', default=None, help='Value for receipts.ExternalSource')
+    p.add_argument('--pubid', default=None, help='PublicationAbbr (pubid) to use')
     args = get_args(parser=p)
 
     outf = open_output()
-
-    new_receipts = ''
 
     nextReceiptId = get_last_receipt_id() + 1
 
@@ -62,21 +65,26 @@ def main():
                     continue
                 source_files[innerfn] = row
 
-        # enumerate all files in this source
-        for fn, contents, dt in find_files_with_time(input_source, strip_toplevel=False):
+        # enumerate all files in this source, reverse-sorted by time
+        #  (so most recent edition gets main slot in case of shelving
+        #  conflict)
+        for fn, contents, dt in sorted(find_files_with_time(input_source, strip_toplevel=False), reverse=True, key=lambda x: x[2]):
             if fn.endswith(".tsv") or fn.endswith(".log"):
+                continue
+
+            if not contents:  # 0-length files
                 continue
 
             innerfn = strip_toplevel(fn)
             if innerfn in source_files:
                 srcrow = source_files[innerfn]
-                DownloadTime = srcrow.DownloadTime
-                ExternalSource = srcrow.ExternalSource
+                CaptureTime = srcrow.DownloadTime
+                ExternalSource = args.source or srcrow.ExternalSource
                 SourceFilename = innerfn
             else:
                 log("%s not in sources.tsv" % innerfn)
-                DownloadTime = iso8601(dt)
-                ExternalSource = parse_pathname(input_source).filename
+                CaptureTime = iso8601(dt)
+                ExternalSource = args.source or parse_pathname(input_source).filename
                 SourceFilename = innerfn
 
             ReceiptId = nextReceiptId
@@ -84,6 +92,8 @@ def main():
 
             ReceivedTime = iso8601(time.time())
             InternalSource = parse_pathname(input_source).filename
+
+            xdid = ""  # unshelved at start
 
             # try each parser by extension
             ext = parse_pathname(fn).ext.lower()
@@ -112,7 +122,9 @@ def main():
                                 xd.set_header("Copyright", args.copyright)
 
                         xdstr = xd.to_unicode()
-                        outf.write_file(xd.filename, xdstr, dt)
+                        path = catalog.get_target_basename(xd, args.pubid)
+                        xdid = parse_pathname(path).base
+                        outf.write_file(path + ".xd", xdstr, dt)
                         debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
                         rejected = ""
                         break  # stop after first successful parsing
@@ -126,22 +138,19 @@ def main():
                     log("could not convert: %s" % rejected)
 
             this_receipt = xd_receipts_row(ReceiptId=ReceiptId,
-                    DownloadTime=DownloadTime,
+                    CaptureTime=CaptureTime,
                     ReceivedTime=ReceivedTime,
                     ExternalSource=ExternalSource,
                     InternalSource=InternalSource,
                     SourceFilename=SourceFilename,
-                    PubYear="")
+                    xdid=xdid)
 
             append_receipts(this_receipt)
 
-            new_receipts += this_receipt
       except Exception as e:
           log(str(e))
           if args.debug:
               raise
-
-    outf.write_file("receipts.tsv", xd_receipts_header + new_receipts)
 
 
 if __name__ == "__main__":

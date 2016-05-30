@@ -28,9 +28,7 @@ scripts/10-download-puzzles.py -o $WWWZIP --recents $RECENTS
 aws s3 cp $WWWZIP ${S3PRIV}/sources/
 
 # 2x: convert everything to .xd, shelve in the proper location, and commit
-scripts/20-convert2xd.py -o $TMP/converted.zip $EMAILZIP $WWWZIP
-
-scripts/25-shelve.py -o $GXD $TMP/converted.zip
+scripts/20-convert2xd.py -o $GXD $EMAILZIP $WWWZIP
 
 scripts/29-git-commit.sh $GXD
 

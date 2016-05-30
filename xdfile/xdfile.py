@@ -142,6 +142,9 @@ class xdfile:
             if clueid == posdir + str(n):
                 return clue
 
+    def append_clue_break(self):
+        self.clues.append((("", ""), "", ""))
+
     def cell(self, r, c):
         if r < 0 or c < 0 or r >= len(self.grid) or c >= len(self.grid[0]):
             return BLOCK_CHAR
@@ -227,13 +230,13 @@ class xdfile:
                 continue
             else:
                 if nblanklines >= 2:
-                    if section == 3:
-                        self.clues.append((("", ""), "", ""))
-
                     section += 1
                     subsection = 1
                     nblanklines = 0
                 elif nblanklines == 1:
+                    if section == 3:
+                        self.append_clue_break()
+
                     subsection += 1
                     nblanklines = 0
 
@@ -438,3 +441,6 @@ def clues():
 
     return g_all_clues
 
+
+def get_shelf(path):
+    return parse_pathname(path).base.split('-')[0]

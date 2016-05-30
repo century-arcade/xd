@@ -12,7 +12,8 @@ RECEIPTS_TSV = "gxd/receipts.tsv"
 PUBLICATIONS_TSV = "gxd/publications.tsv"
 PUZZLES_TSV = "priv/puzzles.tsv"
 PUZZLE_SOURCES_TSV = "gxd/sources.tsv"
-RECENTS_TSV = "gxd/recents.tsv"
+RECENT_DOWNLOADS_TSV = "gxd/recents.tsv"
+
 
 
 g_pubs = {}
@@ -29,12 +30,12 @@ xd_sources_header = COLSEP.join([
 # Each row from every 'sources' table appends an expanded version to the global 'receipts' table.
 xd_receipts_header = COLSEP.join([
         "ReceiptId",        # simple numeric row id (empty if Rejected)
-        "DownloadTime",     # '2016-04-11' [as above, copied from xd-downloads.tsv]
+        "CaptureTime",     # '2016-04-11' [as above, copied from xd-downloads.tsv]
         "ReceivedTime",     # '2016-04-14' [date of entry into receipts]
         "ExternalSource",   # URL or email [as above]
         "InternalSource",   # 'src/2016/xd-download-2016-04-11.zip'
         "SourceFilename",   # filename in the containing .zip [as above]
-        "PubYear"           # Shelf location (check log for error if empty)
+        "xdid"              # Shelf location (check log for error if empty)
     ]) + EOL
 
 
@@ -107,15 +108,15 @@ def get_last_receipt_id():
         
 
 # for each row in fnDownloadZip:*.tsv, assigns ReceiptId, ReceivedTime, and appends to receipts.tsv.  
-def xd_receipts_row(**nt):
+def xd_receipts_row(ReceiptId="", CaptureTime="", ReceivedTime="", ExternalSource="", InternalSource="", SourceFilename="", xdid=""):
     return COLSEP.join([
-        str(nt.get("ReceiptId", "")),
-        nt.get("DownloadTime", ""),
-        nt.get("ReceivedTime", ""),
-        nt.get("ExternalSource", ""),
-        nt.get("InternalSource", ""),
-        nt.get("SourceFilename", ""),
-        nt.get("PubYear", "")
+        str(ReceiptId),
+        CaptureTime,
+        ReceivedTime,
+        ExternalSource,
+        InternalSource,
+        SourceFilename,
+        xdid
     ]) + EOL
 
 

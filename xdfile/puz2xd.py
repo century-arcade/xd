@@ -41,7 +41,7 @@ def parse_puz(contents, filename):
         puzzle = crossword.from_puz(puzobj)
     except puz.PuzzleFormatError as e:
         emsg = e.message
-        if "<html>" in contents.lower():
+        if "<html>" in contents.decode('utf-8').lower():
             emsg += " (looks like html)"
         raise xdfile.PuzzleParseError(emsg)
 
@@ -126,6 +126,8 @@ def parse_puz(contents, filename):
             if cluenum not in answers:
                 raise xdfile.IncompletePuzzleParse(xd, "Clue number doesn't match grid: " + cluenum)
             xd.clues.append((("A", number), decode(clue), answers.get(cluenum, "")))
+
+        xd.append_clue_break()
 
         for number, clue in puzzle.clues.down():
             cluenum = "D" + str(number)

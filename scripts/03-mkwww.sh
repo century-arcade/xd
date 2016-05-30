@@ -6,15 +6,15 @@
 
 #source scripts/config-vars.sh
 
-CORPUS="-c ${CORPUSDIR}"
+CORPUS="-c $GXD"
 
 mkdir -p wwwroot/pub/gxd
 
 # produce an analysis for each puzzle in odd.tsv
-scripts/60-mkwww-odd.py ${CORPUS} -o wwwroot/ gxd/odd.tsv
+scripts/60-mkwww-odd.py ${CORPUS} -o wwwroot/ $GXD/odd.tsv
 
 # 
-cp ${CORPUSDIR}/*.tsv wwwroot/pub/gxd/
+cp $GXD/*.tsv wwwroot/pub/gxd/
 
 #scripts/60-mkwww-pub-index.py ${CORPUS} -o wwwroot/pub/
 
@@ -26,4 +26,6 @@ cp ${CORPUSDIR}/*.tsv wwwroot/pub/gxd/
 #scripts/65-mkwww-index.py -o www/${BASE} ${BASE}-similar.tsv
 #scripts/67-mkwww-clues.py -o wwwroot/
 #scripts/68-mkwww-words.py -o wwwroot/
+
+scripts/71-mkwww-redirects.py -o wwwroot/ $GXD/redirects.tsv
 

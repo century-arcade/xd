@@ -40,8 +40,9 @@ html_footer = """
 </html>
 """
 
-html_redirect = """<html><head><meta http-equiv="refresh" content="0; URL='{url}'" />
-<script>window.location.replace("{url}");</script></head><body>Redirecting to <a href="{url}">{url}</a></body></html>"""
+def redirect_page(url):
+    return """<html><head><meta http-equiv="refresh" content="0; URL='{url}'" />
+<script>window.location.replace("{url}");</script></head><body>Redirecting to <a href="{url}">{url}</a></body></html>""".format(url=url)
 
 
 def mkhref(text, link, title=""):
@@ -140,8 +141,12 @@ def html_table(rows, colnames, rowclass="row"):
     out += table_row(colnames, colnames, tag='th')
 
     for r in rows:
-        out += table_row(r, colnames, rowclass)
+        out += table_row(r, colnames, rowclass=rowclass)
 
     out += '</table>'  # end table
     return out
+
+
+def tsv_to_table(rows):
+    return html_table(rows, rows[0]._fields)
 

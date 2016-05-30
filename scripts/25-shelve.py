@@ -11,50 +11,11 @@
 
 import string
 import re
-import datetime
 
 from xdfile.metadatabase import xd_publications, xd_puzzles_row, xd_puzzles_header, xd_puzzles_append, xd_receipts
 from xdfile.utils import get_args, find_files, parse_pathname, log, debug, open_output, strip_toplevel, parse_tsv_data, parse_pubid_from_filename
+from xdfile import catalog, utils
 from xdfile import xdfile, HEADER_ORDER
-
-
-badchars = """ "'\\"""
-
-
-def construct_date(y, m, d):
-    thisyear = datetime.datetime.today().year
-    year, mon, day = int(y), int(m), int(d)
-
-    if year > 1900 and year <= thisyear:
-        pass
-    elif year < 100:
-        if year >= 0 and year <= thisyear - 2000:
-            year += 2000
-        else:
-            year += 1900
-    else:
-        debug("year outside 1900-%s: '%s'" % (thisyear, y))
-        return None
-
-    if mon < 1 or mon > 12:
-        debug("bad month '%s'" % m)
-        return None
-
-    if day < 1 or day > 31:
-        debug("bad day %s" % d)
-        return None
-
-    return datetime.date(year, mon, day)
-
-
-# from original filename
-def parse_date_from_filename(fn):
-    base = parse_pathname(fn).base
-    m = re.search("(\d{2,4})-?(\d{2})-?(\d{2})", base)
-    if m:
-        g1, g2, g3 = m.groups()
-        # try YYMMDD first, then MMDDYY
-        return construct_date(g1, g2, g3) or construct_date(g3, g1, g2)
 
 
 def clean_headers(xd):
@@ -124,7 +85,7 @@ def clean_headers(xd):
 
     if not xd.get_header("Date"):
         try:
-            d = parse_date_from_filename(xd.filename)
+            d = utils.parse_date_from_filename(xd.filename)
             if d:
                 xd.set_header("Date", d.strftime("%Y-%m-%d"))
         except Exception as e:
@@ -137,84 +98,6 @@ def clean_headers(xd):
         else:
             if hdr.lower() not in HEADER_ORDER:
                 log("%s: '%s' header not known: '%s'" % (xd.filename, hdr, xd.headers[hdr]))
-
-
-def clean_filename(fn):
-    basefn = parse_pathname(fn).base
-    for ch in badchars:
-        basefn = basefn.replace(ch, '_')
-    return basefn
-
-
-def get_publication(xd):
-    matching_publications = set()
-
-    all_headers = "|".join(hdr for hdr in list(xd.headers.values())).lower()
-
-    # source filename/metadata must be the priority
-    abbr = parse_pubid_from_filename(xd.filename)
-
-    all_pubs = xd_publications()
-
-    for publ in all_pubs.values():
-        if publ.PublicationAbbr == abbr.lower():
-            matching_publications.add((1, publ))
-
-        if publ.PublicationName and publ.PublicationName.lower() in all_headers:
-            matching_publications.add((2, publ))
-
-        if publ.PublisherName and publ.PublisherName.lower() in all_headers:
-            matching_publications.add((3, publ))
-
-    if not matching_publications:
-        return None
-    elif len(matching_publications) == 1:
-        return matching_publications.pop()[1]
-
-    # otherwise, filter out 'self' publications
-    matching_pubs = set([(pri, p) for pri, p in matching_publications if 'self' not in p.PublisherAbbr])
-
-    if not matching_pubs:
-        matching_pubs = matching_publications  # right back where we started
-    elif len(matching_pubs) == 1:
-        return matching_pubs.pop()[1]
-
-    debug("%s: pubs=%s; headers=%s" % (xd, " ".join(p.PublicationAbbr for pri, p in matching_pubs), all_headers))
-
-    return sorted(matching_pubs)[0][1]
-
-
-# all but extension
-def get_target_basename(xd):
-    # determine publisher/publication
-    try:
-        publ = get_publication(xd)
-    except Exception as e:
-        publ = None
-        if args.debug:
-            raise
-
-    # determine date (or at least year if possible)
-    seqnum = xd.get_header("Number") or xd.get_header("Date")
-    if seqnum:
-        year = seqnum.split("-")[0]
-    else:
-        year = ""
-        m = re.search(r'(\d+)', xd.filename)
-        if m:
-            year = m.group(1)
-        else:
-            year = None
-
-    if publ and seqnum:
-        if year:
-            publabbr = "%s/%s/%s" % (publ.PublisherAbbr, year, publ.PublicationAbbr)
-        elif publ:
-            publabbr = "%s/%s" % (publ.PublisherAbbr, publ.PublicationAbbr)
-    else:
-        return "misc/%s" % clean_filename(xd.filename)
-
-    return "%s%s" % (publabbr, seqnum)
 
 
 def main():
@@ -258,7 +141,7 @@ def main():
             puzzles_tsv += xd_puzzles_row(xd, rcptid)
 
             try:
-                target_fn = get_target_basename(xd)
+                target_fn = catalog.get_target_basename(xd)
                 real_target_fn = target_fn + ".xd"
 
                 # append a, b, c, etc until finding one that hasn't been taken already

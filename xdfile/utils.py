@@ -7,6 +7,7 @@ import sys
 import zipfile
 import io
 import csv
+import string
 import codecs
 import datetime
 import time
@@ -201,6 +202,52 @@ def parse_pubid_from_filename(fn):
     return m.group(1).lower()
 
 
+def construct_date(y, m, d):
+    thisyear = datetime.datetime.today().year
+    year, mon, day = int(y), int(m), int(d)
+
+    if year > 1900 and year <= thisyear:
+        pass
+    elif year < 100:
+        if year >= 0 and year <= thisyear - 2000:
+            year += 2000
+        else:
+            year += 1900
+    else:
+        debug("year outside 1900-%s: '%s'" % (thisyear, y))
+        return None
+
+    if mon < 1 or mon > 12:
+        debug("bad month '%s'" % m)
+        return None
+
+    if day < 1 or day > 31:
+        debug("bad day %s" % d)
+        return None
+
+    return datetime.date(year, mon, day)
+
+
+# from original filename
+def parse_date_from_filename(fn):
+    base = parse_pathname(fn).base
+    m = re.search("(\d{2,4})-?(\d{2})-?(\d{2})", base)
+    if m:
+        g1, g2, g3 = m.groups()
+        # try YYMMDD first, then MMDDYY
+        return construct_date(g1, g2, g3) or construct_date(g3, g1, g2)
+
+
+def clean_filename(fn):
+    badchars = """ "'\\"""
+
+    basefn = parse_pathname(fn).base
+    for ch in badchars:
+        basefn = basefn.replace(ch, '_')
+
+    return basefn
+
+
 # newext always includes the '.' so it can be removed entirely with newext=""
 def replace_ext(fn, newext):
     base, ext = os.path.splitext(fn)
@@ -282,6 +329,20 @@ def strip_toplevel(fn):
     else:
         return fn
 
+
+def disambiguate_fn(fn, all_filenames):
+    p = parse_pathname(fn)
+    
+    # append a, b, c, etc until finding one that hasn't been taken already
+    i = 0
+    while fn in all_filenames:
+        log('%s already in use, disambiguating' % fn)
+        fn = os.path.join(p.path, p.base + string.ascii_lowercase[i] + p.ext)
+        i += 1
+
+    return fn
+
+
 class OutputDirectory:
     def __init__(self, toplevel_dir):
         self.toplevel = toplevel_dir
@@ -293,7 +354,13 @@ class OutputDirectory:
 
     def open_file(self, fn, mode='w'):
         if fn in self.files:
-            return self.files[fn]
+            if mode == 'a':
+                # just keep appending to same file
+                return self.files[fn]
+
+            if mode == 'w':
+                # make a new file with a disambiguated filename
+                fn = disambiguate_fn(fn, self.files)
 
         fullfn = os.path.join(self.toplevel, fn)  #  prepend our toplevel
 
@@ -350,4 +417,3 @@ def open_output(fnout=None):
         outf = OutputFile(codecs.open(fnout, 'w', encoding="utf-8"))
 
     return outf
-
