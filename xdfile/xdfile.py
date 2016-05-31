@@ -24,6 +24,10 @@ class PuzzleParseError(Error):
     pass
 
 
+class NoShelfError(Error):
+    pass
+
+
 REBUS_SEP = " "
 
 
@@ -167,6 +171,10 @@ class xdfile:
                 r[cellchar] = replstr
 
         return r
+
+    def iterclues(self):
+        for pos, clue, answer in self.clues:
+            yield "%s%s" % pos, clue, answer
 
     def iteranswers(self):
 

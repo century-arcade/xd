@@ -7,7 +7,7 @@ import re
 
 from lxml import html
 
-from . import xdfile
+import xdfile
 
 SPLIT_REBUS_TITLES = "CRYPTOCROSSWORD TIC-TAC-TOE".split()
 
@@ -23,6 +23,8 @@ def stringify_children(node):
 
 # content is unicode()
 def parse_xwordinfo(content, filename):
+    content = content.decode('utf-8')
+
     REBUS_LONG_HANDS = {'NINE': '9',
                         'EIGHT': '8',
                         'SEVEN': '7',

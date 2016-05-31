@@ -3,6 +3,7 @@ import re
 
 from xdfile import utils
 from xdfile import metadatabase as metadb
+import xdfile
 
 def get_publication(xd):
     matching_publications = set()
@@ -70,7 +71,7 @@ def get_shelf_path(xd, pubid):
             pubid = publ.PublisherAbbr
 
         if not pubid:
-            raise Exception("unknown pubid for '%s'" % xd.filename)
+            raise xdfile.NoShelfError("unknown pubid for '%s'" % xd.filename)
 
     num = xd.get_header("Number")
     if num:
@@ -78,7 +79,7 @@ def get_shelf_path(xd, pubid):
 
     dt = xd.get_header("Date")
     if not dt:
-        raise Exception("neither Number nor Date for '%s'" % xd.filename)
+        raise xdfile.NoShelfError("neither Number nor Date for '%s'" % xd.filename)
 
     year = xdfile.year_from_date(dt)
     return "%s/%s/%s%s" % (pubid, year, pubid, dt)

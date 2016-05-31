@@ -10,8 +10,8 @@ CORPUS="-c $GXD"
 
 mkdir -p wwwroot/pub/gxd
 
-# produce an analysis for each puzzle in odd.tsv
-scripts/60-mkwww-odd.py ${CORPUS} -o wwwroot/ $GXD/odd.tsv
+## produce an analysis for each puzzle in odd.tsv
+#scripts/60-mkwww-odd.py ${CORPUS} -o wwwroot/ $GXD/odd.tsv
 
 # 
 cp $GXD/*.tsv wwwroot/pub/gxd/

@@ -98,6 +98,8 @@ def main():
     args = get_args("annotate puzzle clues with earliest date used in the corpus")
     outf = open_output()
 
+    similar = parse_tsv("similar.tsv", "Similar") # by xdid
+
     for fn, contents in find_files(*args.inputs, ext=".xd"):
         mainxd = xdfile(contents.decode('utf-8'), fn)
 
@@ -113,7 +115,7 @@ def main():
         nstaleanswers = 0
         ntotalclues = 0
 
-        for pos, mainclue, mainanswer in mainxd.iterclues():
+        for pos, mainclue, mainanswer in mainxd.clues:
             progress(mainanswer)
 
             poss_answers = []
@@ -121,7 +123,7 @@ def main():
 
             mainca = ClueAnswer(mainpubid, maindate, mainanswer, mainclue)
 
-            clues_html += '<tr><td class="pos">%s.</td>' % pos
+            clues_html += '<tr><td class="pos">%s%s.</td>' % pos
 
             for clueans in find_clue_variants(mainclue):
                 if clueans.answer != mainanswer:
@@ -203,7 +205,8 @@ def main():
         main_html += xd_to_html(mainxd)
 
         # dump miniature grids with highlights of similarities
-        for pct, xd1, xd2 in similar_grids:
+        r = similar[mainxd.xdid()]
+        for xdid in r.similar_grids.split():
             main_html += '<div class="similar-grid">' + xd_to_html(xd2, mainxd)
             main_html += '</div>'
             main_html += '</div>'
@@ -226,7 +229,7 @@ def main():
             ntotalclues
             ])
 
-        outf.write_html("pub/%s/index.html" % mainxd.xdid(), main_html, title="xd analysis of %s" % mainxd.xdid())
+        outf.write_html("pub/%s/%s/%s/index.html" % (mainxd.publication_id(), mainxd.year(), mainxd.xdid()), main_html, title="xd analysis of %s" % mainxd.xdid())
 
 
 main()

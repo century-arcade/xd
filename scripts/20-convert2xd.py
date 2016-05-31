@@ -128,6 +128,9 @@ def main():
                         debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
                         rejected = ""
                         break  # stop after first successful parsing
+                    except xdfile.NoShelfError as e:
+                        debug("could not shelve: %s" % str(e))
+                        rejected += "[shelver] %s  " % str(e)
                     except Exception as e:
                         debug("%s could not convert: %s" % (parsefunc.__name__, str(e)))
                         rejected += "[%s] %s  " % (parsefunc.__name__, str(e))

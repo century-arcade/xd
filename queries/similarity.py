@@ -80,11 +80,15 @@ SIMPLE_CHARS = string.ascii_letters + string.digits + '_'
 
 # boil a clue down to its letters and numbers only
 def boil(s):
-    if "Across" in s or "Down" in s or s == "No Clue":  # skip self-referential clues
-        return ""
+    if re.search('\d+[ \-](across|down)', s, re.IGNORECASE):
+        return None
 
     boiled = "".join(c for c in s if c in SIMPLE_CHARS).lower()
     boiled = re.sub('[_\-]+','_', boiled)
+
+    if boiled == "noclue":
+        return None
+
     return boiled
 
 def load_clues():
