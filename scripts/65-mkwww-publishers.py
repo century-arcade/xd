@@ -45,7 +45,7 @@ class PublicationStats:
     def row(self):
         return [
                 self.pubid,
-                mkhref(str(self.num_xd), self.pubid),
+                html.mkhref(str(self.num_xd), self.pubid),
                 "%s &mdash; %s" % (self.mindate, self.maxdate),
                 html_select_options(self.formats),
                 html_select_options(self.copyrights),
@@ -82,7 +82,7 @@ def main():
     # collate puzzles
     for tsvfn, contents in utils.find_files(*args.inputs, ext=".tsv"):
         for puzrow in utils.parse_tsv(tsvfn, "PuzzleRow").values():
-            pubid = utils.parse_pubid_from_filename(puzrow.xdid)
+            pubid = utils.parse_pubid(puzrow.xdid)
             year = xdfile.year_from_date(puzrow.Date)
             k = (pubid, year or "0000")
             if k not in all_pubs:
@@ -101,7 +101,8 @@ def main():
    
         rows = []
         for r in pub.puzzles_meta:
-            row = [ r.xdid,
+            row = [ 
+                html.mkhref(r.xdid, '/pub/' + r.xdid),
                 r.Date,
                 r.Size,
                 r.Title,
@@ -129,10 +130,10 @@ def main():
 #            avg(reused_answers),
             ])
 
-    pub_header = "pubid year num_puzzles".split()            
+    pub_header = "year num_puzzles".split()            
 
     for pubid, rows in list(pubyear_rows.items()):
-        pub_h = html.html_table(sorted(rows), pub_header, "onepub")
+        pub_h = html.html_table(sorted((html.mkhref(str(y), '/pub/%s%s' % (pubid, y)), n) for pubid, y, n in rows), pub_header, "onepub")
         outf.write_html("pub/%s/index.html" % pubid, pub_h, title="%s" % pubid)
 
     progress()

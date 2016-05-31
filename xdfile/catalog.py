@@ -11,7 +11,7 @@ def get_publication(xd):
     all_headers = "|".join(hdr for hdr in list(xd.headers.values())).lower()
 
     # source filename/metadata must be the priority
-    abbr = utils.parse_pubid_from_filename(xd.filename)
+    abbr = utils.parse_pubid(xd.filename)
 
     all_pubs = metadb.xd_publications()
 

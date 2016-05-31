@@ -23,8 +23,9 @@ def split_year(y):
 
     return "%s<br/>%s" % (msy, lsy)
 
-def pubyear_html():
-    pubyears = xdfile.utils.parse_tsv("pub/pubyears.tsv", "pubyear")
+def pubyear_html(pubyears=None):
+    if not pubyears:
+        pubyears = xdfile.utils.parse_tsv_data(open("pub/pubyears.tsv").read(), "pubyear")
 
     pubs = {}
     for pubid, year, num in pubyears:
@@ -32,8 +33,8 @@ def pubyear_html():
             pubs[pubid] = Counter()
         try:
             pubs[pubid][int(year)] += int(num)
-        except:
-            pass
+        except Exception as e:
+            xdfile.utils.log(str(e))
 
     allyears = "1910s 1920s 1930s".split() + [ str(y) for y in range(1940, 2017) ]
 
@@ -51,8 +52,8 @@ def pubyear_html():
     xdtotal = 0
     for pubid, years in sorted(pubs.items(), key=key_pubyears):
         pubtotal = sum(years.values())
-        if pubtotal < 10:
-            continue
+#        if pubtotal < 10:
+#            continue
         xdtotal += pubtotal
         
         pub = publications().get(pubid)
@@ -63,7 +64,7 @@ def pubyear_html():
             pubname, start, end = "", "", ""
 
         ret += '<tr>'
-        ret += '<td class="pub">%s</td>' % (mkcell(pubname or pubid, "/" + pubid, ))
+        ret += '<td class="pub">%s</td>' % (mkcell(pubname or pubid, "/pub/" + pubid, ))
         for y in allyears:
             classes = []
 
@@ -93,7 +94,7 @@ def pubyear_html():
             else:
                 classes.append("block")
 
-            ret += '<td class="%s">%s</td>' % (" ".join(classes), mkcell(n or "", href="%s/%s" % (pubid, y)))
+            ret += '<td class="%s">%s</td>' % (" ".join(classes), mkcell(n or "", href="/pub/%s%s" % (pubid, y)))
         ret += '<td>%s</td>' % pubtotal
         ret += '</tr>'
 

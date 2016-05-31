@@ -3,7 +3,7 @@
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 from xdfile.html import th, td, mkhref, html_select_options
-from xdfile import corpus, clues
+from xdfile import corpus, clues, pubyear
 
 from collections import Counter
 import random
@@ -25,7 +25,7 @@ def mkwww_cluepage(bc):
     clue_html += '<hr/>'
     clue_html += '<div>Answers for this clue: ' + html_select_options([ ca.answer for ca in bcs ]) + '</div>'
     clue_html += '<hr/>'
-    clue_html += pubyear_table(ca.pubyear for ca in bcs)
+    clue_html += pubyear.pubyear_html([ (ca.pubyear()[0], ca.pubyear()[1], 1) for ca in bcs ])
     
     return clue_html 
 
@@ -71,8 +71,8 @@ def main():
     most_ambig += '</table>'
 
     for bc in cluepages_to_make:
-        outf.write_html('clue/%s/index.html' % bc, mkwww_cluepage(bc), title=bc)
+        outf.write_html('pub/clue/%s/index.html' % bc, mkwww_cluepage(bc), title=bc)
 
-    outf.write_html('clue/index.html', biggest_clues + most_ambig, title="Clues")
+    outf.write_html('pub/clue/index.html', biggest_clues + most_ambig, title="Clues")
         
 main()

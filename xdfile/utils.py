@@ -197,7 +197,7 @@ def parse_pathname(path):
     return nt(path=path, base=base, ext=ext, filename=fn)
 
 
-def parse_pubid_from_filename(fn):
+def parse_pubid(fn):
     m = re.search("(^[A-Za-z]*)", parse_pathname(fn).base)
     return m.group(1).lower()
 
@@ -271,6 +271,7 @@ def parse_tsv_data(contents, objname=None):
             r = row
 
         yield r
+
 
 def parse_tsv(fn, objname=None):
     fp = codecs.open(fn, encoding='utf-8')

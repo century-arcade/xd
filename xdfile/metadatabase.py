@@ -7,6 +7,8 @@ from .html import mkhref, html_select_options
 from .utils import COLSEP, EOL, parse_tsv, parse_pathname
 from .xdfile import corpus
 
+from xdfile import utils
+
 
 RECEIPTS_TSV = "gxd/receipts.tsv"
 PUBLICATIONS_TSV = "gxd/publications.tsv"
@@ -147,13 +149,13 @@ def xd_puzzles_row(xd):
 
 class Publication:
     def __init__(self, pubid, row):
-        self.publication_id = pubid
+        self.pubid = pubid
         self.row = row
 
 
 def publications():
     if not g_pubs:
-        for pubrow in xd_publications():
+        for pubrow in xd_publications().values():
             pubid = pubrow.PublicationAbbr
             p = Publication(pubid, pubrow)
             g_pubs[pubid] = p

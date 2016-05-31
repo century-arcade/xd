@@ -2,9 +2,8 @@
 
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
-from xdfile.html import th, td, mkhref, html_select_options, pubyear_table
-from xdfile.metadatabase import xd_puzzles_meta
-from xdfile import corpus, clues
+from xdfile.html import th, td, mkhref, html_select_options
+from xdfile import corpus, clues, pubyear, metadatabase, utils
 
 from collections import Counter
 import random
@@ -14,7 +13,7 @@ g_puzzles_md = {}
 
 def xd_metadata_row(xdid):
     if not g_puzzles_md:
-        for r in xd_puzzles_meta():
+        for r in metadatabase.xd_puzzles().values():
             g_puzzles_md[r.xdid] = r
     return g_puzzles_md[xdid]
 
@@ -23,7 +22,7 @@ def mkwww_wordpage(answer):
     uses = all_uses[answer]
 
     h = ''
-    h += pubyear_table([ ca.pubyear() for ca in uses ])
+    h += pubyear.pubyear_html([ (ca.pubyear()[0], ca.pubyear()[1], 1) for ca in uses ])
     h += '<hr/>'
     h += '<div>Clued as: ' + html_select_options([ ca.clue for ca in uses ]) + '</div>'
     h += '<h2>%d uses</h2>' % len(uses)
@@ -35,6 +34,8 @@ def mkwww_wordpage(answer):
             h += td(md.xdid, ca.clue, md.Author, md.Copyright)
         except Exception as e:
             h += td(ca.xdid(), ca.clue, str(e))
+            if utils.get_args().debug:
+                raise
     h += '</table>'
 
 #    h += '<hr/>'
@@ -67,15 +68,15 @@ def main():
 
     for answer, uses in sorted(all_uses.items(), reverse=True, key=lambda x: len(x[1]))[:100]:
         wordpages_to_make.add(answer)
-        h += td(mkhref(answer.upper(), answer.lower()),
+        h += td(mkhref(answer.upper(), answer.upper()),
                 len(uses),
                 html_select_options(uses, strmaker=lambda ca: ca.clue))
 
     h += '</table>'
 
     for word in wordpages_to_make:
-        outf.write_html('word/%s/index.html' % word.lower(), mkwww_wordpage(word), title=word)
+        outf.write_html('pub/word/%s/index.html' % word.upper(), mkwww_wordpage(word), title=word)
 
-    outf.write_html('word/index.html', h, title="Words")
+    outf.write_html('pub/word/index.html', h, title="Words")
         
 main()

@@ -3,7 +3,7 @@
 
 import string
 
-from .utils import parse_pathname, parse_tsv, progress, parse_pubid_from_filename
+from .utils import parse_pathname, parse_tsv, progress, parse_pubid
 
 g_corpus = []  # list of xdfile
 g_all_clues = []  # list of ClueAnswer
@@ -50,7 +50,7 @@ class xdfile:
         self.notes = ""
 
         if filename:
-            self._publication_id = pubid or parse_pubid_from_filename(filename)
+            self._publication_id = pubid or parse_pubid(filename)
         else:
             self._publication_id = pubid
 
@@ -446,7 +446,7 @@ def clues():
             progress(xd.filename)
             pubid = xd.publication_id()
             dt = xd.date() or ""
-            for pos, clue, answer in xd.clues:
+            for pos, clue, answer in xd.iterclues():
                 ca = ClueAnswer(pubid, dt, answer, clue)
                 g_all_clues.append(ca)
 

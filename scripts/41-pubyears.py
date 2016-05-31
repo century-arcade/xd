@@ -10,7 +10,7 @@ def main():
     args = utils.get_args('generate pub-years data')
 
 #    pubyears = [ (xd.publication_id(), xd.year()) for xd in xdfile.corpus() ]
-    pubyears = [ (r.PublicationAbbr, xdfile.year_from_date(r.Date)) for r in metadatabase.xd_puzzles() ]
+    pubyears = [ (utils.parse_pubid(r.xdid), xdfile.year_from_date(r.Date)) for r in metadatabase.xd_puzzles().values() ]
 
     pubs = {}
     for pubid, year in pubyears:

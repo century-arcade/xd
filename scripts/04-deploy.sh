@@ -2,7 +2,7 @@
 
 # source scripts/config-vars.sh
 
-scripts/95-mkwww-logs.py -o ${OUTWWWDIR}/${NOW}/log.html ${OUTBASEDIR}
+scripts/95-mkwww-logs.py -o $WWW/$NOW/log.html $TMP
 
-aws s3 sync ${OUTWWWDIR} ${S3WWW}/ --acl public-read
+aws s3 sync $WWW ${S3WWW}/ --acl public-read
 

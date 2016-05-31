@@ -11,3 +11,4 @@ outf = utils.open_output()
 for tsvfn, contents in utils.find_files(*args.inputs):
     for row in utils.parse_tsv_data(contents.decode('utf-8'), "Redirect"):
         outf.write_file(row.SourcePath, html.redirect_page(row.DestURL))
+
