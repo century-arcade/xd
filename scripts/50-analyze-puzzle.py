@@ -12,6 +12,7 @@ from xdfile.html import th, html_select_options
 from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 import time
 import cgi
+from xdfile import utils, metadatabase
 
 def xd_to_html(xd, compare_with=None):
     r = '<div class="fullgrid">'
@@ -24,7 +25,7 @@ def xd_to_html(xd, compare_with=None):
 
         similarity_pct = " (%d%%)" % real_pct
 
-    r += '<div class="xdid"><a href="/pub/%s/%s/%s">%s %s</a></div>' % (xd.publication_id(), xd.year(), xd.xdid(), xd.xdid(), similarity_pct)
+    r += '<div class="xdid"><a href="/pub/%s">%s %s</a></div>' % (xd.xdid(), xd.xdid(), similarity_pct)
     r += headers_to_html(xd)
     r += grid_to_html(xd, compare_with)
 
@@ -34,8 +35,12 @@ def xd_to_html(xd, compare_with=None):
 def headers_to_html(xd):
     # headers
     r = '<div class="xdheaders"><ul class="xdheaders">'
-    for k, v in xd.iterheaders():
-        r += '<li class="%s">%s: <b>%s</b></li>' % (k, k, v)
+    for k in "Title Author Editor Copyright".split():
+        v = xd.get_header(k)
+        if v:
+            r += '<li class="%s">%s: <b>%s</b></li>' % (k, k, v)
+        else:
+            r += '<li></li>'
     r += '</ul></div>'
     return r
 
@@ -95,15 +100,25 @@ def esc(s):
     return cgi.escape(s)
 
 def main():
-    args = get_args("annotate puzzle clues with earliest date used in the corpus")
+    p = utils.args_parser(desc="annotate puzzle clues with earliest date used in the corpus")
+    p.add_argument('-a', '--all', default=False, help='analyze all puzzles, even those already in similar.tsv')
+    args = get_args(parser=p)
+
     outf = open_output()
 
+    prev_similar = parse_tsv('gxd/similar.tsv', "similar")
     for fn, contents in find_files(*args.inputs, ext=".xd"):
         mainxd = xdfile(contents.decode('utf-8'), fn)
 
-        similar_grids = sorted(find_similar_to(mainxd, corpus()), key=lambda x: x[0], reverse=True)
+        if mainxd.xdid() in prev_similar:
+            continue
 
-        log("finding similar clues")
+        similar_grids = sorted(find_similar_to(mainxd, corpus(), min_pct=0.20), key=lambda x: x[0], reverse=True)
+
+        earlier_similar = [ (pct, xd1, xd2) for pct, xd1, xd2 in similar_grids if xd1.date() > xd2.date() ]
+        if earlier_similar:
+            log("similar: " + " ".join(("%s:%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in earlier_similar))
+
         clues_html = '<table class="clues">' + th('grid', 'original clue and previous uses', 'answers for this clue', 'other clues for this answer')
 
         mainpubid = mainxd.publication_id()
@@ -195,18 +210,21 @@ def main():
                 nstaleclues += 1
             ntotalclues += 1
 
-            
         clues_html += '</table>'
 
         # similar grids
         main_html = '<div class="grids">'
         main_html += xd_to_html(mainxd)
 
+        all_pct = 0
+        # XXX: emit entire list sorted on .date()
+
         # dump miniature grids with highlights of similarities
-        for pct, xd1, xd2 in similar_grids:
+        for pct, xd1, xd2 in sorted(similar_grids, key=lambda x: x[2].date()):
             main_html += '<div class="similar-grid">' + xd_to_html(xd2, mainxd)
             main_html += '</div>'
             main_html += '</div>'
+            all_pct += pct
 
         main_html += '</div>'
 
@@ -217,16 +235,18 @@ def main():
         main_html += '<ul>' + clues_html + '</ul>'
         main_html += '</div>'
 
+        if args.all or similar_grids:
+            outf.write_html("pub/%s/index.html" % mainxd.xdid(), main_html, title="xd analysis of %s" % mainxd.xdid())
+
         # summary row
-        outf.write_row('similar.tsv', 'xdid similar_grid_pct reused_clues reused_answers total_clues', [
+        metadatabase.append_row('gxd/similar.tsv', 'xdid similar_grid_pct reused_clues reused_answers total_clues matches', [
             mainxd.xdid(),
-            int(100*sum(pct/100.0 for pct, xd1, xd2 in similar_grids)),
+            int(100*sum(pct/100.0 for pct, xd1, xd2 in earlier_similar)),
             nstaleclues,
             nstaleanswers,
-            ntotalclues
+            ntotalclues,
+            " ".join(("%s=%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in earlier_similar)
             ])
-
-        outf.write_html("pub/%s/index.html" % mainxd.xdid(), main_html, title="xd analysis of %s" % mainxd.xdid())
 
 
 main()

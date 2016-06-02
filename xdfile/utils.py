@@ -274,8 +274,12 @@ def parse_tsv_data(contents, objname=None):
 
 
 def parse_tsv(fn, objname=None):
-    fp = codecs.open(fn, encoding='utf-8')
-    return dict((r[0], r) for r in parse_tsv_data(fp.read(), objname))
+    try:
+        fp = codecs.open(fn, encoding='utf-8')
+        return dict((r[0], r) for r in parse_tsv_data(fp.read(), objname))
+    except Exception as e:
+        log(str(e))
+        return {}
 
 
 class OutputZipFile(zipfile.ZipFile):

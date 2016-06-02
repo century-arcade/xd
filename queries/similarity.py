@@ -49,7 +49,7 @@ def grid_similarity(a, b):
     astr = a.to_unicode()
     bstr = b.to_unicode()
     if astr == bstr:
-        return 1
+        return 100
 
     # add in a little bit of just whole string comparison to catch grid dissimilarities
     #total_diffs = sum(map(str.__eq__, astr, bstr)) / float(max(len(astr), len(bstr)))
@@ -73,7 +73,11 @@ def find_similar_to(needle, haystack, min_pct=0.3):
             similarity = 0
 
         if similarity >= min_similarity:
-            yield grid_similarity(needle, xd), needle, xd
+            if needle.xdid() != xd.xdid(): # skip if same puzzle
+                # recompute with slower metric
+                similarity = grid_similarity(needle, xd)
+                if similarity >= 25:
+                    yield similarity, needle, xd
 
 
 SIMPLE_CHARS = string.ascii_letters + string.digits + '_'

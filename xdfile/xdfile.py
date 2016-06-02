@@ -174,7 +174,8 @@ class xdfile:
 
     def iterclues(self):
         for pos, clue, answer in self.clues:
-            yield "%s%s" % pos, clue, answer
+            if answer:  # skip cluegroup breaks
+                yield "%s%s" % pos, clue, answer
 
     def iteranswers(self):
 

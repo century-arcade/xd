@@ -12,7 +12,7 @@ from xdfile import utils
 
 RECEIPTS_TSV = "gxd/receipts.tsv"
 PUBLICATIONS_TSV = "gxd/publications.tsv"
-PUZZLES_TSV = "priv/puzzles.tsv"
+PUZZLES_TSV = "pub/puzzles.tsv"
 PUZZLE_SOURCES_TSV = "gxd/sources.tsv"
 RECENT_DOWNLOADS_TSV = "gxd/recents.tsv"
 
@@ -91,6 +91,15 @@ def append_receipts(receipts):
     if receipts:
         codecs.open(RECEIPTS_TSV, 'a', encoding='utf-8').write(receipts)
 
+def append_row(tsvpath, headerstr, row):
+    addhdr = not os.path.exists(tsvpath)
+
+    fp = codecs.open(tsvpath, 'a', encoding='utf-8')
+    if addhdr:
+        fp.write(COLSEP.join(headerstr.split()) + EOL)
+
+    fp.write(COLSEP.join([str(x) for x in row]) + EOL)
+    fp.close()
 
 def get_last_receipt_id():
     try:

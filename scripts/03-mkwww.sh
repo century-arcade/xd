@@ -23,7 +23,7 @@ cp $GXD/*.tsv wwwroot/pub/gxd/
 ## produce an analysis for each puzzle in odd.tsv
 #scripts/60-mkwww-odd.py ${CORPUS} -o wwwroot/ $GXD/odd.tsv
 
-scripts/65-mkwww-publishers.py -o $WWW priv/puzzles.tsv
+scripts/65-mkwww-publishers.py -o $WWW $PUB/puzzles.tsv
 
 scripts/67-mkwww-clues.py -o $WWW
 scripts/68-mkwww-words.py -o $WWW

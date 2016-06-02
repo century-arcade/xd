@@ -25,6 +25,8 @@ def main():
 
     for pubid, years in pubs.items():
         for y in sorted(years.keys()):
+            if y < 1900 or y > 2100:
+                continue
             outf.write_row('pubyears.tsv', "pubid year num", [ pubid, y, years[y] ])
 
 main()
