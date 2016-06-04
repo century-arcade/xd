@@ -21,14 +21,12 @@ cp $GXD/*.tsv wwwroot/pub/gxd/
 # requires: scripts/41-pubyears.py -o $PUB
 
 ## produce an analysis for each puzzle in odd.tsv
-#scripts/60-mkwww-odd.py ${CORPUS} -o wwwroot/ $GXD/odd.tsv
+#scripts/60-mkwww-odd.py ${CORPUS} -o $WWW $GXD/odd.tsv
 
-scripts/65-mkwww-publishers.py -o $WWW $PUB/puzzles.tsv
+scripts/65-mkwww-publishers.py -o $WWW
 
 scripts/67-mkwww-clues.py -o $WWW
 scripts/68-mkwww-words.py -o $WWW
-
-scripts/70-mkwww-index.py -o $WWW
 
 scripts/71-mkwww-redirects.py -o $WWW $GXD/redirects.tsv
 

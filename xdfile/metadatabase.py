@@ -11,6 +11,7 @@ from xdfile import utils
 
 
 RECEIPTS_TSV = "gxd/receipts.tsv"
+SIMILAR_TSV = "gxd/similar.tsv"
 PUBLICATIONS_TSV = "gxd/publications.tsv"
 PUZZLES_TSV = "pub/puzzles.tsv"
 PUZZLE_SOURCES_TSV = "gxd/sources.tsv"
@@ -83,6 +84,9 @@ def xd_publications():
 
 def xd_puzzles():
     return parse_tsv(PUZZLES_TSV, "Puzzle")
+
+def xd_similar():
+    return parse_tsv(SIMILAR_TSV, "Similar")
 
 def xd_puzzle_sources():
     return parse_tsv(PUZZLE_SOURCES_TSV, "PuzzleSource")

@@ -4,7 +4,7 @@ from collections import Counter
 import re
 
 from xdfile.utils import progress, open_output, get_args, args_parser, COLUMN_SEPARATOR
-from xdfile import html, utils, catalog
+from xdfile import html, utils, catalog, pubyear
 from xdfile import metadatabase as metadb
 import xdfile
 
@@ -79,14 +79,16 @@ def main():
 
     pubyear_rows = {}
 
-    similar = utils.parse_tsv('gxd/similar.tsv', 'Similar')  # [xdid] -> (similar_grid_pct, reused_clues, reused_answers, total_clues)
+    similar = metadb.xd_similar()
+    puzzles = metadb.xd_puzzles()
 
-    # collate puzzles
-    for tsvfn, contents in utils.find_files(*args.inputs, ext=".tsv"):
-        for puzrow in utils.parse_tsv(tsvfn, "PuzzleRow").values():
+    outf.write_html('pub/index.html', pubyear.pubyear_html(), title='The xd crossword puzzle corpus')
+
+    utils.log("collating puzzles")
+    for puzrow in puzzles.values():
             pubid = utils.parse_pubid(puzrow.xdid)
             year = xdfile.year_from_date(puzrow.Date)
-            k = (pubid, year or "9999")
+            k = (pubid, year or 9999)
             if k not in all_pubs:
                 all_pubs[k] = PublicationStats(pubid)
 
@@ -96,8 +98,8 @@ def main():
 
 
     pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', 'Grid_1A_1D', 'SimilarGrids' ]
-
-    for pair, pub in list(all_pubs.items()):
+    utils.log('generating index pages')
+    for pair, pub in sorted(list(all_pubs.items())):
         pubid, year = pair
         progress(pubid)
    
@@ -108,22 +110,24 @@ def main():
 
         rows = []
         for r in pub.puzzles_meta:
+            similar_text = ""
+
             rsim = similar.get(r.xdid)
             if rsim:
                 similar_pct = float(rsim.similar_grid_pct)
                 if similar_pct > 0:
+                    matches = [x.split('=') for x in rsim.matches.split()]
+                    for xdid, pct in matches:
+                        similar_text += '(%s%%) %s [%s]<br/>' % (pct, puzzles[xdid].Author, xdid)
                     total_similar.append(similar_pct)
-                    similar_pct = "%.2f" % (similar_pct/100.0)
                 else:
-                    similar_pct = "0"
+                    similar_text = "0"
 
                 reused_clues += int(rsim.reused_clues)
                 reused_answers += int(rsim.reused_answers)
                 total_clues += int(rsim.total_clues)
-            else:
-                similar_pct = ""
 
-            if similar_pct and similar_pct != "0":
+            if similar_text and similar_text != "0":
                 pubidtext = html.mkhref(r.xdid, '/pub/' + r.xdid)
             else:
                 pubidtext = r.xdid
@@ -137,13 +141,14 @@ def main():
                 r.Editor,
                 r.Copyright,
                 r.A1_D1,
-                similar_pct,
+                similar_text,
               ]
 
             outf.write_row('pub/%s%s.tsv' % (pubid, year), " ".join(pubyear_header), row)
             rows.append(row)
 
-        onepubyear_html = html.html_table(sorted(rows, key=lambda r: r[1]), pubyear_header, "puzzle")
+        onepubyear_html = pubyear.pubyear_html([(pubid, year, len(rows))])
+        onepubyear_html += html.html_table(sorted(rows, key=lambda r: r[1]), pubyear_header, "puzzle")
         outf.write_html("pub/%s%s/index.html" % (pubid, year), onepubyear_html, title="%s %s" % (pubid, year))
        
         cluepct = ""

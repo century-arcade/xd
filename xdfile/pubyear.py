@@ -23,12 +23,15 @@ def split_year(y):
 
     return "%s<br/>%s" % (msy, lsy)
 
-def pubyear_html(pubyears=None):
-    if not pubyears:
-        pubyears = xdfile.utils.parse_tsv_data(open("pub/pubyears.tsv").read(), "pubyear")
+
+g_all_pubyears = None
+def pubyear_html(pubyears=[]):
+    global g_all_pubyears
+    if not g_all_pubyears:
+        g_all_pubyears = xdfile.utils.parse_tsv_data(open("pub/pubyears.tsv").read(), "pubyear")
 
     pubs = {}
-    for pubid, year, num in pubyears:
+    for pubid, year, num in g_all_pubyears:
         if pubid not in pubs:
             pubs[pubid] = Counter()
         try:
@@ -52,8 +55,6 @@ def pubyear_html(pubyears=None):
     xdtotal = 0
     for pubid, years in sorted(pubs.items(), key=key_pubyears):
         pubtotal = sum(years.values())
-#        if pubtotal < 10:
-#            continue
         xdtotal += pubtotal
         
         pub = publications().get(pubid)
@@ -76,14 +77,18 @@ def pubyear_html(pubyears=None):
                 n = years[int(y)]
 
             y = int(y)
+
+            if (pubid, y) in pubyears:
+                classes.append('this')
+
             if n >= 365:
-                classes.append("daily")
+                classes.append('daily')
             elif n >= 200:
-                classes.append("semidaily")
+                classes.append('semidaily')
             elif n >= 50:
-                classes.append("weekly")
+                classes.append('weekly')
             elif n >= 12:
-                classes.append("monthly")
+                classes.append('monthly')
             elif n > 0:
                 pass
             elif start:
