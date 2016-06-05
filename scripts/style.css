@@ -7,6 +7,13 @@
         .diff_chg {background-color:#ffff77}
         .diff_sub {background-color:#ffaaaa}
 
+/* Empty row */
+
+.pubyears td.emptytd {
+    border-right:0px;
+    border-left:0px;
+}
+
 /*
 span.visible { color: blue; }
 .fixed {font-family:Courier; }
@@ -206,11 +213,21 @@ select {width: 100%; }
 .puzzles th, .puzzles td {
     font-size: 10px;
     margin: 0;
-    padding: 0;
+    padding: 10px 2px;
+}
+
+.puzzles th {
+    background-color:#343434;
+    color:#ffffff
 }
 
 .puzzles .block {
     background: #333333;
+}
+
+.puzzles tr, .puzzles th  {
+    border-style:solid;
+    border-width:1px
 }
 
 .puzzles td {
@@ -239,3 +256,19 @@ select {width: 100%; }
 .puzzles .this {
     font-size: 80px;
 }
+
+/* Pubyear header */
+
+.pubyearhead, .pubyearhead > th {
+    padding:2px 2px;
+    border-style:solid;
+    border-width:1px;
+}
+
+/* Empty row */
+
+.emptytd {
+    border-right:0px;
+    border-left:0px;
+}
+

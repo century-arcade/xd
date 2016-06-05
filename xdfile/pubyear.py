@@ -45,8 +45,10 @@ def pubyear_html(pubyears=[]):
     yhdr = [ '' ] + [ split_year(y) for y in allyears ]
     yhdr.append("all")
 
-    ret += th(*yhdr)
-
+    ret += th(*yhdr, rowclass="pubyearhead")
+    # Insert empty row
+    ret += '<tr><td class="emptytd">&nbsp;</td></tr>' 
+    
     def key_pubyears(x):
         pubid, y = x
         firstyear = xdfile.year_from_date(get_publication(pubid).row.FirstIssueDate)
@@ -105,7 +107,9 @@ def pubyear_html(pubyears=[]):
 
     yhdr = yhdr[:-1]
     yhdr.append(xdtotal)
-    ret += th(*yhdr)
+    # Insert empty row
+    ret += '<tr><td class="emptytd">&nbsp;</td></tr>'    
+    ret += th(*yhdr,rowclass="pubyearhead")
     ret += '</table>'
     return ret
 
