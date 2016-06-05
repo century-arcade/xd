@@ -67,6 +67,33 @@ def td(*cols, rowclass='', href='', tag='td'):
     r += '</tr>'
     return r
 
+def td_with_class(*cols, classes = [], rowclass='', href='', tag='td'):
+    """
+    Print td with class defined per element
+    """
+    r = ''
+    r += '<tr class="%s">' % rowclass
+    for i, x in enumerate(cols):
+        try:
+            class_ = classes[i]
+        except IndexError:
+            class_ = ''
+        r += '<%s class="%s">' % (tag, class_)
+        if href:
+            r += '<a href="%s">' % href
+        r += str(x)
+        if href:
+            r += '</a>'
+        r += '</%s>' % tag
+    r += '</tr>'
+    return r
+
+
+def tr_empty(class_="emptytd"):
+    """
+    Generates empty table row with class=emptytd by default
+    """
+    return '<tr><td class="'+class_+'">&nbsp;</td></tr>'
 
 # list of options, possibly duplicate.  presents and groups by strmaker(option)
 def html_select_options(options, strmaker=str, force_top=""):
