@@ -196,3 +196,46 @@ select {width: 100%; }
 .pubyears .this {
     font-size: 80px;
 }
+
+/* puzzles */
+.puzzles {
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.puzzles th, .puzzles td {
+    font-size: 10px;
+    margin: 0;
+    padding: 0;
+}
+
+.puzzles .block {
+    background: #333333;
+}
+
+.puzzles td {
+/*    width: 20px;*/
+    height: 20px;
+    border-right: 1px solid #333333;
+    border-bottom: 1px solid #333333;
+    border-top: 1px solid #333333;
+}
+
+.puzzles tr:hover td {
+    background: pink;
+}
+
+.puzzles tr:hover td.block {
+    background: #555555; 
+}
+
+.puzzles a {
+    text-decoration: none;
+}
+
+.puzzles tr:hover td:hover {
+}
+
+.puzzles .this {
+    font-size: 80px;
+}
