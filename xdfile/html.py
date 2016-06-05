@@ -146,6 +146,18 @@ def html_table(rows, colnames, rowclass="row"):
     out += '</table>'  # end table
     return out
 
+def html_table_class(rows, colnames, rowclass="row", tableclass=""):
+    """
+    Generates html table with class defined
+    """
+    out = '<table class="'+tableclass+'">' if tableclass else '<table>' 
+    out += table_row(colnames, colnames, tag='th')
+
+    for r in rows:
+        out += table_row(r, colnames, rowclass=rowclass)
+
+    out += '</table>'  # end table
+    return out
 
 def tsv_to_table(rows):
     return html_table(rows, rows[0]._fields)
