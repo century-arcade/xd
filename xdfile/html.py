@@ -19,8 +19,8 @@ def html_header(**kwargs):
     <meta http-equiv="Content-Type"
           content="text/html; charset=ISO-8859-1" />
     <title>{title}</title>
-    <LINK href="style.css" rel="stylesheet" type="text/css">
-    <LINK href="/style.css" rel="stylesheet" type="text/css">
+    <!-- <LINK href="style.css" rel="stylesheet" type="text/css"> -->
+    <LINK href="/pub/style.css" rel="stylesheet" type="text/css">
   </HEAD>
 </head>
 
@@ -67,6 +67,33 @@ def td(*cols, rowclass='', href='', tag='td'):
     r += '</tr>'
     return r
 
+def td_with_class(*cols, classes = [], rowclass='', href='', tag='td'):
+    """
+    Print td with class defined per element
+    """
+    r = ''
+    r += '<tr class="%s">' % rowclass
+    for i, x in enumerate(cols):
+        try:
+            class_ = classes[i]
+        except IndexError:
+            class_ = ''
+        r += '<%s class="%s">' % (tag, class_)
+        if href:
+            r += '<a href="%s">' % href
+        r += str(x)
+        if href:
+            r += '</a>'
+        r += '</%s>' % tag
+    r += '</tr>'
+    return r
+
+
+def tr_empty(class_="emptytd"):
+    """
+    Generates empty table row with class=emptytd by default
+    """
+    return '<tr><td class="'+class_+'">&nbsp;</td></tr>'
 
 # list of options, possibly duplicate.  presents and groups by strmaker(option)
 def html_select_options(options, strmaker=str, force_top=""):
@@ -146,6 +173,18 @@ def html_table(rows, colnames, rowclass="row"):
     out += '</table>'  # end table
     return out
 
+def html_table_class(rows, colnames, rowclass="row", tableclass=""):
+    """
+    Generates html table with class defined
+    """
+    out = '<table class="'+tableclass+'">' if tableclass else '<table>' 
+    out += table_row(colnames, colnames, tag='th')
+
+    for r in rows:
+        out += table_row(r, colnames, rowclass=rowclass)
+
+    out += '</table>'  # end table
+    return out
 
 def tsv_to_table(rows):
     return html_table(rows, rows[0]._fields)
