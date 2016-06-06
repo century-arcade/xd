@@ -69,7 +69,7 @@ def td(*cols, rowclass='', href='', tag='td'):
 
 def td_with_class(*cols, classes = [], rowclass='', href='', tag='td'):
     """
-    Print td with class defined per element
+    Print td with class defined per element provided by list
     """
     r = ''
     r += '<tr class="%s">' % rowclass
