@@ -76,8 +76,9 @@ tbody tr:hover td {
 .xdgrid {
     margin: auto;
     display: table;
-    border-bottom: 1px solid black;
-    border-right: 1px solid black;
+    border: 1px solid black;
+    /*border-bottom: 1px solid black;
+    border-right: 1px solid black;*/
 }
 
 .xdrow {
@@ -91,8 +92,9 @@ tbody tr:hover td {
 .xdcell {
     display: table-cell;
     text-align: center;
-    border-top: 1px solid black;
-    border-left: 1px solid black;
+    border: 1px solid black;
+    /*border-top: 1px solid black;
+    border-left: 1px solid black;*/
     width: 10px;
     height: 8px;
     padding: 4px;
@@ -119,7 +121,7 @@ tbody tr:hover td {
     padding-right: 4px;
 }
 table div {
-    float: left;
+    float: none;
 }
 
 .grids .xdid {
