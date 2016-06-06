@@ -7,6 +7,11 @@ from lxml import etree
 import xdfile
 
 
+HEADER_RENAMES = {
+    'Creator': 'Author'
+}
+
+
 # data is bytes()
 def parse_ccxml(data, filename):
     content = data.decode('utf-8')
@@ -44,7 +49,7 @@ def parse_ccxml(data, filename):
         text = metadata.text and metadata.text.strip()
         title = re.sub('\{[^\}]*\}', '', metadata.tag.title())
         if text:
-            xd.set_header(title, text)
+            xd.set_header(HEADER_RENAMES.get(title, title), text)
 
     # add puzzle
     puzzle = []

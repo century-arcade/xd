@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 # Usage:
-#   $0 [-c corpus] -o output_dir <input.xd> <sources.tsv>
+#   $0 [-c corpus] -o output_dir <input.xd>
 #
-# outputs html analysis page with similar grids/clues/answers
+# outputs html analysis page with similar grids/clues/answers for each page with similar grids
 #
 
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, grid_similarity

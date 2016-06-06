@@ -1,0 +1,16 @@
+output	location	script
+recent-downloads.tsv	gxd	10-download-puzzles
+receipts.tsv	gxd	20-convert2xd
+puzzles.tsv	pub	30-clean-metadata
+pubyears.tsv	pub	41-pubyears
+similar.tsv	gxd	50-find-similar
+/pub/{xdid}/index.html	www	60-mkwww-diffs
+/pub/{pub}{year}/index.html	www	65-mkwww-publishers
+/pub/{pub}/index.html	www	65-mkwww-publishers
+/pub/index.html	www	65-mkwww-publishers
+/pub/clue/{boiledclue}/index.html	www	67-mkwww-clues
+/pub/clue/index.html	www	67-mkwww-clues
+/pub/word/{ANSWER}/index.html	www	68-mkwww-words
+/pub/word/index.html	www	68-mkwww-words
+{pub}{year}.tsv	pub	65-mkwww-publishers
+clues.tsv	pub	51-clues-tsv
