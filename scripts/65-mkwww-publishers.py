@@ -147,8 +147,9 @@ def main():
             outf.write_row('pub/%s%s.tsv' % (pubid, year), " ".join(pubyear_header), row)
             rows.append(row)
 
-        onepubyear_html = pubyear.pubyear_html([(pubid, year, len(rows))])
-        onepubyear_html += html.html_table(sorted(rows, key=lambda r: r[1]), pubyear_header, "puzzle", "puzzles")
+        # Disabled below as no point in header for pages except main one
+        #onepubyear_html = pubyear.pubyear_html([(pubid, year, len(rows))])
+        onepubyear_html = html.html_table(sorted(rows, key=lambda r: r[1]), pubyear_header, "puzzle", "puzzles")
         outf.write_html("pub/%s%s/index.html" % (pubid, year), onepubyear_html, title="%s %s" % (pubid, year))
        
         cluepct = ""
