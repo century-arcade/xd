@@ -2,7 +2,7 @@
 import cgi
 from collections import Counter
 
-from xdfile.html import th, td, mkhref
+from xdfile.html import th, td, mkhref, tr_empty, td_with_class
 from xdfile.metadatabase import publications, get_publication
 import xdfile.utils
 import xdfile
@@ -17,12 +17,25 @@ def mkcell(text, href="", title=""):
 def split_year(y):
     lsy = str(y)[2:]
     if y[3] != '0':
-        msy = ' '  # unicode M space
+        #msy = ' '  # unicode M space
+        msy = '&nbsp;' # Changed to &nbsp;
     else:
         msy = str(y)[:2]
 
     return "%s<br/>%s" % (msy, lsy)
 
+def get_pubheader_classes(*years):
+    """
+    Assign classes to years header
+    """
+    classes = []
+    for y in years:
+        if "&nbsp" in str(y):
+            classes.append("ord-year")
+        else:
+            classes.append("zero-year")    
+    return classes
+        
 
 g_all_pubyears = None
 def pubyear_html(pubyears=[]):
@@ -42,11 +55,13 @@ def pubyear_html(pubyears=[]):
     allyears = "1910s 1920s 1930s".split() + [ str(y) for y in range(1940, 2017) ]
 
     ret = '<table class="pubyears">'
-    yhdr = [ '' ] + [ split_year(y) for y in allyears ]
+    yhdr = [ '&nbsp;' ] + [ split_year(y) for y in allyears ]
     yhdr.append("all")
-
-    ret += th(*yhdr)
-
+    ret += td_with_class(*yhdr, classes=get_pubheader_classes(*yhdr),
+                        rowclass="pubyearhead",tag="th")
+    # Insert empty row
+    ret += tr_empty()
+    
     def key_pubyears(x):
         pubid, y = x
         firstyear = xdfile.year_from_date(get_publication(pubid).row.FirstIssueDate)
@@ -105,7 +120,10 @@ def pubyear_html(pubyears=[]):
 
     yhdr = yhdr[:-1]
     yhdr.append(xdtotal)
-    ret += th(*yhdr)
+    # Insert empty row
+    ret += tr_empty()
+    ret += td_with_class(*yhdr, classes=get_pubheader_classes(*yhdr),
+                         rowclass="pubyearhead",tag="th")
     ret += '</table>'
     return ret
 
