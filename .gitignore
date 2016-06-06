@@ -4,3 +4,5 @@
 .eggs/*
 .cache/
 xd*egg*
+*.zip*
+wwwroot/
