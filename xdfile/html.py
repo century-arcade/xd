@@ -40,6 +40,7 @@ html_footer = """
 </html>
 """
 
+
 def redirect_page(url):
     return """<html><head><meta http-equiv="refresh" content="0; URL='{url}'" />
 <script>window.location.replace("{url}");</script></head><body>Redirecting to <a href="{url}">{url}</a></body></html>""".format(url=url)
@@ -67,7 +68,8 @@ def td(*cols, rowclass='', href='', tag='td'):
     r += '</tr>'
     return r
 
-def td_with_class(*cols, classes = [], rowclass='', href='', tag='td'):
+
+def td_with_class(*cols, classes=[], rowclass='', href='', tag='td'):
     """
     Print td with class defined per element provided by list
     """
@@ -93,9 +95,11 @@ def tr_empty(class_="emptytd"):
     """
     Generates empty table row with class=emptytd by default
     """
-    return '<tr><td class="'+class_+'">&nbsp;</td></tr>'
+    return '<tr><td class="' + class_ + '">&nbsp;</td></tr>'
 
 # list of options, possibly duplicate.  presents and groups by strmaker(option)
+
+
 def html_select_options(options, strmaker=str, force_top=""):
     def strnum(s, n):
         assert n > 0
@@ -109,16 +113,16 @@ def html_select_options(options, strmaker=str, force_top=""):
 
     freq_sorted = []
     if force_top:
-        freq_sorted.append( (1, strmaker(force_top)) )
+        freq_sorted.append((1, strmaker(force_top)))
 
     if isinstance(options, Counter):
         pairs = options.items()
-    else:        
-        groups = { }
+    else:
+        groups = {}
         for opt in options:
             s = strmaker(opt)
             if not s in groups:
-                groups[s] = [ opt ]
+                groups[s] = [opt]
             else:
                 groups[s].append(opt)
 
@@ -144,10 +148,9 @@ def html_select_options(options, strmaker=str, force_top=""):
     return r
 
 
-
 def table_row(row, keys, rowclass="row", tag="td"):
     if isinstance(row, dict):
-        row = [ row[k] for k in keys ]
+        row = [row[k] for k in keys]
 
     out = '<tr class="%s">' % rowclass
     for k, v in zip(keys, row):
@@ -163,21 +166,11 @@ def table_row(row, keys, rowclass="row", tag="td"):
     return out
 
 
-def html_table(rows, colnames, rowclass="row"):
-    out = '<table>'
-    out += table_row(colnames, colnames, tag='th')
-
-    for r in rows:
-        out += table_row(r, colnames, rowclass=rowclass)
-
-    out += '</table>'  # end table
-    return out
-
-def html_table_class(rows, colnames, rowclass="row", tableclass=""):
+def html_table(rows, colnames, rowclass="row", tableclass=""):
     """
     Generates html table with class defined
     """
-    out = '<table class="'+tableclass+'">' if tableclass else '<table>' 
+    out = '<table class="'+tableclass+'">' if tableclass else '<table>'
     out += table_row(colnames, colnames, tag='th')
 
     for r in rows:
@@ -188,4 +181,3 @@ def html_table_class(rows, colnames, rowclass="row", tableclass=""):
 
 def tsv_to_table(rows):
     return html_table(rows, rows[0]._fields)
-
