@@ -173,7 +173,7 @@ def main():
         for pubid, y, n, similarity, wordpct, cluepct in tsvrows:
             pubhref = html.mkhref(str(y), '/pub/%s%s' % (pubid, y))
             rows.append((pubhref, n, similarity, wordpct, cluepct))
-        pub_h = html.html_table(sorted(rows), pub_header, "onepub")
+        pub_h = html.html_table(sorted(rows), pub_header, "onepub", "onepub")
         outf.write_html("pub/%s/index.html" % pubid, pub_h, title="%s" % pubid)
 
     progress()
