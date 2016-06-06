@@ -241,7 +241,7 @@ def main():
         # summary row
         metadatabase.append_row('gxd/similar.tsv', 'xdid similar_grid_pct reused_clues reused_answers total_clues matches', [
             mainxd.xdid(),
-            int(100*sum(pct/100.0 for pct, xd1, xd2 in earlier_similar)),
+            int(100*sum(pct/100.0 for pct, xd1, xd2 in similar_grids)),
             nstaleclues,
             nstaleanswers,
             ntotalclues,

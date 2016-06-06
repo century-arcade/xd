@@ -18,8 +18,9 @@ PUZZLE_SOURCES_TSV = "gxd/sources.tsv"
 RECENT_DOWNLOADS_TSV = "gxd/recents.tsv"
 
 
+class Error(Exception):
+    pass
 
-g_pubs = {}
 
 # Each delivery from an extractor should have a 'sources' table, to preserve the precise external sources.
 xd_sources_header = COLSEP.join([
@@ -76,18 +77,23 @@ xd_puzzles_header = COLSEP.join([
 
 
 # yields dict corresponding to each row of receipts.tsv, in sequential order
+@utils.memoize
 def xd_receipts():
     return parse_tsv(RECEIPTS_TSV, "Receipt")
 
+@utils.memoize
 def xd_publications():
     return parse_tsv(PUBLICATIONS_TSV, "Publication")
 
+@utils.memoize
 def xd_puzzles():
     return parse_tsv(PUZZLES_TSV, "Puzzle")
 
+@utils.memoize
 def xd_similar():
     return parse_tsv(SIMILAR_TSV, "Similar")
 
+@utils.memoize
 def xd_puzzle_sources():
     return parse_tsv(PUZZLE_SOURCES_TSV, "PuzzleSource")
 
@@ -109,7 +115,7 @@ def get_last_receipt_id():
     try:
         all_receipts = list(xd_receipts().values())
         if all_receipts:
-            return int(all_receipts[-1].ReceiptId)
+            return max(int(r.ReceiptId) for r in all_receipts)
         else:
             return 0
     except IOError:
@@ -143,7 +149,11 @@ def xd_recent_download(pubid, dt):
     return COLSEP.join([ pubid, dt ]) + EOL
 
 
-def xd_puzzles_row(xd):
+def update_puzzles_row(xd):
+    # INSERT only for now
+    if xd.xdid() in xd_puzzles():
+        raise Error('record already exists; UPDATE not implemented')
+
     fields = [
         xd.xdid(),                   # xdid
         xd.get_header("Date"),
@@ -157,7 +167,8 @@ def xd_puzzles_row(xd):
     ]
 
     assert COLSEP not in "".join(fields), fields
-    return COLSEP.join(fields) + EOL
+
+    append_row(PUZZLES_TSV, xd_puzzles_header, fields)
 
 
 class Publication:
@@ -166,20 +177,3 @@ class Publication:
         self.row = row
 
 
-def publications():
-    if not g_pubs:
-        for pubrow in xd_publications().values():
-            pubid = pubrow.PublicationAbbr
-            p = Publication(pubid, pubrow)
-            g_pubs[pubid] = p
-
-    return g_pubs
-
-
-def get_publication(pubid):
-    pubs = publications()
-    if pubid in pubs:
-        return pubs[pubid]
-
-    p = Publication(pubid, namedtuple("Publication", xd_publications_header)(pubid, pubid, pubid, pubid, "", "", ""))
-    return p

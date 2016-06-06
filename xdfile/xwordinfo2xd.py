@@ -73,7 +73,7 @@ def parse_xwordinfo(content, filename):
     rebus = {}
     rebus_order = []
 
-    xd = xdfile.xdfile()
+    xd = xdfile.xdfile('', filename)
 
     # get crossword info
     title = root.cssselect(xwiprefix + 'TitleLabel')[0].text.strip()

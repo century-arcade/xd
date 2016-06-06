@@ -58,6 +58,7 @@ def deduce_set_seqnum(xd):
 
 
 def get_shelf_path(xd, pubid):
+    publisher = ""
     if not pubid:
         # determine publisher/publication
         try:
@@ -68,19 +69,20 @@ def get_shelf_path(xd, pubid):
                 raise
 
         if publ and not pubid:
-            pubid = publ.PublisherAbbr
+            pubid = publ.PublicationAbbr
+            publisher = publ.PublisherAbbr
 
         if not pubid:
             raise xdfile.NoShelfError("unknown pubid for '%s'" % xd.filename)
 
     num = xd.get_header("Number")
     if num:
-        return "%s/%s-%03d" % (pubid, pubid, int(num))
+        return "%s/%s-%03d" % (publisher or pubid, pubid, int(num))
 
     dt = xd.get_header("Date")
     if not dt:
         raise xdfile.NoShelfError("neither Number nor Date for '%s'" % xd.filename)
 
     year = xdfile.year_from_date(dt)
-    return "%s/%s/%s%s" % (pubid, year, pubid, dt)
+    return "%s/%s/%s%s" % (publisher, year, pubid, dt)
 

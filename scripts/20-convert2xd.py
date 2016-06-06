@@ -13,11 +13,11 @@ import zipfile
 
 from xdfile import IncompletePuzzleParse
 
-from xdfile.utils import log, debug, get_log
+from xdfile.utils import log
 from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, strip_toplevel
 from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output
 
-from xdfile.metadatabase import xd_receipts_header, xd_receipts_row, append_receipts, get_last_receipt_id
+from xdfile import metadatabase as metadb
 
 from xdfile.ccxml2xd import parse_ccxml
 from xdfile.uxml2xd import parse_uxml
@@ -50,7 +50,7 @@ def main():
 
     outf = open_output()
 
-    nextReceiptId = get_last_receipt_id() + 1
+    nextReceiptId = metadb.get_last_receipt_id() + 1
 
     for input_source in args.inputs:
       try:
@@ -125,14 +125,14 @@ def main():
                         xdid = xd.xdid()
                         xdstr = xd.to_unicode()
                         outf.write_file(catalog.get_shelf_path(xd, args.pubid) + ".xd", xdstr, dt)
-                        debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
+                        log("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
                         rejected = ""
                         break  # stop after first successful parsing
                     except xdfile.NoShelfError as e:
-                        debug("could not shelve: %s" % str(e))
+                        log("could not shelve: %s" % str(e))
                         rejected += "[shelver] %s  " % str(e)
                     except Exception as e:
-                        debug("%s could not convert: %s" % (parsefunc.__name__, str(e)))
+                        log("%s could not convert: %s" % (parsefunc.__name__, str(e)))
                         rejected += "[%s] %s  " % (parsefunc.__name__, str(e))
                         if args.debug:
                             raise
@@ -140,7 +140,7 @@ def main():
                 if rejected:
                     log("could not convert: %s" % rejected)
 
-            this_receipt = xd_receipts_row(ReceiptId=ReceiptId,
+            this_receipt = metadb.xd_receipts_row(ReceiptId=ReceiptId,
                     CaptureTime=CaptureTime,
                     ReceivedTime=ReceivedTime,
                     ExternalSource=ExternalSource,
@@ -148,7 +148,7 @@ def main():
                     SourceFilename=SourceFilename,
                     xdid=xdid)
 
-            append_receipts(this_receipt)
+            metadb.append_receipts(this_receipt)
 
       except Exception as e:
           log(str(e))

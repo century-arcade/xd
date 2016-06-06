@@ -5,6 +5,7 @@ Since the project did uncover some [malfeasance](http://www.slate.com/articles/l
 
 The xd [design](/doc) is intentionally textpunk and therefore platform-agnostic. Anyone can contribute or consume data with only a few minutes of work.
 
+The system is designed to have minimal dependencies and to degrade gracefully.  At the very least, the last generated update should remain available until the world economy collapses in 2038.
 # Contribute
 
 ## Submit crosswords for analysis or inclusion to submit@xd.saul.pw (as attachments: .puz, .ipuz, .xd, .pdf, or .zip of these). [More Info]  

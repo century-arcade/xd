@@ -42,7 +42,7 @@ def parse_ccxml(data, filename):
     rows = int(grid.attrib['height'])
     cols = int(grid.attrib['width'])
 
-    xd = xdfile.xdfile()
+    xd = xdfile.xdfile('', filename)
 
     # add metadata
     for metadata in root.xpath('//puzzle:metadata', namespaces=ns)[0]:

@@ -54,6 +54,9 @@ class xdfile:
         else:
             self._publication_id = pubid
 
+        if not self._publication_id:
+            raise Error("No Publication Id in '%s'" % filename)
+
         if xd_contents:
             self.parse_xd(xd_contents)
 

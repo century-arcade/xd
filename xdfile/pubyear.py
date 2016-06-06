@@ -3,8 +3,7 @@ import cgi
 from collections import Counter
 
 from xdfile.html import th, td, mkhref, tr_empty, td_with_class
-from xdfile.metadatabase import publications, get_publication
-import xdfile.utils
+from xdfile import utils, metadatabase as metadb
 import xdfile
 
 def mkcell(text, href="", title=""):
@@ -41,7 +40,7 @@ g_all_pubyears = None
 def pubyear_html(pubyears=[]):
     global g_all_pubyears
     if not g_all_pubyears:
-        g_all_pubyears = xdfile.utils.parse_tsv_data(open("pub/pubyears.tsv").read(), "pubyear")
+        g_all_pubyears = utils.parse_tsv_data(open("pub/pubyears.tsv").read(), "pubyear")
 
     pubs = {}
     for pubid, year, num in g_all_pubyears:
@@ -50,7 +49,7 @@ def pubyear_html(pubyears=[]):
         try:
             pubs[pubid][int(year)] += int(num)
         except Exception as e:
-            xdfile.utils.log(str(e))
+            utils.log(str(e))
 
     allyears = "1910s 1920s 1930s".split() + [ str(y) for y in range(1940, 2017) ]
 
@@ -64,7 +63,7 @@ def pubyear_html(pubyears=[]):
     
     def key_pubyears(x):
         pubid, y = x
-        firstyear = xdfile.year_from_date(get_publication(pubid).row.FirstIssueDate)
+        firstyear = xdfile.year_from_date(metadb.xd_publications()[pubid].FirstIssueDate)
         return firstyear or min(y.keys())
 
     xdtotal = 0
@@ -72,10 +71,10 @@ def pubyear_html(pubyears=[]):
         pubtotal = sum(years.values())
         xdtotal += pubtotal
         
-        pub = publications().get(pubid)
+        pub = metadb.xd_publications().get(pubid)
         if pub:
-            pubname = pub.row.PublicationName
-            start, end = pub.row.FirstIssueDate, pub.row.LastIssueDate
+            pubname = pub.PublicationName
+            start, end = pub.FirstIssueDate, pub.LastIssueDate
         else:
             pubname, start, end = "", "", ""
 

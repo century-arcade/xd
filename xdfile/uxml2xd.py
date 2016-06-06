@@ -47,7 +47,7 @@ def parse_uxml(content, filename):
     # init crossword
     # rows = int(root.xpath('//crossword/Height')[0].attrib['v'])
     cols = int(root.xpath('//crossword/Width')[0].attrib['v'])
-    xd = xdfile.xdfile()
+    xd = xdfile.xdfile('', filename)
 
     # add meta data
     for item in POSSIBLE_META_DATA:

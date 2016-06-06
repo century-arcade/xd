@@ -2,6 +2,7 @@
 from collections import namedtuple
 import re
 import os
+import functools
 import stat
 import sys
 import zipfile
@@ -28,6 +29,7 @@ g_logfp = sys.stderr
 
 # save on start to auto-log at end
 g_scriptname = None
+
 
 def get_log():
     return EOL.join(g_logs) + EOL
@@ -422,3 +424,17 @@ def open_output(fnout=None):
         outf = OutputFile(codecs.open(fnout, 'w', encoding="utf-8"))
 
     return outf
+
+
+# from https://wiki.python.org/moin/PythonDecoratorLibrary#Alternate_memoize_that_stores_cache_between_executions
+# note that this decorator ignores **kwargs
+def memoize(obj):
+    cache = obj.cache = {}
+
+    @functools.wraps(obj)
+    def memoizer(*args, **kwargs):
+        if args not in cache:
+            cache[args] = obj(*args, **kwargs)
+        return cache[args]
+    return memoizer
+
