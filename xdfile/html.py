@@ -60,10 +60,9 @@ def td(*cols, rowclass='', href='', tag='td'):
     for x in cols:
         r += '<%s>' % tag
         if href:
-            r += '<a href="%s">' % href
-        r += str(x)
-        if href:
-            r += '</a>'
+            r += mkhref(href, str(x))
+        else:
+            r += str(x) 
         r += '</%s>' % tag
     r += '</tr>'
     return r
@@ -82,10 +81,9 @@ def td_with_class(*cols, classes=[], rowclass='', href='', tag='td'):
             class_ = ''
         r += '<%s class="%s">' % (tag, class_)
         if href:
-            r += '<a href="%s">' % href
-        r += str(x)
-        if href:
-            r += '</a>'
+            r += mkhref(href, str(x))
+        else:
+            r += str(x)
         r += '</%s>' % tag
     r += '</tr>'
     return r
@@ -170,7 +168,7 @@ def html_table(rows, colnames, rowclass="row", tableclass=""):
     """
     Generates html table with class defined
     """
-    out = '<table class="'+tableclass+'">' if tableclass else '<table>'
+    out = '<table class="' + tableclass + '">' if tableclass else '<table>'
     out += table_row(colnames, colnames, tag='th')
 
     for r in rows:
