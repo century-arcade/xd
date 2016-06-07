@@ -46,6 +46,16 @@ def redirect_page(url):
 <script>window.location.replace("{url}");</script></head><body>Redirecting to <a href="{url}">{url}</a></body></html>""".format(url=url)
 
 
+def html_tag(tagname, tagclass=''):
+    """ generates tag:
+        <tag class="class">
+    """
+    if tagclass:
+        return '<%s class="%s">' % (tagname, tagclass)
+    else:
+        return '<%s>' % (tagname)
+
+
 def mkhref(text, link, title=""):
     return '<a href="%s" title="%s">%s</a>' % (link, title, text)
 
@@ -56,15 +66,15 @@ def th(*cols, rowclass=''):
 
 def td(*cols, rowclass='', href='', tag='td'):
     r = ''
-    r += '<tr class="%s">' % rowclass
+    r += html_tag('tr', rowclass)
     for x in cols:
-        r += '<%s>' % tag
+        r += html_tag(tag)
         if href:
             r += mkhref(href, str(x))
         else:
             r += str(x) 
-        r += '</%s>' % tag
-    r += '</tr>'
+        r += html_tag('/' + tag)
+    r += html_tag('/tr')
     return r
 
 
@@ -73,19 +83,19 @@ def td_with_class(*cols, classes=[], rowclass='', href='', tag='td'):
     Print td with class defined per element provided by list
     """
     r = ''
-    r += '<tr class="%s">' % rowclass
+    r += html_tag('tr', rowclass) 
     for i, x in enumerate(cols):
         try:
             class_ = classes[i]
         except IndexError:
             class_ = ''
-        r += '<%s class="%s">' % (tag, class_)
+        r += html_tag(tag, class_)
         if href:
             r += mkhref(href, str(x))
         else:
             r += str(x)
-        r += '</%s>' % tag
-    r += '</tr>'
+        r += html_tag('/' + tag)
+    r += html_tag('tr')
     return r
 
 
@@ -150,17 +160,17 @@ def table_row(row, keys, rowclass="row", tag="td"):
     if isinstance(row, dict):
         row = [row[k] for k in keys]
 
-    out = '<tr class="%s">' % rowclass
+    out = html_tag('tr', rowclass)
     for k, v in zip(keys, row):
         try:
             v = str(v or "")
         except UnicodeDecodeError:
             v = "???"
 
-        out += '<%s class="%s">' % (tag, k.strip())
+        out += html_tag(tag, k.strip())
         out += v
-        out += '</%s>'  % tag  # end cell
-    out += '</tr>\n'  # end row
+        out += html_tag('/' + tag)  # end cell
+    out += html_tag('/tr') + '\n'  # end row
     return out
 
 
