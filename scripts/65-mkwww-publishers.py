@@ -97,7 +97,7 @@ def main():
             all_pubs[k].add(puzrow)
 
 
-    pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', 'Grid_1A_1D', 'SimilarGrids' ]
+    pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', 'Grid_1A_1D', 'ReusedCluePct', 'SimilarGrids' ]
     utils.log('generating index pages')
     for pair, pub in sorted(list(all_pubs.items())):
         pubid, year = pair
@@ -111,6 +111,7 @@ def main():
         rows = []
         for r in pub.puzzles_meta:
             similar_text = ""
+            reused_clue_pct = "n/a"
 
             rsim = similar.get(r.xdid)
             if rsim:
@@ -127,6 +128,8 @@ def main():
                 reused_answers += int(rsim.reused_answers)
                 total_clues += int(rsim.total_clues)
 
+                reused_clue_pct = int(100*(float(rsim.reused_clues) / float(rsim.total_clues)))
+
             if similar_text and similar_text != "0":
                 pubidtext = html.mkhref(r.xdid, '/pub/' + r.xdid)
             else:
@@ -141,7 +144,8 @@ def main():
                 r.Editor,
                 r.Copyright,
                 r.A1_D1,
-                similar_text,
+                reused_clue_pct,
+                similar_text
               ]
 
             outf.write_row('pub/%s%s.tsv' % (pubid, year), " ".join(pubyear_header), row)

@@ -147,7 +147,7 @@ $(CORPUS).tar.xz:
 	find crosswords -name '*.xd' -print | sort | tar Jcf $@ --owner 0 --group 0 --no-recursion -T -
 
 $(CORPUS).zip:
-	find crosswords -name '*.xd' -print | sort | zip $@ -@
+	find $(CORPUS) -name '*.xd' -print | sort | zip $@ -@
 
 publishers.tsv: $(QUERYDIR)/enumpublishers.py
 	PYTHONPATH=. $(QUERYDIR)/enumpublishers.py > $@

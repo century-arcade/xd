@@ -3,14 +3,15 @@
 import json
 from collections import Counter
 
-from xdfile import utils, metadatabase
+from xdfile import utils, metadatabase as metadb
 import xdfile
 
 def main():
     args = utils.get_args('generate pub-years data')
 
 #    pubyears = [ (xd.publication_id(), xd.year()) for xd in xdfile.corpus() ]
-    pubyears = [ (utils.parse_pubid(r.xdid), xdfile.year_from_date(r.Date)) for r in metadatabase.xd_puzzles().values() ]
+    pubyears = [ (utils.parse_pubid(r.xdid), xdfile.year_from_date(r.Date)) 
+					for r in metadb.xd_puzzles().values() ]
 
     pubs = {}
     for pubid, year in pubyears:
@@ -27,7 +28,7 @@ def main():
         for y in sorted(years.keys()):
             if y < 1900 or y > 2100:
                 continue
-            outf.write_row('pubyears.tsv', "pubid year num", [ pubid, y, years[y] ])
+            metadb.append_row('pub/pubyears.tsv', "pubid year num", [ pubid, y, years[y] ])
 
 main()
 

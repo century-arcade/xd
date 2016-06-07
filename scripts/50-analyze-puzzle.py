@@ -14,6 +14,7 @@ import time
 import cgi
 from xdfile import utils, metadatabase
 
+
 def xd_to_html(xd, compare_with=None):
     r = '<div class="fullgrid">'
 
@@ -31,6 +32,7 @@ def xd_to_html(xd, compare_with=None):
 
     r += '</div>' # solution
     return r
+
 
 def headers_to_html(xd):
     # headers
@@ -96,8 +98,10 @@ def html_select(options, top_option=""):
     r += '<div class="num"> %d</div>' % len(options)
     return r
 
+
 def esc(s):
     return cgi.escape(s)
+
 
 def main():
     p = utils.args_parser(desc="annotate puzzle clues with earliest date used in the corpus")
@@ -113,17 +117,22 @@ def main():
         if mainxd.xdid() in prev_similar:
             continue
 
+        # find similar grids (pct, xd) for the mainxd in the corpus.  takes about 1 second per xd.  sorted by pct.
+
         similar_grids = sorted(find_similar_to(mainxd, corpus(), min_pct=0.20), key=lambda x: x[0], reverse=True)
 
-        earlier_similar = [ (pct, xd1, xd2) for pct, xd1, xd2 in similar_grids if xd1.date() > xd2.date() ]
-        if earlier_similar:
-            log("similar: " + " ".join(("%s:%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in earlier_similar))
+        if similar_grids:
+            log("similar: " + " ".join(("%s:%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in similar_grids))
 
+        # clues_html is the 'deepclues' table
         clues_html = '<table class="clues">' + th('grid', 'original clue and previous uses', 'answers for this clue', 'other clues for this answer')
 
         mainpubid = mainxd.publication_id()
         maindate = mainxd.date()
 
+        # go over each clue/answer, find all other uses, other answers, other possibilities. 
+
+        # these are added directly to similar.tsv
         nstaleclues = 0
         nstaleanswers = 0
         ntotalclues = 0
@@ -136,8 +145,10 @@ def main():
 
             mainca = ClueAnswer(mainpubid, maindate, mainanswer, mainclue)
 
+            # 'grid position' column
             clues_html += '<tr><td class="pos">%s.</td>' % pos
 
+            # find other uses of this clue, and other answers, in a single pass
             for clueans in find_clue_variants(mainclue):
                 if clueans.answer != mainanswer:
                     poss_answers.append(clueans)
@@ -151,12 +162,13 @@ def main():
 
                     otherpubs.add(clueans)
 
+            # add 'other uses' to clues_html
             stale = False
             clues_html += '<td class="other-uses">'
             if len(pub_uses) > 0:
                 sortable_uses = []
                 for pubid, uses in pub_uses.items():
-                    # show the earlist unboiled clue
+                    # show the earliest unboiled clue
                     for u in sorted(uses, key=lambda x: x.date or ""):
                         # only show those published earlier
                         if u.date and u.date <= maindate:
@@ -172,15 +184,21 @@ def main():
                 clues_html += '<div class="original">%s</div>' % esc(mainclue)
         
             clues_html += '</td>'
+
+            # add 'other answers' to clues_html
+
             clues_html += '<td class="other-answers">'
             clues_html += html_select_options(poss_answers, strmaker=lambda ca: ca.answer, force_top=mainca)
             clues_html += '</td>'
+
+            # add 'other clues' to clues_html
 
             clues_html += '<td class="other-clues">'
 
             # bclues is all boiled clues for this particular answer: { [bc] -> #uses }
             bclues = load_answers().get(mainanswer, [])
             stale_answer = False
+
             if bclues:
                 uses = []
                 for bc, nuses in bclues.items():
@@ -200,7 +218,7 @@ def main():
                 if uses:
                     clues_html += html_select(uses)
 
-            clues_html += '</td>'
+            clues_html += '</td>'  # end 'other-clues'
 
             clues_html += '</tr>'
 
@@ -212,14 +230,18 @@ def main():
 
         clues_html += '</table>'
 
-        # similar grids
+        # final output
+
+        # dump miniature grids with highlights of similarities
+
+        # main_html is /pub/{xdid}
         main_html = '<div class="grids">'
+
+        # TODO: emit entire list sorted on .date().  The 'main' grid should be indicated somehow.
         main_html += xd_to_html(mainxd)
 
         all_pct = 0
-        # XXX: emit entire list sorted on .date()
 
-        # dump miniature grids with highlights of similarities
         for pct, xd1, xd2 in sorted(similar_grids, key=lambda x: x[2].date()):
             main_html += '<div class="similar-grid">' + xd_to_html(xd2, mainxd)
             main_html += '</div>'
@@ -228,8 +250,7 @@ def main():
 
         main_html += '</div>'
 
-
-        # clue analysis
+        # add deepclue analysis
         main_html += '<div class="clues">'
         main_html += '<h2>%d%% reused clues (%s/%s)</h2>' % (nstaleclues*100.0/ntotalclues, nstaleclues, ntotalclues)
         main_html += '<ul>' + clues_html + '</ul>'
@@ -238,14 +259,14 @@ def main():
         if args.all or similar_grids:
             outf.write_html("pub/%s/index.html" % mainxd.xdid(), main_html, title="xd analysis of %s" % mainxd.xdid())
 
-        # summary row
+        # summary row to similar.tsv
         metadatabase.append_row('gxd/similar.tsv', 'xdid similar_grid_pct reused_clues reused_answers total_clues matches', [
             mainxd.xdid(),
             int(100*sum(pct/100.0 for pct, xd1, xd2 in similar_grids)),
             nstaleclues,
             nstaleanswers,
             ntotalclues,
-            " ".join(("%s=%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in earlier_similar)
+            " ".join(("%s=%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in similar_grids)
             ])
 
 
