@@ -76,8 +76,9 @@ tbody tr:hover td {
 .xdgrid {
     margin: auto;
     display: table;
-    border-bottom: 1px solid black;
-    border-right: 1px solid black;
+    border: 1px solid black;
+    /*border-bottom: 1px solid black;
+    border-right: 1px solid black;*/
 }
 
 .xdrow {
@@ -91,8 +92,9 @@ tbody tr:hover td {
 .xdcell {
     display: table-cell;
     text-align: center;
-    border-top: 1px solid black;
-    border-left: 1px solid black;
+    border: 1px solid black;
+    /*border-top: 1px solid black;
+    border-left: 1px solid black;*/
     width: 10px;
     height: 8px;
     padding: 4px;
@@ -119,7 +121,7 @@ tbody tr:hover td {
     padding-right: 4px;
 }
 table div {
-    float: left;
+    float: none;
 }
 
 .grids .xdid {
@@ -135,8 +137,11 @@ table div {
 }
 
 .options { width: 85%; }
+
 div.actuals { width: 85%; }
+
 select {width: 100%; }
+
 .other-answers {
     text-align: center;
     }
@@ -153,6 +158,7 @@ select {width: 100%; }
     font-size: 10px;
     margin: 0;
     padding: 0;
+    text-align: center;
 }
 
 .pubyears th.zero-year {
@@ -229,8 +235,8 @@ select {width: 100%; }
 }
 
 .puzzles th {
-    background-color:#343434;
-    color:#ffffff
+    background-color:#ccf;
+    color:black;
 }
 
 .puzzles .block {
@@ -282,5 +288,59 @@ select {width: 100%; }
 .emptytd {
     border-right:0px;
     border-left:0px;
+}
+
+
+/* onepub */
+.onepub {
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.onepub th, .onepub td {
+    font-size: 10px;
+    margin: 0;
+    padding: 10px 2px;
+}
+
+.onepub th {
+    background-color:#ccf;
+    color:black;}
+
+.onepub .block {
+    background: #333333;
+}
+
+.onepub tr, .onepub th  {
+    border-style:solid;
+    border-width:1px;
+    text-align: center;
+}
+
+.onepub td {
+/*    width: 20px;*/
+    height: 20px;
+    border-right: 1px solid #333333;
+    border-bottom: 1px solid #333333;
+    border-top: 1px solid #333333;
+}
+
+.onepub tr:hover td {
+    background: pink;
+}
+
+.onepub tr:hover td.block {
+    background: #555555; 
+}
+
+.onepub a {
+    text-decoration: none;
+}
+
+.onepub tr:hover td:hover {
+}
+
+.onepub .this {
+    font-size: 80px;
 }
 
