@@ -144,14 +144,14 @@ def html_select_options(options, strmaker=str, force_top=""):
         n, k = freq_sorted[0]
         return strnum(k, n)
 
-    r = '<div class="options">'
-    r += '<select>'
+    r = html_tag('div', 'options')
+    r += html_tag('select')
 
     for n, k in freq_sorted:
         r += '<option>%s</option>' % strnum(k, n)
 
-    r += '</select>'
-    r += '</div>'
+    r += html_tag('/select') 
+    r += html_tag('/div')
     r += '<div class="num"> %s</div>' % len(freq_sorted)
     return r
 
@@ -178,14 +178,15 @@ def html_table(rows, colnames, rowclass="row", tableclass=""):
     """
     Generates html table with class defined
     """
-    out = '<table class="' + tableclass + '">' if tableclass else '<table>'
+    out = html_tag('table', tableclass)
     out += table_row(colnames, colnames, tag='th')
 
     for r in rows:
         out += table_row(r, colnames, rowclass=rowclass)
 
-    out += '</table>'  # end table
+    out += html_tag('/table')  # end table
     return out
+
 
 def tsv_to_table(rows):
     return html_table(rows, rows[0]._fields)
