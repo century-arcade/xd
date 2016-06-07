@@ -3,7 +3,7 @@
 # Usage:
 #   $0 [-c corpus] <input.xd>
 #
-# updates similar.csv for later usage
+# updates similar.tsv for later usage
 #
 
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, grid_similarity
@@ -17,7 +17,6 @@ def main():
     p = utils.args_parser(desc="annotate puzzle clues with earliest date used in the corpus")
     p.add_argument('-a', '--all', default=False, help='analyze all puzzles, even those already in similar.tsv')
     args = get_args(parser=p)
-
     outf = open_output()
 
     prev_similar = parse_tsv('gxd/similar.tsv', "similar")
@@ -25,19 +24,22 @@ def main():
         mainxd = xdfile(contents.decode('utf-8'), fn)
 
         if mainxd.xdid() in prev_similar:
-            continue
+            continue # Skip to not reprocess same .xd are in similar.tsv
 
-        # find similar grids (pct, xd) for the mainxd in the corpus.  takes about 1 second per xd.  sorted by pct.
-        similar_grids = sorted(find_similar_to(mainxd, corpus(), min_pct=0.20), key=lambda x: x[0], reverse=True)
+        """ find similar grids (pct, xd) for the mainxd in the corpus. 
+        Takes about 1 second per xd.  sorted by pct.
+        """
+        similar_grids = sorted(find_similar_to(mainxd, corpus(), min_pct=0.20), 
+                               key=lambda x: x[0], reverse=True)
 
         if similar_grids:
-            log("similar: " + " ".join(("%s:%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in similar_grids))
+            log("similar: " + " ".join(("%s:%s" % (xd2.xdid(), pct)) 
+                                       for pct, xd1, xd2 in similar_grids))
 
         mainpubid = mainxd.publication_id()
         maindate = mainxd.date()
 
         # go over each clue/answer, find all other uses, other answers, other possibilities. 
-
         # these are added directly to similar.tsv
         nstaleclues = 0
         nstaleanswers = 0
@@ -74,7 +76,8 @@ def main():
                 uses = []
                 for bc, nuses in bclues.items():
                     # then find all clues besides this one
-                    clue_usages = [ ca for ca in load_clues().get(bc, []) if ca.answer == mainanswer and ca.date < maindate ]
+                    clue_usages = [ ca for ca in load_clues().get(bc, []) 
+                                    if ca.answer == mainanswer and ca.date < maindate ]
 
                     if clue_usages:
                         stale_answer = True
@@ -87,7 +90,8 @@ def main():
                         uses.append((ca, nuses))
         
         # summary row to similar.tsv
-        metadatabase.append_row('gxd/similar.tsv', 'xdid similar_grid_pct reused_clues reused_answers total_clues matches', [
+        row_header = 'xdid similar_grid_pct reused_clues reused_answers total_clues matches'
+        metadatabase.append_row('gxd/similar.tsv', row_header, [
             mainxd.xdid(),
             int(100*sum(pct/100.0 for pct, xd1, xd2 in similar_grids)),
             nstaleclues,
