@@ -235,17 +235,18 @@ def main():
         # dump miniature grids with highlights of similarities
 
         # main_html is /pub/{xdid}
-        main_html = '<div class="grids">'
+        main_html = '<table><tr>'
+        main_html += '<div class="grids">'
 
-        # TODO: emit entire list sorted on .date().  The 'main' grid should be indicated somehow.
-        main_html += xd_to_html(mainxd)
+        # TODO: emit entire list sorted on .date().  The 'main' grid should be indicated with a different class.
+        main_html += '<td>' + xd_to_html(mainxd) + '</td>'
 
         all_pct = 0
 
         for pct, xd1, xd2 in sorted(similar_grids, key=lambda x: x[2].date()):
-            main_html += '<div class="similar-grid">' + xd_to_html(xd2, mainxd)
-            main_html += '</div>'
-            main_html += '</div>'
+            main_html += '<td><div class="similar-grid">' + xd_to_html(xd2, mainxd)
+            main_html += '</td></div>'
+            main_html += '</tr></div>'
             all_pct += pct
 
         main_html += '</div>'
