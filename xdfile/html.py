@@ -47,7 +47,10 @@ def redirect_page(url):
 
 
 def mkhref(text, link, title=""):
-    return '<a href="%s" title="%s">%s</a>' % (link, title, text)
+    if title:
+        return '<a href="%s" title="%s">%s</a>' % (link, title, text)
+    else:
+        return '<a href="%s">%s</a>' % (link, text)
 
 
 def th(*cols, rowclass=''):
@@ -62,7 +65,7 @@ def td(*cols, rowclass='', href='', tag='td'):
         if href:
             r += mkhref(href, str(x))
         else:
-            r += str(x) 
+            r += str(x)
         r += '</%s>' % tag
     r += '</tr>'
     return r
