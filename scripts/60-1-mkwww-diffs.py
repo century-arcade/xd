@@ -113,34 +113,36 @@ def main():
     p.add_argument('-a', '--all', default=False, help='analyze all puzzles, even those already in similar.tsv')
     args = get_args(parser=p)
 
-    outf = open_output()
-
+    outf = open_output() # HTML otput file
     prev_similar = parse_tsv('gxd/similar.tsv', "similar")
-    #print(prev_similar)
-    #quit()
-    for fn, contents in find_files(*args.inputs, ext=".xd"):
-        mainxd = xdfile(contents.decode('utf-8'), fn)
 
-        if mainxd.xdid() in prev_similar:
-            continue
+    #for fn, contents in find_files(*args.inputs, ext=".xd"):
+        #mainxd = xdfile(contents.decode('utf-8'), fn)
+
+        #if mainxd.xdid() in prev_similar:
+        #    continue
 
         # find similar grids (pct, xd) for the mainxd in the corpus.  takes about 1 second per xd.  sorted by pct.
 
-        similar_grids = sorted(find_similar_to(mainxd, corpus(), min_pct=0.20), key=lambda x: x[0], reverse=True)
-
-        if similar_grids:
-            log("similar: " + " ".join(("%s:%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in similar_grids))
+    # process each grid from file
+    for s_grid, val in prev_similar.items():
+        #similar_grids = sorted(find_similar_to(mainxd, corpus(), min_pct=0.20), key=lambda x: x[0], reverse=True)
+        #if similar_grids:
+        #    log("similar: " + " ".join(("%s:%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in similar_grids))
 
         # clues_html is the 'deepclues' table
         clues_html = mktag('table', 'clues')
         clues_html += th('grid', 'original clue and previous uses', 'answers for this clue', 'other clues for this answer')
 
-        mainpubid = mainxd.publication_id()
-        maindate = mainxd.date()
+        #mainpubid = mainxd.publication_id()
+        print(s_grid, val)
+        mainpubid = s_grid
+        quit()
+        #maindate = mainxd.date()
         # go over each clue/answer, find all other uses, other answers, other possibilities.
         # these are added directly to similar.tsv
         nstaleclues = 0
-        nstaleanswers = 0
+        # nstaleanswers = 0
         ntotalclues = 0
 
         for pos, mainclue, mainanswer in mainxd.iterclues():
@@ -264,17 +266,17 @@ def main():
             outf.write_html("pub/%s/index.html" %  mainxd.xdid(),
                         main_html, title="xd analysis of %s" % mainxd.xdid())
 
-        """
-        # summary row to similar.tsv
-        metadatabase.append_row('gxd/similar.tsv', 'xdid similar_grid_pct reused_clues reused_answers total_clues matches', [
-            mainxd.xdid(),
-            int(100*sum(pct/100.0 for pct, xd1, xd2 in similar_grids)),
-            nstaleclues,
-            nstaleanswers,
-            ntotalclues,
-            " ".join(("%s=%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in similar_grids)
-            ])
-        """
+    """
+    # summary row to similar.tsv
+    metadatabase.append_row('gxd/similar.tsv', 'xdid similar_grid_pct reused_clues reused_answers total_clues matches', [
+        mainxd.xdid(),
+        int(100*sum(pct/100.0 for pct, xd1, xd2 in similar_grids)),
+        nstaleclues,
+        nstaleanswers,
+        ntotalclues,
+        " ".join(("%s=%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in similar_grids)
+        ])
+    """
 
 if __name__ == '__main__':
     main()
