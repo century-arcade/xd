@@ -116,6 +116,8 @@ def main():
     outf = open_output()
 
     prev_similar = parse_tsv('gxd/similar.tsv', "similar")
+    #print(prev_similar)
+    #quit()
     for fn, contents in find_files(*args.inputs, ext=".xd"):
         mainxd = xdfile(contents.decode('utf-8'), fn)
 
@@ -185,8 +187,7 @@ def main():
                 clues_html += html_select([ (clue, nuses) for dt, clue, nuses in sorted(sortable_uses, key=lambda x: x[0], reverse=True) ], top_option=mainclue)
 
             else:
-                clues_html += mktag('div', 'original') + esc(mainclue)
-                                    + mktag('/div')
+                clues_html += mktag('div', 'original') + esc(mainclue) + mktag('/div')
 
             clues_html += mktag('/td')
 
@@ -254,9 +255,8 @@ def main():
         main_html += mktag('/div')
 
         # add deepclue analysis
-        main_html += mktag('div', 'clues')' + mktag('h2')
-        main_html += '%d%% reused clues (%s/%s)' %
-                    (nstaleclues*100.0/ntotalclues, nstaleclues, ntotalclues)
+        main_html += mktag('div', 'clues') + mktag('h2')
+        main_html += '%d%% reused clues (%s/%s)' % (nstaleclues*100.0/ntotalclues, nstaleclues, ntotalclues)
         main_html += mktag('/h2') + mktag('ul') + clues_html + mktag('/ul')
         main_html += mktag('/div')
 
