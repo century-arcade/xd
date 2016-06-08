@@ -138,7 +138,7 @@ def main():
         print(s_grid, val)
         mainpubid = s_grid
         quit()
-        #maindate = mainxd.date()
+        maindate = mainxd.date() # ???????
         # go over each clue/answer, find all other uses, other answers, other possibilities.
         # these are added directly to similar.tsv
         nstaleclues = 0
