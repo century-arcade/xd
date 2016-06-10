@@ -230,6 +230,17 @@ def construct_date(y, m, d):
     return datetime.date(year, mon, day)
 
 
+def parse_iso8601(s):
+    m = re.search(r'\d+(-\d+(-\d+))', s)
+    if m:
+        return m.group(0)
+
+
+def parse_seqnum(s):
+    m = re.search(r'-?\d+(-\d+(-\d+))', s)
+    if m:
+        return m.group(0)
+
 # from original filename
 def parse_date_from_filename(fn):
     base = parse_pathname(fn).base

@@ -13,7 +13,7 @@ import zipfile
 
 from xdfile import IncompletePuzzleParse
 
-from xdfile.utils import log
+from xdfile.utils import log, debug
 from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, strip_toplevel
 from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output
 
@@ -93,7 +93,22 @@ def main():
             ReceivedTime = iso8601(time.time())
             InternalSource = parse_pathname(input_source).filename
 
-            xdid = ""  # unshelved at start
+            already_received = list(r for r in metadb.xd_receipts().values()
+                           if r.ExternalSource == ExternalSource
+                           and r.SourceFilename == SourceFilename)
+
+            xdid = ""
+            prev_xdid = ""  # unshelved by default
+
+            existing_xdids = set(r.xdid for r in already_received)
+
+            if existing_xdids:
+
+                if len(existing_xdids) > 1:
+                    log('previously received this same file under multiple xdids:' + ' '.join(existing_xdids))
+                else:
+                    prev_xdid = existing_xdids.pop()
+                    debug('already received as %s' % prev_xdid)
 
             # try each parser by extension
             ext = parse_pathname(fn).ext.lower()
@@ -122,9 +137,13 @@ def main():
                                 xd.set_header("Copyright", args.copyright)
 
                         catalog.deduce_set_seqnum(xd)
-                        xdid = xd.xdid()
+
                         xdstr = xd.to_unicode()
-                        outf.write_file(catalog.get_shelf_path(xd, args.pubid) + ".xd", xdstr, dt)
+
+                        mdtext = "|".join((ExternalSource,InternalSource,SourceFilename))
+                        xdid = prev_xdid or catalog.deduce_xdid(xd, mdtext)
+                        path = catalog.get_shelf_path(xd, args.pubid, mdtext)
+                        outf.write_file(path + ".xd", xdstr, dt)
                         log("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
                         rejected = ""
                         break  # stop after first successful parsing
@@ -140,15 +159,17 @@ def main():
                 if rejected:
                     log("could not convert: %s" % rejected)
 
-            this_receipt = metadb.xd_receipts_row(ReceiptId=ReceiptId,
-                    CaptureTime=CaptureTime,
-                    ReceivedTime=ReceivedTime,
-                    ExternalSource=ExternalSource,
-                    InternalSource=InternalSource,
-                    SourceFilename=SourceFilename,
-                    xdid=xdid)
+                # only add receipt if first time converting this source
+                if xdid not in existing_xdids:
+                    this_receipt = metadb.xd_receipts_row(ReceiptId=ReceiptId,
+                        CaptureTime=CaptureTime,
+                        ReceivedTime=ReceivedTime,
+                        ExternalSource=ExternalSource,
+                        InternalSource=InternalSource,
+                        SourceFilename=SourceFilename,
+                        xdid=xdid)
 
-            metadb.append_receipts(this_receipt)
+                    metadb.append_receipts(this_receipt)
 
       except Exception as e:
           log(str(e))

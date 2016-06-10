@@ -8,7 +8,7 @@ import xdfile
 def get_publication(xd):
     matching_publications = set()
 
-    all_headers = "|".join(hdr for hdr in list(xd.headers.values())).lower()
+    all_headers = xd.get_header("Copyright").lower()
 
     # source filename/metadata must be the priority
     abbr = utils.parse_pubid(xd.filename)
@@ -40,6 +40,32 @@ def get_publication(xd):
 
     return sorted(matching_pubs)[0][1]
 
+# some regex heuristics for shelving
+PUBREGEX_TSV = 'gxd/pubregex.tsv'
+
+def find_pubid(rowstr):
+    '''rowstr is a concatentation of all metadata fields'''
+
+    regexes = utils.parse_tsv_data(open(PUBREGEX_TSV, 'r').read())
+
+    matching = set()
+    for r in regexes:
+        m = re.search(r['regex'], rowstr)
+        if m:
+            matching.add(r['pubid'])
+
+    if not matching:
+        utils.log("%s: no regex matches" % rowstr)
+    else:
+        if len(matching) > 1:
+            utils.log("%s: too many regex matches (%s)" % (rowstr, " ".join(matching)))
+            return None
+        else:
+            return matching.pop()
+
+    return None
+
+
 
 # all but extension
 def deduce_set_seqnum(xd):
@@ -57,31 +83,43 @@ def deduce_set_seqnum(xd):
             xd.set_header("Number", int(m.group(1)))
 
 
-def get_shelf_path(xd, pubid):
+def deduce_xdid(xd, mdtext):
+    pubid = find_pubid(mdtext) or get_publication(xd).PublicationAbbr
+    num = xd.get_header('Number')
+    if num:
+        return "%s-%03d" % (pubid, int(num))
+
+    dt = xd.get_header("Date")
+    if dt:
+        year = xdfile.year_from_date(dt)
+        return "%s%s" % (pubid, dt)
+
+
+def get_shelf_path(xd, pubid, mdtext):
     publisher = ""
     if not pubid:
-        # determine publisher/publication
-        try:
-            publ = get_publication(xd)
-        except Exception as e:
-            publ = None
-            if utils.get_args().debug:
-                raise
+        pubid = find_pubid(mdtext)
 
-        if publ and not pubid:
-            pubid = publ.PublicationAbbr
-            publisher = publ.PublisherAbbr
+    if pubid:
+        publ = metadb.xd_publications()[pubid]
+    else:
+        publ = get_publication(xd)
+        pubid = publ.PublicationAbbr
 
-        if not pubid:
-            raise xdfile.NoShelfError("unknown pubid for '%s'" % xd.filename)
+    if not pubid:
+        utils.log("unknown pubid for '%s'" % xd.filename)
+        return None
 
-    num = xd.get_header("Number")
+    publisher = publ.PublisherAbbr
+
+    num = xd.get_header('Number')
     if num:
         return "%s/%s-%03d" % (publisher or pubid, pubid, int(num))
 
     dt = xd.get_header("Date")
     if not dt:
-        raise xdfile.NoShelfError("neither Number nor Date for '%s'" % xd.filename)
+        utils.log("neither Number nor Date for '%s'" % xd.filename)
+        return 'misc/' + xd.filename
 
     year = xdfile.year_from_date(dt)
     return "%s/%s/%s%s" % (publisher, year, pubid, dt)

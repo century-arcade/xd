@@ -47,8 +47,7 @@ def parse_puz(contents, filename):
 
     grid_dict = dict(list(zip(string.ascii_uppercase, string.ascii_uppercase)))
 
-    xd = xdfile.xdfile()
-    xd.source = filename
+    xd = xdfile.xdfile('', filename)
 
     xd.set_header("Author", puzobj.author)
     xd.set_header("Copyright", puzobj.copyright)
