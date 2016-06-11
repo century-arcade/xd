@@ -46,8 +46,21 @@ def redirect_page(url):
 <script>window.location.replace("{url}");</script></head><body>Redirecting to <a href="{url}">{url}</a></body></html>""".format(url=url)
 
 
+def mktag(tagname, tagclass=''):
+    """ generates tag:
+        <tag class="class">
+    """
+    if tagclass:
+        return '<%s class="%s">' % (tagname, tagclass)
+    else:
+        return '<%s>' % (tagname)
+
+
 def mkhref(text, link, title=""):
-    return '<a href="%s" title="%s">%s</a>' % (link, title, text)
+    if title:
+        return '<a href="%s" title="%s">%s</a>' % (link, title, text)
+    else:
+        return '<a href="%s">%s</a>' % (link, text)
 
 
 def th(*cols, rowclass=''):
@@ -56,15 +69,15 @@ def th(*cols, rowclass=''):
 
 def td(*cols, rowclass='', href='', tag='td'):
     r = ''
-    r += '<tr class="%s">' % rowclass
+    r += mktag('tr', rowclass)
     for x in cols:
-        r += '<%s>' % tag
+        r += mktag(tag)
         if href:
             r += mkhref(href, str(x))
         else:
-            r += str(x) 
-        r += '</%s>' % tag
-    r += '</tr>'
+            r += str(x)
+        r += mktag('/' + tag)
+    r += mktag('/tr')
     return r
 
 
@@ -73,19 +86,19 @@ def td_with_class(*cols, classes=[], rowclass='', href='', tag='td'):
     Print td with class defined per element provided by list
     """
     r = ''
-    r += '<tr class="%s">' % rowclass
+    r += mktag('tr', rowclass)
     for i, x in enumerate(cols):
         try:
             class_ = classes[i]
         except IndexError:
             class_ = ''
-        r += '<%s class="%s">' % (tag, class_)
+        r += mktag(tag, class_)
         if href:
             r += mkhref(href, str(x))
         else:
             r += str(x)
-        r += '</%s>' % tag
-    r += '</tr>'
+        r += mktag('/' + tag)
+    r += mktag('tr')
     return r
 
 
@@ -134,14 +147,14 @@ def html_select_options(options, strmaker=str, force_top=""):
         n, k = freq_sorted[0]
         return strnum(k, n)
 
-    r = '<div class="options">'
-    r += '<select>'
+    r = mktag('div', 'options')
+    r += mktag('select')
 
     for n, k in freq_sorted:
         r += '<option>%s</option>' % strnum(k, n)
 
-    r += '</select>'
-    r += '</div>'
+    r += mktag('/select')
+    r += mktag('/div')
     r += '<div class="num"> %s</div>' % len(freq_sorted)
     return r
 
@@ -150,17 +163,17 @@ def table_row(row, keys, rowclass="row", tag="td"):
     if isinstance(row, dict):
         row = [row[k] for k in keys]
 
-    out = '<tr class="%s">' % rowclass
+    out = mktag('tr', rowclass)
     for k, v in zip(keys, row):
         try:
             v = str(v or "")
         except UnicodeDecodeError:
             v = "???"
 
-        out += '<%s class="%s">' % (tag, k.strip())
+        out += mktag(tag, k.strip())
         out += v
-        out += '</%s>'  % tag  # end cell
-    out += '</tr>\n'  # end row
+        out += mktag('/' + tag)  # end cell
+    out += mktag('/tr') + '\n'  # end row
     return out
 
 
@@ -168,14 +181,15 @@ def html_table(rows, colnames, rowclass="row", tableclass=""):
     """
     Generates html table with class defined
     """
-    out = '<table class="' + tableclass + '">' if tableclass else '<table>'
+    out = mktag('table', tableclass)
     out += table_row(colnames, colnames, tag='th')
 
     for r in rows:
         out += table_row(r, colnames, rowclass=rowclass)
 
-    out += '</table>'  # end table
+    out += mktag('/table')  # end table
     return out
+
 
 def tsv_to_table(rows):
     return html_table(rows, rows[0]._fields)

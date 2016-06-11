@@ -6,7 +6,7 @@
 import os.path
 import difflib
 
-from xdfile.utils import get_args, log, get_log, open_output, find_files, parse_tsv, progress
+from xdfile.utils import get_parser, get_args, log, get_log, open_output, find_files, parse_tsv, progress
 import xdfile
 
 style_css = """

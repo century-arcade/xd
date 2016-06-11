@@ -7,6 +7,18 @@
         .diff_chg {background-color:#ffff77}
         .diff_sub {background-color:#ffaaaa}
 
+span.match {
+    color: green;
+}
+
+span.diff {
+    color: orange;
+}
+
+td.clue {
+    vertical-align: top;
+}
+
 /* Empty row */
 
 .pubyears td.emptytd {
