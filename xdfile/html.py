@@ -46,14 +46,21 @@ def redirect_page(url):
 <script>window.location.replace("{url}");</script></head><body>Redirecting to <a href="{url}">{url}</a></body></html>""".format(url=url)
 
 
-def mktag(tagname, tagclass=''):
+def mktag(tagname, tagclass='', inner=None):
     """ generates tag:
         <tag class="class">
     """
+    ret = ''
     if tagclass:
-        return '<%s class="%s">' % (tagname, tagclass)
+        ret += '<%s class="%s">' % (tagname, tagclass)
     else:
-        return '<%s>' % (tagname)
+        ret += '<%s>' % (tagname)
+
+    if inner is not None:
+        ret += inner
+        ret += mktag('/' + tagname)
+
+    return ret
 
 
 def mkhref(text, link, title=""):

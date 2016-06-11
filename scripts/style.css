@@ -8,11 +8,11 @@
         .diff_sub {background-color:#ffaaaa}
 
 span.match {
-    color: green;
+    background-color: lightgreen;
 }
 
 span.diff {
-    color: orange;
+/*    background-color: orange; */
 }
 
 td.clue {
@@ -82,31 +82,32 @@ tbody tr:hover td {
 /* --- analyze-puzzle --- */
 .fullgrid {
     margin-left: 20px;
-    margin-bottom: 20px;
+    margin-top: 2px;
 }
 
 .xdgrid {
     margin: auto;
+    margin-bottom: 2em;
     display: table;
-    border: 1px solid black;
-    /*border-bottom: 1px solid black;
-    border-right: 1px solid black;*/
+    border-bottom: 1px solid black;
+    border-right: 1px solid black;
+    border-spacing: 0px;
+
 }
 
 .xdrow {
     display: table-row;
 }
 
-.xdcell.same {
+.match {
     background: lightgreen;
 }
 
 .xdcell {
     display: table-cell;
     text-align: center;
-    border: 1px solid black;
-    /*border-top: 1px solid black;
-    border-left: 1px solid black;*/
+    border-top: 1px solid black;
+    border-left: 1px solid black;
     width: 10px;
     height: 8px;
     padding: 4px;
@@ -114,6 +115,24 @@ tbody tr:hover td {
 
 .xdcell.block {
     background: black;
+}
+
+.xdcell.block.diff {
+    background: #440000;
+    color: #440000;
+    border-top: 1px solid #440000;
+    border-left: 1px solid #440000;
+}
+
+.main {
+    background: #ddddff;
+}
+
+.xdcell.diff {
+    background: #ffeedd;
+    color: #440000;
+    border-top: 1px solid #440000;
+    border-left: 1px solid #440000;
 }
 
 .clues td {

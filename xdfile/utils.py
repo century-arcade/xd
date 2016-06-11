@@ -192,6 +192,12 @@ def datestr_to_datetime(s):
     return dt
 
 
+def parse_xdid(path):
+    a = path.rindex('/')
+    b = path.rindex('.')
+    return path[a+1:b]
+
+
 def parse_pathname(path):
     path, fn = os.path.split(path)
     base, ext = os.path.splitext(fn)
@@ -389,11 +395,19 @@ class OutputDirectory:
             pass  # log("%s: %s" % (type(e), str(e)))
 
         f = codecs.open(fullfn, mode, encoding='utf-8')
-        self.files[fn] = f
+        if mode[0] == 'a':
+            self.files[fn] = f
+        elif mode[0] == 'w':
+            self.files[fn] = 'written once already'
+
         return f
 
+    def close_file(self, fn):
+        del self.files[fn]
+
     def write_file(self, fn, contents, timet=None):
-        self.open_file(fn, 'w').write(contents)
+        with self.open_file(fn, 'w') as f:
+            f.write(contents)
         log("wrote %s to %s" % (fn, self.toplevel))
 
     def write_html(self, fn, innerhtml, title=""):

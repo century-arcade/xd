@@ -1,218 +1,174 @@
 #!/usr/bin/env python3
+#
+#
 
-# Usage:
-#   $0 -o <www_dir> <similarities.xsv>
-
-import os.path
+from queries.similarity import grid_similarity
 import difflib
+import datetime
+from xdfile import utils
+from xdfile.html import mktag, mkhref
 
-from xdfile.utils import get_parser, get_args, log, get_log, open_output, find_files, parse_tsv, progress
+from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
+#from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
+from xdfile import BLOCK_CHAR
 import xdfile
+import operator
 
-style_css = """
-        table.diff {font-family:Courier; border:medium;}
-        .diff_header {  background-color:#e0e0e0; color: #e0e0e0 }
-        td.diff_header { text-align:right; width: 0px}
-        table.diff td { padding-left: 5px }
-        .diff_next {display: none; }
-        .diff_add {background-color:#aaffaa}
-        .diff_chg {background-color:#ffff77}
-        .diff_sub {background-color:#ffaaaa}
-
-span.visible { color: blue; }
-.fixed {font-family:Courier; }
-div, textarea { margin-top: 1em; }
-
-body { 
-    padding: 10px;
-    background-color: #ffeeee 
-}
-body div { padding: 10px; background-color: #ffeeee }
-"""
-
-html_header = """
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
-<html>
-
-<head>
-    <meta http-equiv="Content-Type"
-          content="text/html; charset=ISO-8859-1" />
-    <title>{title}</title>
-    <LINK href="style.css" rel="stylesheet" type="text/css">
-  </HEAD>
-</head>
-
-<body>
-<h1>{title}</h1>
-"""
-
-html_footer = """
-  <hr style="clear:both;"/>
-  <a href="http://saul.pw"><small>saul.pw</small></a>
-
-<script type="text/javascript">
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-30170773-1']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-</script>
-
-</body>
-</html>
-"""
-
-
-def same_answers(a, b):
-    ans1 = set(sol for pos, clue, sol in a.clues)
-    ans2 = set(sol for pos, clue, sol in b.clues)
-    return ans1 & ans2
-
-
-def get_url(xd):
-    raise Exception("notimpl")
-
-
-def gendiff(xd1, xd2, pct):
-    try:
-        desc1 = '<a href="%s">%s</a>' % (get_url(xd1), xd1.filename)
-    except:
-        desc1 = '<a href="">%s</a>' % xd1.filename
-
-    try:
-        desc2 = '<a href="%s">%s</a>' % (get_url(xd2), xd2.filename)
-    except:
-        desc2 = '<a href="">%s</a>' % xd2.filename
-
-    shared = same_answers(xd1, xd2)
-
-    ret = html_header.format(title="%s%% similar grids, %d/%d shared answers" % (pct,
-                                                                                 len(shared),
-                                                                                 len(xd2.clues)))
-
-    s1 = xd1.to_unicode()
-    s2 = xd2.to_unicode()
-
-    hd = difflib.HtmlDiff(linejunk=lambda x: False)
-    diff_html = hd.make_table(s1.splitlines(), s2.splitlines(), fromdesc=desc1, todesc=desc2, numlines=False)
-
-    ret += '<div class="answers"><br/>Shared answers:<br/> %s</div>' % " ".join(shared)
-
-    ret += diff_html
-
-    if int(pct) < 50:
-        # it might be easier to see partial similarities this way, due to limitations of HtmlDiff
-        xdt1 = xd1.transpose()
-        xdt2 = xd2.transpose()
-
-        diff_html += "<hr><p>With both puzzles transposed (may be easier to see vertical similarities)</p>"
-        diff_html += hd.make_table(xdt1.to_unicode().splitlines(), xdt2.to_unicode().splitlines(), fromdesc=desc1 + " (transposed)", todesc=desc2 + " (transposed)", numlines=False)
-
-    ret += html_footer
-
-    return ret
-
-
-def get_list_band_html(index_list, lowpct, highpct):
-    matches = [(b2, L) for pct, L, b1, b2 in list(index_list.values()) if pct >= lowpct and pct < highpct]
-
-    r = "\n<h3>%d puzzles match %d-%d%% of another grid</h3>" % (len(matches), lowpct, highpct)
-    for b1, L in sorted(matches):
-        r += '\n<li>' + L + '</li>'
-
-    r += '<hr/>'
+def headers_to_html(xd):
+    # headers
+    r = '<div class="xdheaders"><ul class="xdheaders">'
+    for k in "Title Author Editor Copyright".split():
+        v = xd.get_header(k)
+        if v:
+            r += '<li class="%s">%s: <b>%s</b></li>' % (k, k, v)
+        else:
+            r += '<li></li>'
+    r += '</ul></div>'
     return r
 
 
-def get_index_html(index_list, subset=""):
-    out = html_header.format(title="%s crossword similarity" % subset)
+def grid_to_html(xd, compare_with=None):
+    "htmlify this puzzle's grid"
 
-    out += "The left side is always the earlier published puzzle. <b>Bold</b> highlights that the authors are different for the two puzzles.<br/>"
+    grid_html = '<div class="xdgrid">'
+    for r, row in enumerate(xd.grid):
+        grid_html += '<div class="xdrow">'
+        for c, cell in enumerate(row):
+            classes = [ "xdcell" ]
 
-    out += '<h2>%s grids that are similar to other puzzles</h2>' % subset
+            if cell == BLOCK_CHAR:
+                classes.append("block")
 
-    out += '<ul>'
-    out += get_list_band_html(index_list, 75, 100)
-    out += get_list_band_html(index_list, 50, 75)
-    out += get_list_band_html(index_list, 25, 50)
-    out += '</ul>'
+            if compare_with:
+                if cell == compare_with.cell(r, c):
+                    classes.append("match")
+                else:
+                    classes.append("diff")
 
-    out += html_footer
+            grid_html += '<div class="%s">' % " ".join(classes)
+            grid_html += cell  # TODO: expand rebus
+            #  include other mutations that would still be valid
+            grid_html += '</div>' # xdcell
+        grid_html += '</div>' #  xdrow
+    grid_html += '</div>' # xdgrid
 
-    return out
+    return grid_html
+
+
+def grid_diff_html(xd, compare_with=None):
+    if compare_with:
+        r = mktag('div', tagclass='fullgrid')
+    else:
+        r = mktag('div', tagclass='fullgrid main')
+
+    similarity_pct = ''
+    if compare_with:
+        real_pct = grid_similarity(xd, compare_with)
+        if real_pct < 25:
+            return ''
+
+        similarity_pct = " (%d%%)" % real_pct
+
+    xdlink = mktag('div', tagclass='xdid', inner=mkhref("%s %s" % (xd.xdid(), similarity_pct), '/pub/' + xd.xdid()))
+    if compare_with is not None:
+        r += xdlink
+    else:
+        r += mktag('b', inner=xdlink)
+    r += headers_to_html(xd)
+    r += grid_to_html(xd, compare_with)
+
+    r += '</div>' # solution
+    return r
 
 
 def main():
-    parser = get_parser(desc="make www pages from similarity query results")
-    parser.add_option('-n', '--name', dest="subset", help="user-facing name of the given subset")
-    args = get_args(parser=parser)
+    args = utils.get_args('generates .html diffs for all puzzles in similar.tsv')
+    outf = utils.open_output()
 
-    outf = open_output()
+    similars = utils.parse_tsv('gxd/similar.tsv', 'Similar')
+    xdids_todo = args.inputs or [ xdid for xdid, simrow in similars.items() if simrow.matches ]
+    
+    for mainxdid in xdids_todo:
+        try:
+            mainxd = xdfile.get_xd(mainxdid)
+        except Exception as e:
+            utils.log(str(e)) # 'xdid not found: %s' % mainxdid)
+            continue
 
-    right_index_list = {}  # [(olderfn, newerfn)] -> (pct, index_line, b1, b2)
+        try:
+            sim_matches = similars[mainxdid].matches
+        except:
+            utils.log('no matches known for %s' % mainxdid)
+            # but produce anyway
+            sim_matches = [ ]
 
-    # find all tsv/xsv/csv files
-    for xsvfn, xsv in find_files(*args.inputs, ext='sv'):
-        for row in parse_tsv_data(xsv, "Similarity"):
-            fn1, fn2 = row.needle, row.match
+        xddates = {}
+        xddates[mainxdid] = mainxd.date() # Dict to store XD dates for further sort
+        matches = [ x.split('=') for x in sim_matches.split() ]
+        html_grids = {}
+        html_clues = {}
+        
+        # Store in list to make further formatting as html table easier
+        html_grids[mainxdid] = grid_diff_html(xdfile.get_xd(mainxdid))
 
-            progress("%s - %s" % (fn1, fn2))
+        # Add for main XD
+        diff_l = []
+        for pos, mainclue, mainanswer in mainxd.iterclues():
+            diff_h = mktag('div','fullgrid main') + '%s.&nbsp;' %pos
+            diff_h += mainclue
+            diff_h += mktag('span', tagclass='main', inner='&nbsp;~&nbsp;' + mainanswer.upper())
+            diff_l.append(diff_h)
+        html_clues[mainxdid] = diff_l
+       
+        # Process for all matches
+        for xdid, pct in matches:
+            xd = xdfile.get_xd(xdid)
+            xddates[xdid] = xd.date()
+            # output each grid
+            html_grids[xdid] = grid_diff_html(xd, compare_with=mainxd)
+           
+            diff_l = []
+            # output comparison of each set of clues
+            for pos, clue, answer in xd.iterclues():
+                diff_h = mktag('div','fullgrid') + '%s.&nbsp;' %pos 
+                # Sometimes can return clue == None
+                sm = difflib.SequenceMatcher(lambda x: x == ' ', mainxd.get_clue(pos) or '', clue)
+                if sm.ratio() < 0.50:
+                    diff_h += clue
+                else:
+                    # Compare based on op codes
+                    for opcode in sm.get_opcodes():
+                        c, a1, a2, b1, b2 = opcode
+                        if c == 'equal':
+                            diff_h += '<span class="match">%s</span>' % clue[b1:b2]
+                        else:
+                            diff_h += '<span class="diff">%s</span>' % clue[b1:b2]
+                    
+                diff_h += mktag('span', tagclass=(answer == mainxd.get_answer(pos)) and 'match' or 'diff', inner='&nbsp;~&nbsp;' + answer.upper())
+                diff_h += mktag('/div')
+                diff_l.append(diff_h)
+            html_clues[xdid] = diff_l 
+        
 
-            if fn1.endswith(".transposed"):
-                fn1, _ = os.path.splitext(fn1)
-                flTranspose = True
-            else:
-                flTranspose = False
+        # Wrap into table
+        diff_h = mktag('table') + mktag('tr')
+        # Sort by date
+        sortedkeys = sorted(xddates.items(), key=operator.itemgetter(1)) 
+        for w, dt in sortedkeys:
+            # Wrap into table
+            diff_h += mktag('td') + html_grids[w] + mktag('/td')
+        diff_h += mktag('/tr')
+        
+        for i, clue in enumerate(html_clues[sortedkeys[0][0]]):
+            diff_h += mktag('tr')
+            for w, dt in sortedkeys:
+                diff_h += mktag('td') + html_clues[w][i] + mktag('/td')
+            diff_h += mktag('/tr') 
+        diff_h += mktag('/table')
+        
+        outf.write_html('pub/%s/index.html' % mainxdid, diff_h, title='Comparison for ' + mainxdid)
 
-            xd1 = xdfile.xdfile(file(fn1).read(), fn1)
-            xd2 = xdfile.xdfile(file(fn2).read(), fn2)
 
-            if flTranspose:
-                xd1 = xd1.transpose()
 
-            # always earlier on left
-            if xd2.date() < xd1.date():
-                xd1, xd2 = xd2, xd1
-
-            pct = int(row.percent)
-
-            if pct < 20:
-                log("%s%%, skipping" % pct)
-                continue
-
-            ret = gendiff(xd1, xd2, pct)
-
-            b1 = xd1.xdid()
-            b2 = xd2.xdid()
-
-            outfn = "%s-%s.html" % (b1, b2)
-
-            if flTranspose:
-                index_line = '%d%% <a href="%s">%s (transposed) - %s</a>' % (pct, outfn, b1, b2)
-            else:
-                index_line = '%d%% <a href="%s">%s - %s</a>' % (pct, outfn, b1, b2)
-
-            aut1 = xd1.get_header("Author")
-            aut2 = xd2.get_header("Author")
-
-            if aut1 != aut2:
-                index_line += ' <b>%s | %s</b>' % (aut1, aut2)
-            else:
-                index_line += ' %s' % aut1
-
-            right_index_list[(fn1, fn2)] = (pct, index_line, b1, b2)
-
-            outf.write_file(outfn, ret)
-
-    outf.write_file("style.css", style_css)
-    outf.write_file("index.html", get_index_html(right_index_list, args.subset))
-    outf.write_file("mkwww.log", get_log())
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

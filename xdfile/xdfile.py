@@ -3,7 +3,7 @@
 
 import string
 
-from .utils import parse_pathname, parse_tsv, progress, parse_pubid
+from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
 
 g_corpus = []  # list of xdfile
 g_all_clues = []  # list of ClueAnswer
@@ -391,34 +391,41 @@ class xdfile:
 
 
 # get_args(...) should be called before corpus()
-def corpus(*inputs):
-    from .utils import log, find_files, get_args
-
-    if len(g_corpus) > 0:
-        for xd in g_corpus:
-            yield xd
-        return
+@memoize
+def corpus():
+    from .utils import log
 
     args = get_args()
 
-    if not inputs:
-        inputs = [ args.corpusdir ]
+    ret = []
 
-    for fullfn, contents in find_files(*inputs, ext='.xd'):
+    for fullfn, contents in find_files(args.corpusdir, ext='.xd'):
         try:
             progress(fullfn)
 
             xd = xdfile(contents.decode("utf-8"), fullfn)
 
-            g_corpus.append(xd)
-
-            yield xd
+            ret.append(xd)
         except Exception as e:
             log(str(e))
             if args.debug:
                 raise
 
     progress()
+
+    return ret
+
+
+# just xdid -> contents
+@memoize
+def corpus_contents():
+    args = get_args()
+    ret = {}
+    for fullfn, contents in find_files(args.corpusdir, ext='.xd'):
+        xdid = parse_xdid(fullfn)
+        ret[xdid] = contents
+    return ret
+
 
 def year_from_date(dt):
     try:
@@ -461,3 +468,9 @@ def clues():
 
 def get_shelf(path):
     return parse_pathname(path).base.split('-')[0]
+
+@memoize
+def get_xd(xdid):
+    xd = xdfile(corpus_contents()[xdid].decode("utf-8"), xdid)
+    return xd
+
