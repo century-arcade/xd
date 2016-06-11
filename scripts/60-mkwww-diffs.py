@@ -89,10 +89,12 @@ def main():
     xdids_todo = args.inputs or [ xdid for xdid, simrow in similars.items() if simrow.matches ]
     
     for mainxdid in xdids_todo:
+        progress(mainxdid)
+
         try:
             mainxd = xdfile.get_xd(mainxdid)
         except Exception as e:
-            utils.log(str(e)) # 'xdid not found: %s' % mainxdid)
+            utils.log(str(e))
             continue
 
         try:
@@ -162,7 +164,8 @@ def main():
         for i, clue in enumerate(html_clues[sortedkeys[0][0]]):
             diff_h += mktag('tr')
             for w, dt in sortedkeys:
-                diff_h += mktag('td') + html_clues[w][i] + mktag('/td')
+                if i < len(html_clues[w]):
+                    diff_h += mktag('td') + html_clues[w][i] + mktag('/td')
             diff_h += mktag('/tr') 
         diff_h += mktag('/table')
         
