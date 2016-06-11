@@ -51,7 +51,7 @@ cat <<EOF > $config/create-receipt-rule.json
             {
                 "S3Action": {
                     "TopicArn": "$TOPICARN", 
-                    "BucketName": "$PRIVATE_BUCKET", 
+                    "BucketName": "$XDPRIV", 
                     "ObjectKeyPrefix": "incoming", 
                     "KmsKeyArn": ""
                 }
@@ -76,7 +76,7 @@ cat <<EOF > $config/s3-email-policy.json
             "Action": [
                 "s3:PutObject"
             ],
-            "Resource": "arn:aws:s3:::$PRIVATE_BUCKET/*",
+            "Resource": "arn:aws:s3:::$XDPRIV/*",
             "Condition": {
                 "StringEquals": {
                     "aws:Referer": "$ACCOUNTID"
@@ -88,7 +88,7 @@ cat <<EOF > $config/s3-email-policy.json
 EOF
 
 # these before creating the rule
-$aws s3api put-bucket-policy --bucket $PRIVATE_BUCKET --policy file://$config/s3-email-policy.json
+$aws s3api put-bucket-policy --bucket $XDPRIV --policy file://$config/s3-email-policy.json
 $aws sns create-topic --name $TOPICNAME
 
 

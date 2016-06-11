@@ -28,7 +28,7 @@ To just run unit tests:
 
 ## code style
 
-Line length: 90-ish is OK, flake8 is set to 95.
+The xd project mostly follows the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html).
 
 ## packaging and setup
 
