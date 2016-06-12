@@ -1,8 +1,8 @@
 
 # account-specific variables
 export ACCOUNTID=165509303398
-export DOMAIN=xddev.saul.pw
-export XDPRIV=xddev-private
+export DOMAIN=xd.saul.pw
+export XDPRIV=xd-private
 export REGION=us-west-2
 
 export GITURL=git@gitlab.com:rabidrat/gxd.git

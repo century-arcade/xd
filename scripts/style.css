@@ -186,14 +186,14 @@ select {width: 100%; }
     text-align: center;
 }
 .pubyears th, .pubyears td {
-    font-size: 10px;
+    font-size: 14px;
     margin: 0;
     padding: 0;
     text-align: center;
 }
 
 .pubyears th.zero-year {
-    background: #6678b1;
+    background: #aaaaff;
     color: black;
     border-color: white;
 }
@@ -260,9 +260,9 @@ select {width: 100%; }
 }
 
 .puzzles th, .puzzles td {
-    font-size: 10px;
+    font-size: 14px;
     margin: 0;
-    padding: 10px 2px;
+    padding: 7px 7px 7px 7px;
 }
 
 .puzzles th {
@@ -329,9 +329,9 @@ select {width: 100%; }
 }
 
 .onepub th, .onepub td {
-    font-size: 10px;
+    font-size: 14px;
     margin: 0;
-    padding: 10px 2px;
+    padding: 7px 7px 7px 7px;
 }
 
 .onepub th {

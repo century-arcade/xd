@@ -21,6 +21,7 @@ def main():
 
     prev_similar = parse_tsv('gxd/similar.tsv', "similar")
     for fn, contents in find_files(*args.inputs, ext=".xd"):
+        progress(fn)
         mainxd = xdfile(contents.decode('utf-8'), fn)
 
         if mainxd.xdid() in prev_similar:
@@ -33,7 +34,7 @@ def main():
                                key=lambda x: x[0], reverse=True)
 
         if similar_grids:
-            log("similar: " + " ".join(("%s:%s" % (xd2.xdid(), pct)) 
+            log("similar: " + " ".join(("%s=%s" % (xd2.xdid(), pct)) 
                                        for pct, xd1, xd2 in similar_grids))
 
         mainpubid = mainxd.publication_id()

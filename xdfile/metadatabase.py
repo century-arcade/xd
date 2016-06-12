@@ -177,3 +177,24 @@ class Publication:
         self.row = row
 
 
+@utils.memoize
+def get_similar_grids():
+    '''returns dict of [xdid] -> set of matching xdid'''
+
+    ret = {}
+    for r in utils.parse_tsv('gxd/similar.tsv', 'Similar').values():
+        matches = [ x.split('=') for x in r.matches.split() ]
+        if matches:
+            if r.xdid not in ret:
+                ret[r.xdid.lower()] = set()
+
+            ret[r.xdid.lower()] |= set(xdid.lower() for xdid, pct in matches)
+            
+            for xdid, pct in matches:
+                if xdid not in ret:
+                    ret[xdid.lower()] = set()
+
+                ret[xdid.lower()].add(r.xdid.lower())
+
+    return ret 
+

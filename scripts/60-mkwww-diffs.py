@@ -11,6 +11,7 @@ from xdfile.html import mktag, mkhref
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 #from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 from xdfile import BLOCK_CHAR
+from xdfile import metadatabase as metadb
 import xdfile
 import operator
 
@@ -86,7 +87,7 @@ def main():
     outf = utils.open_output()
 
     similars = utils.parse_tsv('gxd/similar.tsv', 'Similar')
-    xdids_todo = args.inputs or [ xdid for xdid, simrow in similars.items() if simrow.matches ]
+    xdids_todo = args.inputs or [ xdid for xdid, matches in metadb.get_similar_grids().items() if matches ]
     
     for mainxdid in xdids_todo:
         progress(mainxdid)
@@ -97,16 +98,10 @@ def main():
             utils.log(str(e))
             continue
 
-        try:
-            sim_matches = similars[mainxdid].matches
-        except:
-            utils.log('no matches known for %s' % mainxdid)
-            # but produce anyway
-            sim_matches = [ ]
+        matches = metadb.get_similar_grids().get(mainxdid, [])
 
         xddates = {}
         xddates[mainxdid] = mainxd.date() # Dict to store XD dates for further sort
-        matches = [ x.split('=') for x in sim_matches.split() ]
         html_grids = {}
         html_clues = {}
         
@@ -123,7 +118,7 @@ def main():
         html_clues[mainxdid] = diff_l
        
         # Process for all matches
-        for xdid, pct in matches:
+        for xdid in matches:
             xd = xdfile.get_xd(xdid)
             xddates[xdid] = xd.date()
             # output each grid

@@ -124,11 +124,16 @@ def main():
                 else:
                     similar_text = "0"
 
+                nclues = int(rsim.total_clues)
+
                 reused_clues += int(rsim.reused_clues)
                 reused_answers += int(rsim.reused_answers)
-                total_clues += int(rsim.total_clues)
+                total_clues += nclues
 
-                reused_clue_pct = int(100*(float(rsim.reused_clues) / float(rsim.total_clues)))
+                if nclues:
+                    reused_clue_pct = int(100*(float(rsim.reused_clues) / float(nclues)))
+                else:
+                    reused_clue_pct = ''
 
             if similar_text and similar_text != "0":
                 pubidtext = html.mkhref(r.xdid, '/pub/' + r.xdid)

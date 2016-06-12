@@ -423,7 +423,7 @@ def corpus_contents():
     ret = {}
     for fullfn, contents in find_files(args.corpusdir, ext='.xd'):
         xdid = parse_xdid(fullfn)
-        ret[xdid] = contents
+        ret[xdid.lower()] = contents
     return ret
 
 
