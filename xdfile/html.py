@@ -2,6 +2,40 @@ import cgi
 import time
 from collections import Counter
 import xdfile
+from calendar import HTMLCalendar
+from datetime import date
+
+
+class GridCalendar(HTMLCalendar):
+    """
+    Generate HTML calendar with links on certain pages with styles
+    """
+    def __init__(self, grids):
+        super(GridCalendar, self).__init__()
+        self.grids = grids #self.group_by_day(grids)
+
+    def formatday(self, day, weekday):
+        if day != 0:
+            cssclass = self.cssclasses[weekday]
+            cdate = str(date(self.year, self.month, day))
+            # If links in supplied dict show as link
+            if cdate in self.grids.keys():
+                cssclass += ' pctfilled'
+                body = []
+                body.append('<a href="%s">' % self.grids[cdate])
+                body.append(str(day))
+                body.append('</a>')
+                return self.day_cell(cssclass, '%s' % (''.join(body)))
+            return self.day_cell(cssclass, day)
+        return self.day_cell('noday', '&nbsp;')
+
+    
+    def formatmonth(self, year, month, withyear=False):
+        self.year, self.month = year, month
+        return super(GridCalendar, self).formatmonth(year, month, withyear)
+    
+    def day_cell(self, cssclass, body):
+        return '<td class="%s">%s</td>' % (cssclass, body)
 
 
 def html_header(**kwargs):

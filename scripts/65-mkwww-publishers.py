@@ -6,6 +6,7 @@ import re
 from xdfile.utils import progress, open_output, get_args, args_parser, COLUMN_SEPARATOR
 from xdfile import html, utils, catalog, pubyear
 from xdfile import metadatabase as metadb
+from xdfile.html import GridCalendar
 import xdfile
 
 
@@ -99,6 +100,10 @@ def main():
 
     pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', 'Grid_1A_1D', 'ReusedCluePct', 'SimilarGrids' ]
     utils.log('generating index pages')
+    
+    # dict to be used on header calendar with links
+    c_grids = {}
+
     for pair, pub in sorted(list(all_pubs.items())):
         pubid, year = pair
         progress(pubid)
@@ -109,6 +114,7 @@ def main():
         total_similar = []
 
         rows = []
+        
         for r in pub.puzzles_meta:
             similar_text = ""
             reused_clue_pct = "n/a"
@@ -134,12 +140,13 @@ def main():
                     reused_clue_pct = int(100*(float(rsim.reused_clues) / float(nclues)))
                 else:
                     reused_clue_pct = ''
-
+            
             if similar_text and similar_text != "0":
                 pubidtext = html.mkhref(r.xdid, '/pub/' + r.xdid)
+                c_grids[r.Date] = '/pub/' + r.xdid 
             else:
                 pubidtext = r.xdid
-
+            
             row = [ 
                 pubidtext,
                 r.Date,
@@ -156,9 +163,10 @@ def main():
             outf.write_row('pub/%s%s.tsv' % (pubid, year), " ".join(pubyear_header), row)
             rows.append(row)
 
-        # Disabled below as no point in header for pages except main one
-        #onepubyear_html = pubyear.pubyear_html([(pubid, year, len(rows))])
-        onepubyear_html = html.html_table(sorted(rows, key=lambda r: r[1]), pubyear_header, "puzzle", "puzzles")
+        # Generate calendar 
+        onepubyear_html = GridCalendar(c_grids).formatyear(year, 6) + "<br>"
+        
+        onepubyear_html += html.html_table(sorted(rows, key=lambda r: r[1]), pubyear_header, "puzzle", "puzzles")
         outf.write_html("pub/%s%s/index.html" % (pubid, year), onepubyear_html, title="%s %s" % (pubid, year))
        
         cluepct = ""
