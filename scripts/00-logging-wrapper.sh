@@ -2,6 +2,8 @@
 
 source scripts/config-vars.sh
 
+OUTBASEDIR=/tmp/$NOW
+
 # start from a clean $OUTBASEDIR
 if [ -d ${OUTBASEDIR} ] ; then
     BACKUPDIR=products/`date +"%Y%m%d-%H%M%S.%N"`
@@ -15,11 +17,14 @@ export LOGFILE=${OUTBASE}-pipeline.log
 
 exec > >(tee -i ${LOGFILE}) 2>&1
 
-/bin/bash scripts/01-extract.sh
+/bin/bash scripts/01-import.sh
 /bin/bash scripts/02-analyze.sh
 /bin/bash scripts/03-mkwww.sh
 
-# to capture all logs if other scripts fail
+# commit new puzzles and saved analysis results
+/bin/bash scripts/29-git-commit.sh incoming_$TODAY
+
+# capture all logs even if other scripts fail
 scripts/95-mkwww-logs.py -o $WWW/$NOW/log.html $TMP
 
 /bin/bash scripts/04-deploy.sh

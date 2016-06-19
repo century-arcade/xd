@@ -25,7 +25,7 @@ def main():
         mainxd = xdfile(contents.decode('utf-8'), fn)
 
         if mainxd.xdid() in prev_similar:
-            continue # Skip to not reprocess same .xd are in similar.tsv
+            continue  # skip reprocessing .xd that are already in similar.tsv
 
         """ find similar grids (pct, xd) for the mainxd in the corpus. 
         Takes about 1 second per xd.  sorted by pct.

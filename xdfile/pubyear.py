@@ -63,7 +63,11 @@ def pubyear_html(pubyears=[]):
     
     def key_pubyears(x):
         pubid, y = x
-        firstyear = xdfile.year_from_date(metadb.xd_publications()[pubid].FirstIssueDate)
+        try:
+            firstyear = xdfile.year_from_date(metadb.xd_publications()[pubid].FirstIssueDate)
+        except:
+            firstyear = None
+
         return firstyear or min(y.keys())
 
     xdtotal = 0

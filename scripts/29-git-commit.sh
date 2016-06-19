@@ -10,7 +10,7 @@ cd $GXD
 
 if [ -n "$BRANCH" ] ; then
     git checkout master
-    git checkout -b $BRANCH
+    git checkout -b $BRANCH || git checkout $BRANCH
     git add .
     git commit -m "incoming for $TODAY"
     git push --set-upstream origin $BRANCH
@@ -18,6 +18,9 @@ if [ -n "$BRANCH" ] ; then
     # submit pull request
     git request-pull master ${GITURL} $BRANCH
     git checkout master
+
+#    git merge $BRANCH
+#    git branch -d $BRANCH
 else 
     git add .
     git commit -m "incoming for $TODAY"

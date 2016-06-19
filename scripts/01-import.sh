@@ -30,6 +30,3 @@ aws s3 cp $WWWZIP ${S3PRIV}/sources/
 # 2x: convert everything to .xd, shelve in the proper location, and commit
 scripts/20-convert2xd.py -o $GXD $EMAILZIP $WWWZIP
 
-scripts/29-git-commit.sh incoming_$NOW
-
-

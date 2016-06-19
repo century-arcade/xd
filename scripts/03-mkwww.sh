@@ -12,6 +12,7 @@ mkdir -p $WWW/pub/gxd
 
 # 
 cp $GXD/*.tsv $WWW/pub/gxd/
+cp $PUB/*.tsv $WWW/pub/
 
 # 6x: mkwww
 

@@ -143,7 +143,7 @@ class xdfile:
                 clues.append(clue)
 
         if not clues:
-            return "[XXX]"
+            return None
 
         assert len(clues) == 1, Exception("multiple clues for %s: %s" % (target, " | ".join(clues)))
         return clues[0]
@@ -384,7 +384,10 @@ class xdfile:
         flipxd.grid = g
 
         for posdir, posnum, answer in flipxd.iteranswers():
-            flipxd.clues.append(((posdir, posnum), self.get_clue_for_answer(answer), answer))
+            clue = self.get_clue_for_answer(answer)
+            if clue is None:  # '' might be the actual clue
+                clue = '[XXX]'
+            flipxd.clues.append(((posdir, posnum), clue, answer))
 
         flipxd.clues = sorted(flipxd.clues)
         return flipxd

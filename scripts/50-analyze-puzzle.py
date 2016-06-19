@@ -114,7 +114,7 @@ def main():
     for fn, contents in find_files(*args.inputs, ext=".xd"):
         mainxd = xdfile(contents.decode('utf-8'), fn)
 
-        if mainxd.xdid() in prev_similar:
+        if mainxd.xdid() in prev_similar and not args.all:
             continue
 
         # find similar grids (pct, xd) for the mainxd in the corpus.  takes about 1 second per xd.  sorted by pct.
@@ -258,7 +258,7 @@ def main():
         main_html += '</div>'
 
         if args.all or similar_grids:
-            outf.write_html("pub/%s/index.html" % mainxd.xdid(), main_html, title="xd analysis of %s" % mainxd.xdid())
+            outf.write_html("pub/clue/%s/index.html" % mainxd.xdid(), main_html, title="xd analysis of %s" % mainxd.xdid())
 
         # summary row to similar.tsv
         metadatabase.append_row('gxd/similar.tsv', 'xdid similar_grid_pct reused_clues reused_answers total_clues matches', [

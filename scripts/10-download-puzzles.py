@@ -40,7 +40,7 @@ def main():
 
     puzzle_sources = xd_puzzle_sources()
 
-    new_recents_tsv = ''
+    new_recents_tsv = []
 
     # some downloads may fail, track the last successful ones
     most_recent = {}
@@ -95,10 +95,10 @@ def main():
             sources_tsv += xd_sources_row(fn, url, todaystr)
 
     for k, v in most_recent.items():
-        new_recents_tsv += xd_recent_download(k, v)
+        new_recents_tsv.append(xd_recent_download(k, v))
 
     outf.write_file("sources.tsv", xd_sources_header + sources_tsv)
-    open(args.recents, "w").write(xd_recents_header + new_recents_tsv)
+    open(args.recents, "w").write(xd_recents_header + "".join(sorted(new_recents_tsv)))
 
 if __name__ == "__main__":
     main()

@@ -6,6 +6,17 @@ from collections import Counter
 from xdfile import utils, metadatabase as metadb
 import xdfile
 
+
+# pub/pubyears.tsv:
+"""
+   SELECT pubid,
+          year_from_date(date) AS year,
+          COUNT(*) AS num
+      FROM puzzles
+      GROUP BY pubid, year
+      WHERE year > 1900 AND year < 2100
+"""
+
 def main():
     args = utils.get_args('generate pub-years data')
 

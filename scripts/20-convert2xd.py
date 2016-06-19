@@ -160,7 +160,7 @@ def main():
                     log("could not convert: %s" % rejected)
 
                 # only add receipt if first time converting this source
-                if xdid not in existing_xdids:
+                if not already_received:
                     this_receipt = metadb.xd_receipts_row(ReceiptId=ReceiptId,
                         CaptureTime=CaptureTime,
                         ReceivedTime=ReceivedTime,
