@@ -280,11 +280,11 @@ select {width: 100%; }
 }
 
 .puzzles td {
-/*    width: 20px;*/
     height: 20px;
     border-right: 1px solid #333333;
     border-bottom: 1px solid #333333;
     border-top: 1px solid #333333;
+    white-space: nowrap;
 }
 
 .puzzles tr:hover td {
