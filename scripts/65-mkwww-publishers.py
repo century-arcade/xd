@@ -142,8 +142,10 @@ def main():
                     reused_clue_pct = ''
             
             if similar_text and similar_text != "0":
-                pubidtext = html.mkhref(r.xdid, '/pub/' + r.xdid)
-                c_grids[r.Date] = '/pub/' + r.xdid 
+                pubidtext = '<span id="%s">' % r.xdid 
+                pubidtext += html.mkhref(r.xdid, '/pub/' + r.xdid)
+                pubidtext += '</span>'
+                c_grids[r.Date] = '#' + r.xdid 
             else:
                 pubidtext = r.xdid
             
