@@ -18,14 +18,18 @@ class GridCalendar(HTMLCalendar):
         if day != 0:
             cssclass = self.cssclasses[weekday]
             cdate = str(date(self.year, self.month, day))
-            # If links in supplied dict show as link
+            # If links in supplied link and not empty
             if cdate in self.grids.keys():
-                cssclass += ' pctfilled'
-                body = []
-                body.append('<a href="%s">' % self.grids[cdate])
-                body.append(str(day))
-                body.append('</a>')
-                return self.day_cell(cssclass, '%s' % (''.join(body)))
+                # If None as link suplied - just css change
+                if not self.grids[cdate]:
+                    cssclass += ' biggrid'
+                else:
+                    cssclass += ' pctfilled'
+                    body = []
+                    body.append('<a href="%s">' % self.grids[cdate])
+                    body.append(str(day))
+                    body.append('</a>')
+                    return self.day_cell(cssclass, '%s' % (''.join(body)))
             return self.day_cell(cssclass, day)
         return self.day_cell('noday', '&nbsp;')
 

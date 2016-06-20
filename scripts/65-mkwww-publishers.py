@@ -2,6 +2,8 @@
 
 from collections import Counter
 import re
+import operator
+import functools
 
 from xdfile.utils import progress, open_output, get_args, args_parser, COLUMN_SEPARATOR
 from xdfile import html, utils, catalog, pubyear
@@ -141,6 +143,12 @@ def main():
                     reused_clue_pct = int(100*(float(rsim.reused_clues) / float(nclues)))
                 else:
                     reused_clue_pct = ''
+
+            # Highlight only grids sized > 400 cells
+            size_l = re.findall('\d+', r.Size)
+            if functools.reduce(operator.mul, 
+                    [int(i) for i in size_l], 1) >= 400:
+                c_grids[r.Date] = None
             
             if similar_text and similar_text != "0":
                 # http://stackoverflow.com/questions/1418838/html-making-a-link-lead-to-the-anchor-centered-in-the-middle-of-the-page
@@ -148,11 +156,10 @@ def main():
                 pubidtext = '<span class="anchor" id="%s">' % r.xdid 
                 pubidtext += '</span>'
                 pubidtext += html.mkhref(r.xdid, '/pub/' + r.xdid)
-                #pubidtext += '</span>'
                 c_grids[r.Date] = '#' + r.xdid 
             else:
                 pubidtext = r.xdid
-            
+           
             row = [ 
                 pubidtext,
                 r.Date,

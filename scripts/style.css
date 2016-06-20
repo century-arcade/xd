@@ -32,7 +32,7 @@ th.mon, th.tue, th.wed, th.thu, th.fri, th.sat, th.sun {
     text-align: center;
 }
 
- th.sun, td.sun {
+td.biggrid {
     color: red;
 }
 
