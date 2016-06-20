@@ -32,7 +32,7 @@ th.mon, th.tue, th.wed, th.thu, th.fri, th.sat, th.sun {
     text-align: center;
 }
 
-th.sat, th.sun, td.sat, td.sun {
+ th.sun, td.sun {
     color: red;
 }
 
@@ -44,6 +44,14 @@ td.mon, td.tue, td.wed, td.thu, td.fri, td.sat, td.sun {
 table.month td.pctfilled {
     background: lightgreen;
 }
+
+.anchor {
+  display: block;
+  height: 200px; /*same height as header*/
+  margin-top: -200px; /*same height as header*/
+  visibility: hidden;
+}
+
 
         table.diff {font-family:Courier; border:medium;}
         .diff_header {  background-color:#e0e0e0; color: #e0e0e0 }
@@ -351,6 +359,10 @@ select {width: 100%; }
 
 .puzzles .this {
     font-size: 80px;
+}
+
+tr.puzzlehl {
+    background: lightgreen;
 }
 
 /* Pubyear header */
