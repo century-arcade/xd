@@ -103,7 +103,8 @@ def main():
     
     # dict to be used on header calendar with links
     c_grids = {}
-
+    # map row with html class to highlight some of them
+    rows_dict = {}
     for pair, pub in sorted(list(all_pubs.items())):
         pubid, year = pair
         progress(pubid)
@@ -142,9 +143,12 @@ def main():
                     reused_clue_pct = ''
             
             if similar_text and similar_text != "0":
-                pubidtext = '<span id="%s">' % r.xdid 
-                pubidtext += html.mkhref(r.xdid, '/pub/' + r.xdid)
+                # http://stackoverflow.com/questions/1418838/html-making-a-link-lead-to-the-anchor-centered-in-the-middle-of-the-page
+                # 
+                pubidtext = '<span class="anchor" id="%s">' % r.xdid 
                 pubidtext += '</span>'
+                pubidtext += html.mkhref(r.xdid, '/pub/' + r.xdid)
+                #pubidtext += '</span>'
                 c_grids[r.Date] = '#' + r.xdid 
             else:
                 pubidtext = r.xdid
@@ -167,8 +171,17 @@ def main():
 
         # Generate calendar 
         onepubyear_html = GridCalendar(c_grids).formatyear(year, 6) + "<br>"
-        
-        onepubyear_html += html.html_table(sorted(rows, key=lambda r: r[1]), pubyear_header, "puzzle", "puzzles")
+    
+        # Generate rows_dict mappring appropriate css style
+        for i, r in enumerate(sorted(rows, key=lambda r: r[1])):
+            a = [ r ]
+            if r[9] and r[9] != "0":
+                a.append('puzzlehl')
+            else:
+                a.append('puzzle')
+            rows_dict[i] = a
+        # Generate html table
+        onepubyear_html += html.html_table(rows_dict, pubyear_header, "puzzle", "puzzles")
         outf.write_html("pub/%s%s/index.html" % (pubid, year), onepubyear_html, title="%s %s" % (pubid, year))
        
         cluepct = ""

@@ -221,12 +221,18 @@ def table_row(row, keys, rowclass="row", tag="td"):
 def html_table(rows, colnames, rowclass="row", tableclass=""):
     """
     Generates html table with class defined
+    rows can be a list - then rowclass applied
+    or dict - {row:rowclass}
     """
     out = mktag('table', tableclass)
     out += table_row(colnames, colnames, tag='th')
 
-    for r in rows:
-        out += table_row(r, colnames, rowclass=rowclass)
+    if isinstance(rows, list):
+        for r in rows:
+            out += table_row(r, colnames, rowclass=rowclass)
+    if isinstance(rows, dict):
+         for r in rows.values():
+             out += table_row(r[0], colnames, rowclass=r[1])
 
     out += mktag('/table')  # end table
     return out
