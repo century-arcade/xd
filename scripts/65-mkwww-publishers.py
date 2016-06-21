@@ -179,17 +179,6 @@ def main():
         # Generate calendar 
         onepubyear_html = GridCalendar(c_grids).formatyear(year, 6) + "<br>"
         
-        """
-        # Generate rows_dict mappring appropriate css style
-        
-        for i, r in enumerate(sorted(rows, key=lambda r: r[1])):
-            a = [ r ]
-            if r[9] and r[9] != "0":
-                a.append('puzzlehl')
-            else:
-                a.append('puzzle')
-            rows_dict[i] = a
-        """
         # Generate html table
         onepubyear_html += html.html_table(rows, pubyear_header, "puzzle", "puzzles")
         outf.write_html("pub/%s%s/index.html" % (pubid, year), onepubyear_html, title="%s %s" % (pubid, year))
