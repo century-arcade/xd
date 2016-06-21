@@ -2,6 +2,9 @@
 # -*- coding: utf-8
 
 import string
+import operator
+import functools
+import re
 
 from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
 
@@ -477,3 +480,9 @@ def get_xd(xdid):
     xd = xdfile(corpus_contents()[xdid].decode("utf-8"), xdid)
     return xd
 
+def num_cells(size):
+    """
+    Return grid size in cells out of Size definition e.g. "15X15R"
+    """
+    size_l = re.findall('\d+', size)
+    return functools.reduce(operator.mul, [int(i) for i in size_l], 1)

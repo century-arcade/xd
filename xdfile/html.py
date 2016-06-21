@@ -26,9 +26,8 @@ class GridCalendar(HTMLCalendar):
                 else:
                     cssclass += ' pctfilled'
                     body = []
-                    body.append('<a href="%s">' % self.grids[cdate])
-                    body.append(str(day))
-                    body.append('</a>')
+                    link = self.grids[cdate] if self.grids[cdate] else '' 
+                    body.append(mkhref(str(day), link))
                     return self.day_cell(cssclass, '%s' % (''.join(body)))
             return self.day_cell(cssclass, day)
         return self.day_cell('noday', '&nbsp;')
@@ -39,7 +38,11 @@ class GridCalendar(HTMLCalendar):
         return super(GridCalendar, self).formatmonth(year, month, withyear)
     
     def day_cell(self, cssclass, body):
-        return '<td class="%s">%s</td>' % (cssclass, body)
+        text = []
+        text.append(mktag('td', cssclass))
+        text.append(str(body))
+        text.append(mktag('/td'))
+        return ''.join(text)
 
 
 def html_header(**kwargs):
@@ -225,18 +228,16 @@ def table_row(row, keys, rowclass="row", tag="td"):
 def html_table(rows, colnames, rowclass="row", tableclass=""):
     """
     Generates html table with class defined
-    rows can be a list - then rowclass applied
-    or dict - {row:rowclass}
+    each row can be a list - then rowclass applied
+    or dict - {row=row:class=rowclass}
     """
     out = mktag('table', tableclass)
     out += table_row(colnames, colnames, tag='th')
 
-    if isinstance(rows, list):
-        for r in rows:
-            out += table_row(r, colnames, rowclass=rowclass)
-    if isinstance(rows, dict):
-         for r in rows.values():
-             out += table_row(r[0], colnames, rowclass=r[1])
+    for r in rows:
+        r_text = r['row'] if isinstance(r, dict) else r
+        r_class = r['class'] if isinstance(r, dict) else rowclass 
+        out += table_row(r_text, colnames, rowclass=r_class)
 
     out += mktag('/table')  # end table
     return out
