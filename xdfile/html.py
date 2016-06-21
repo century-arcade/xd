@@ -2,6 +2,47 @@ import cgi
 import time
 from collections import Counter
 import xdfile
+from calendar import HTMLCalendar
+from datetime import date
+
+
+class GridCalendar(HTMLCalendar):
+    """
+    Generate HTML calendar with links on certain pages with styles
+    """
+    def __init__(self, grids):
+        super(GridCalendar, self).__init__()
+        self.grids = grids #self.group_by_day(grids)
+
+    def formatday(self, day, weekday):
+        if day != 0:
+            cssclass = self.cssclasses[weekday]
+            cdate = str(date(self.year, self.month, day))
+            # If links in supplied link and not empty
+            if cdate in self.grids.keys():
+                # If None as link suplied - just css change
+                if not self.grids[cdate]:
+                    cssclass += ' biggrid'
+                else:
+                    cssclass += ' pctfilled'
+                    body = []
+                    link = self.grids[cdate] if self.grids[cdate] else '' 
+                    body.append(mkhref(str(day), link))
+                    return self.day_cell(cssclass, '%s' % (''.join(body)))
+            return self.day_cell(cssclass, day)
+        return self.day_cell('noday', '&nbsp;')
+
+    
+    def formatmonth(self, year, month, withyear=False):
+        self.year, self.month = year, month
+        return super(GridCalendar, self).formatmonth(year, month, withyear)
+    
+    def day_cell(self, cssclass, body):
+        text = []
+        text.append(mktag('td', cssclass))
+        text.append(str(body))
+        text.append(mktag('/td'))
+        return ''.join(text)
 
 
 def html_header(**kwargs):
@@ -187,12 +228,16 @@ def table_row(row, keys, rowclass="row", tag="td"):
 def html_table(rows, colnames, rowclass="row", tableclass=""):
     """
     Generates html table with class defined
+    each row can be a list - then rowclass applied
+    or dict - {row=row:class=rowclass}
     """
     out = mktag('table', tableclass)
     out += table_row(colnames, colnames, tag='th')
 
     for r in rows:
-        out += table_row(r, colnames, rowclass=rowclass)
+        r_text = r['row'] if isinstance(r, dict) else r
+        r_class = r['class'] if isinstance(r, dict) else rowclass 
+        out += table_row(r_text, colnames, rowclass=r_class)
 
     out += mktag('/table')  # end table
     return out

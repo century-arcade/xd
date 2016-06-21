@@ -1,3 +1,58 @@
+table.year td {
+    border: 1px solid black;
+    vertical-align: top;
+}
+
+table.year {
+    border: 1px solid black;
+    padding: 2px;
+}
+
+
+table.month {
+    border: 0px;
+    font-size: 12px;
+}
+
+table.month td {
+    border: 0px;
+}
+
+table.month th {
+    border-bottom: 1px solid black;
+}
+
+table.month th.month {
+    background-color: #ccf;
+    color: black;
+}
+
+th.mon, th.tue, th.wed, th.thu, th.fri, th.sat, th.sun {
+    padding: 1px;
+    text-align: center;
+}
+
+td.biggrid {
+    color: red;
+}
+
+td.mon, td.tue, td.wed, td.thu, td.fri, td.sat, td.sun {
+    padding: 1px;
+    text-align: center; 
+}
+
+table.month td.pctfilled {
+    background: lightgreen;
+}
+
+.anchor {
+  display: block;
+  height: 200px; /*same height as header*/
+  margin-top: -200px; /*same height as header*/
+  visibility: hidden;
+}
+
+
         table.diff {font-family:Courier; border:medium;}
         .diff_header {  background-color:#e0e0e0; color: #e0e0e0 }
         td.diff_header { text-align:right; width: 0px}
@@ -280,11 +335,11 @@ select {width: 100%; }
 }
 
 .puzzles td {
+/*    width: 20px;*/
     height: 20px;
     border-right: 1px solid #333333;
     border-bottom: 1px solid #333333;
     border-top: 1px solid #333333;
-    white-space: nowrap;
 }
 
 .puzzles tr:hover td {
@@ -304,6 +359,10 @@ select {width: 100%; }
 
 .puzzles .this {
     font-size: 80px;
+}
+
+tr.puzzlehl {
+    background: lightgreen;
 }
 
 /* Pubyear header */

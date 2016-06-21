@@ -6,6 +6,8 @@ import re
 from xdfile.utils import progress, open_output, get_args, args_parser, COLUMN_SEPARATOR
 from xdfile import html, utils, catalog, pubyear
 from xdfile import metadatabase as metadb
+from xdfile.html import GridCalendar
+from xdfile.xdfile import num_cells
 import xdfile
 
 
@@ -99,6 +101,10 @@ def main():
 
     pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', 'Grid_1A_1D', 'ReusedCluePct', 'SimilarGrids' ]
     utils.log('generating index pages')
+    
+    # dict to be used on header calendar with links
+    c_grids = {}
+    
     for pair, pub in sorted(list(all_pubs.items())):
         pubid, year = pair
         progress(pubid)
@@ -109,6 +115,7 @@ def main():
         total_similar = []
 
         rows = []
+        
         for r in pub.puzzles_meta:
             similar_text = ""
             reused_clue_pct = "n/a"
@@ -135,11 +142,23 @@ def main():
                 else:
                     reused_clue_pct = ''
 
+            # Highlight only grids sized > 400 cells
+            if num_cells(r.Size) >= 400:
+                c_grids[r.Date] = None
+            
+            row_dict = {} # Map row and style
             if similar_text and similar_text != "0":
-                pubidtext = html.mkhref(r.xdid, '/pub/' + r.xdid)
+                # http://stackoverflow.com/questions/1418838/html-making-a-link-lead-to-the-anchor-centered-in-the-middle-of-the-page
+                # 
+                pubidtext = '<span class="anchor" id="%s">' % r.xdid 
+                pubidtext += '</span>'
+                pubidtext += html.mkhref(r.xdid, '/pub/' + r.xdid)
+                c_grids[r.Date] = '#' + r.xdid
+                row_dict['class'] = 'puzzlehl'
             else:
                 pubidtext = r.xdid
-
+                row_dict['class'] = 'puzzle'
+           
             row = [ 
                 pubidtext,
                 r.Date,
@@ -154,11 +173,14 @@ def main():
               ]
 
             outf.write_row('pub/%s%s.tsv' % (pubid, year), " ".join(pubyear_header), row)
-            rows.append(row)
+            row_dict['row'] = row
+            rows.append(row_dict)
 
-        # Disabled below as no point in header for pages except main one
-        #onepubyear_html = pubyear.pubyear_html([(pubid, year, len(rows))])
-        onepubyear_html = html.html_table(sorted(rows, key=lambda r: r[1]), pubyear_header, "puzzle", "puzzles")
+        # Generate calendar 
+        onepubyear_html = GridCalendar(c_grids).formatyear(year, 6) + "<br>"
+        
+        # Generate html table
+        onepubyear_html += html.html_table(rows, pubyear_header, "puzzle", "puzzles")
         outf.write_html("pub/%s%s/index.html" % (pubid, year), onepubyear_html, title="%s %s" % (pubid, year))
        
         cluepct = ""
