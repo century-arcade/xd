@@ -148,8 +148,8 @@ def main():
                     reused_clue_pct = ''
 
             # Highlight only grids sized > 400 cells
-            #if num_cells(r.Size) >= 400:
-            #    c_grids[r.Date] = None
+            if num_cells(r.Size) >= 400:
+                c_grids[r.Date] = None
             
             row_dict = {} # Map row and style
             if similar_text and similar_text != "0":
