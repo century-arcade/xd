@@ -3,8 +3,12 @@ table.year td {
     vertical-align: top;
 }
 
+table.year td.year-v {
+    vertical-align: middle;
+    padding: 5px;
+}
 table.year {
-    border: 1px solid black;
+    /*border: 1px solid black;*/
     padding: 2px;
 }
 
@@ -32,17 +36,23 @@ th.mon, th.tue, th.wed, th.thu, th.fri, th.sat, th.sun {
     text-align: center;
 }
 
+td.mon, td.tue, td.wed, td.thu, td.fri, td.sat, td.sun {
+    padding: 1px;
+    text-align: center;
+    color: lightgrey;
+}
+
 td.biggrid {
     color: red;
 }
 
-td.mon, td.tue, td.wed, td.thu, td.fri, td.sat, td.sun {
-    padding: 1px;
-    text-align: center; 
+td.ordgrid {
+    color: black;
 }
 
 table.month td.pctfilled {
     background: lightgreen;
+    color: black;
 }
 
 .anchor {
@@ -50,6 +60,13 @@ table.month td.pctfilled {
   height: 200px; /*same height as header*/
   margin-top: -200px; /*same height as header*/
   visibility: hidden;
+}
+
+br.break {
+    display: block;
+    margin-top: 5px;
+    margin: 5px 0;
+    content: " ";
 }
 
 

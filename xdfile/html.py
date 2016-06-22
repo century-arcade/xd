@@ -12,7 +12,7 @@ class GridCalendar(HTMLCalendar):
     """
     def __init__(self, grids):
         super(GridCalendar, self).__init__()
-        self.grids = grids #self.group_by_day(grids)
+        self.grids = grids
 
     def formatday(self, day, weekday):
         if day != 0:
@@ -20,19 +20,17 @@ class GridCalendar(HTMLCalendar):
             cdate = str(date(self.year, self.month, day))
             # If links in supplied link and not empty
             if cdate in self.grids.keys():
-                # If None as link suplied - just css change
-                if not self.grids[cdate]:
-                    cssclass += ' biggrid'
+                # Supply class or link via dict
+                if self.grids[cdate]['class']:
+                    cssclass += ' ' + self.grids[cdate]['class']
+                if 'link' in self.grids[cdate].keys():
+                    body = mkhref(str(day), self.grids[cdate]['link']) 
                 else:
-                    cssclass += ' pctfilled'
-                    body = []
-                    link = self.grids[cdate] if self.grids[cdate] else '' 
-                    body.append(mkhref(str(day), link))
-                    return self.day_cell(cssclass, '%s' % (''.join(body)))
+                    body = str(day)
+                return self.day_cell(cssclass, '%s' % (body))
             return self.day_cell(cssclass, day)
         return self.day_cell('noday', '&nbsp;')
 
-    
     def formatmonth(self, year, month, withyear=False):
         self.year, self.month = year, month
         return super(GridCalendar, self).formatmonth(year, month, withyear)
@@ -44,6 +42,37 @@ class GridCalendar(HTMLCalendar):
         text.append(mktag('/td'))
         return ''.join(text)
 
+    def formatyear(self, theyear, width=3, vertical=False):
+        """
+        Return a formatted year as a table of tables.
+        """
+
+        # Constants for months referenced later
+        January = 1
+        February = 2
+
+        v = []
+        a = v.append
+        width = max(width, 1)
+        a('<table border="0" cellpadding="0" cellspacing="0" class="year">')
+        a('\n')
+        
+        # Align header horizontally
+        if not vertical:
+            a('<tr><th colspan="%d" class="year">%s</th></tr>' % (width, theyear))
+        for i in range(January, January+12, width):
+            # months in this row
+            months = range(i, min(i+width, 13))
+            a('<tr>')
+            if vertical:
+                a('<td class="year-v">%s</td>' % ('<br>'.join(str(theyear))))
+            for m in months:
+                a('<td>')
+                a(self.formatmonth(theyear, m, withyear=False))
+                a('</td>')
+            a('</tr>')
+        a('</table>')
+        return ''.join(v)
 
 def html_header(**kwargs):
     kwargs['date'] = time.strftime('%F')
@@ -236,7 +265,7 @@ def html_table(rows, colnames, rowclass="row", tableclass=""):
 
     for r in rows:
         r_text = r['row'] if isinstance(r, dict) else r
-        r_class = r['class'] if isinstance(r, dict) else rowclass 
+        r_class = r['class'] if isinstance(r, dict) else rowclass
         out += table_row(r_text, colnames, rowclass=r_class)
 
     out += mktag('/table')  # end table

@@ -149,7 +149,9 @@ def main():
 
             # Highlight only grids sized > 400 cells
             if num_cells(r.Size) >= 400:
-                c_grids[r.Date] = None
+                c_grids[r.Date] = { 'class' : 'biggrid' }
+            else:
+                c_grids[r.Date] = { 'class' : 'ordgrid' }
             
             row_dict = {} # Map row and style
             if similar_text and similar_text != "0":
@@ -157,7 +159,10 @@ def main():
                 pubidtext = '<span class="anchor" id="%s">' % r.xdid 
                 pubidtext += '</span>'
                 pubidtext += html.mkhref(r.xdid, '/pub/' + r.xdid)
-                c_grids[r.Date] = '/pub/%s%s/index.html#' % (pubid, year) + r.xdid
+                c_grids[r.Date] = { 
+                        'link' : '/pub/%s%s/index.html#' % (pubid, year) + r.xdid,
+                        'class': 'pctfilled'
+                        }
                 row_dict['class'] = 'puzzlehl'
             else:
                 pubidtext = r.xdid
@@ -209,8 +214,8 @@ def main():
     # Generate /pub/[publisher][year] page
     for pubid in pub_grids.keys():
         body = []
-        for y in sorted(pub_grids[pubid]):
-            body.append(GridCalendar(pub_grids[pubid][y]).formatyear(y, 12) + mktag('br'))
+        for y in sorted(pub_grids[pubid], reverse=True):
+            body.append(GridCalendar(pub_grids[pubid][y]).formatyear(y, 12, vertical=True) + mktag('br','break'))
         outf.write_html("pub/%s/index.html" % pubid, ''.join(body), title="%s" % pubid)
     
 
