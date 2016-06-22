@@ -46,10 +46,8 @@ class GridCalendar(HTMLCalendar):
         """
         Return a formatted year as a table of tables.
         """
-
         # Constants for months referenced later
         January = 1
-        February = 2
 
         v = []
         a = v.append

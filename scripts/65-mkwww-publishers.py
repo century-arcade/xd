@@ -102,16 +102,12 @@ def main():
     pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', 'Grid_1A_1D', 'ReusedCluePct', 'SimilarGrids' ]
     utils.log('generating index pages')
     
-    # dict to be used on header calendar with links
-    #c_grids = {}
-
     # dict to generate pub page with calendars
     pub_grids = defaultdict(dict)
     
     for pair, pub in sorted(list(all_pubs.items())):
         c_grids = {}
         pubid, year = pair
-        #pub_grids[pubid] = []
         progress(pubid)
    
         reused_clues = 0
@@ -219,17 +215,6 @@ def main():
         outf.write_html("pub/%s/index.html" % pubid, ''.join(body), title="%s" % pubid)
     
 
-    """
-    pub_header = "Year NumberOfPuzzles SimilarPuzzles OriginalWordPct OriginalCluePct".split()            
-    
-    for pubid, tsvrows in list(pubyear_rows.items()):
-        rows = []
-        for pubid, y, n, similarity, wordpct, cluepct in tsvrows:
-            pubhref = html.mkhref(str(y), '/pub/%s%s' % (pubid, y))
-            rows.append((pubhref, n, similarity, wordpct, cluepct))
-        pub_h = html.html_table(sorted(rows), pub_header, "onepub", "onepub")
-        outf.write_html("pub/%s/index.html" % pubid, pub_h, title="%s" % pubid)
-    """
     progress()
 
 
