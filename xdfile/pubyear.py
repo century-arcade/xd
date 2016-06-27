@@ -1,8 +1,8 @@
 
 import cgi
-from collections import Counter
+from collections import Counter, defaultdict
 
-from xdfile.html import th, td, mkhref, tr_empty, td_with_class
+from xdfile.html import th, td, mkhref, mktag, tr_empty, td_with_class, year_widget
 from xdfile import utils, metadatabase as metadb
 import xdfile
 
@@ -43,90 +43,69 @@ def pubyear_html(pubyears=[]):
         g_all_pubyears = utils.parse_tsv_data(open("pub/pubyears.tsv").read(), "pubyear")
 
     pubs = {}
-    for pubid, year, num in g_all_pubyears:
+    """
+    for pubid, year, num, mon, tue, wed, thu, fri, sat, sun in g_all_pubyears:
         if pubid not in pubs:
             pubs[pubid] = Counter()
         try:
             pubs[pubid][int(year)] += int(num)
         except Exception as e:
             utils.log(str(e))
-
+    """
+    weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
+    dowl = []
+    b = [] # Body
+    
+    # For header
     allyears = "1910s 1920s 1930s".split() + [ str(y) for y in range(1940, 2017) ]
-
-    ret = '<table class="pubyears">'
+    
+    pubs = defaultdict(dict)
+    totals = defaultdict(int)
+    # generate widget for each year
+    for dowl in g_all_pubyears:
+        dow = {}
+        pubid, year, total = dowl[:3]
+        for i, d in enumerate(dowl[3:]):
+            dow[weekdays[i]] = { 'count':d, 'class':'' }
+            dow[weekdays[i]]['class'] = 'sun' if i == 6 else 'ord'
+        pubs[pubid][year] = year_widget(dow, total)
+        totals[pubid] += int(total)
+   
+    # main table
+    b.append('<table class="pubyears">')
     yhdr = [ '&nbsp;' ] + [ split_year(y) for y in allyears ]
     yhdr.append("all")
-    ret += td_with_class(*yhdr, classes=get_pubheader_classes(*yhdr),
-                        rowclass="pubyearhead",tag="th")
-    # Insert empty row
-    ret += tr_empty()
+    b.append(td_with_class(*yhdr, classes=get_pubheader_classes(*yhdr),
+            rowclass="pubyearhead",tag="th"))
+    b.append(tr_empty()) 
     
-    def key_pubyears(x):
-        pubid, y = x
-        try:
-            firstyear = xdfile.year_from_date(metadb.xd_publications()[pubid].FirstIssueDate)
-        except:
-            firstyear = None
-
-        return firstyear or min(y.keys())
-
-    xdtotal = 0
-    for pubid, years in sorted(pubs.items(), key=key_pubyears):
-        pubtotal = sum(years.values())
-        xdtotal += pubtotal
-        
+    for pubid in sorted(pubs.keys()):
         pub = metadb.xd_publications().get(pubid)
         if pub:
             pubname = pub.PublicationName
-            start, end = pub.FirstIssueDate, pub.LastIssueDate
         else:
-            pubname, start, end = "", "", ""
-
-        ret += '<tr>'
-        ret += '<td class="pub">%s</td>' % (mkcell(pubname or pubid, "/pub/" + pubid, ))
-        for y in allyears:
-            classes = []
-
-            if y[-1] == 's':
-                n = sum(v for k, v in years.items() if str(k)[:-1] == y[:-2])
-                y = y[:-1]
-                classes.append("decade")
+            pubname = ''
+        
+        # Pub id to first column 
+        b.append(mktag('tr'))
+        b.append(mktag('td','pub'))
+        b.append(mkcell(pubname or pubid, "/pub/" + pubid, ))
+        b.append(mktag('/td'))
+        
+        for yi in allyears:
+            if yi in pubs[pubid].keys():
+                b.append(mktag('td','this'))
+                b.append(mkcell(pubs[pubid][yi], href="/pub/%s%s" % (pubid, yi)))
+                b.append(mktag('/td'))
             else:
-                n = years[int(y)]
-
-            y = int(y)
-
-            if (pubid, y) in pubyears:
-                classes.append('this')
-
-            if n >= 365:
-                classes.append('daily')
-            elif n >= 200:
-                classes.append('semidaily')
-            elif n >= 50:
-                classes.append('weekly')
-            elif n >= 12:
-                classes.append('monthly')
-            elif n > 0:
-                pass
-            elif start:
-                if y < xdfile.year_from_date(start):
-                    classes.append("block")
-                if end and y > xdfile.year_from_date(end):
-                    classes.append("block")
-            else:
-                classes.append("block")
-
-            ret += '<td class="%s">%s</td>' % (" ".join(classes), mkcell(n or "", href="/pub/%s%s" % (pubid, y)))
-        ret += '<td>%s</td>' % pubtotal
-        ret += '</tr>'
-
-    yhdr = yhdr[:-1]
-    yhdr.append(xdtotal)
-    # Insert empty row
-    ret += tr_empty()
-    ret += td_with_class(*yhdr, classes=get_pubheader_classes(*yhdr),
-                         rowclass="pubyearhead",tag="th")
-    ret += '</table>'
-    return ret
-
+                b.append(mktag('td', 'block'))
+                b.append('&nbsp;')
+                b.append(mktag('/td'))
+                
+        b.append(mktag('td'))
+        b.append(str(totals[pubid]))
+        b.append(mktag('/td'))
+        b.append(mktag('/tr'))
+   
+    b.append(mktag('/table'))
+    return (" ".join(b))

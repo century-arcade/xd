@@ -5,6 +5,7 @@ import string
 import operator
 import functools
 import re
+import datetime
 
 from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
 
@@ -438,6 +439,10 @@ def year_from_date(dt):
         return int(dt.split('-')[0])
     except:
         return 0
+
+def dow_from_date(dt):
+    # Return day of week out of date
+    return datetime.datetime.strptime(dt, '%Y-%m-%d').strftime('%a') 
 
 
 class ClueAnswer:
