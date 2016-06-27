@@ -6,7 +6,7 @@ import re
 from xdfile.utils import progress, open_output, get_args, args_parser, COLUMN_SEPARATOR
 from xdfile import html, utils, catalog, pubyear
 from xdfile import metadatabase as metadb
-from xdfile.html import GridCalendar, mktag
+from xdfile.html import GridCalendar, mktag, year_widget
 from xdfile.xdfile import num_cells
 import xdfile
 

@@ -6,6 +6,19 @@ from calendar import HTMLCalendar
 from datetime import date
 
 
+def year_widget(dow_dict, total):
+    # Generate SVG based widget for day of week dispersion for year
+    b = []
+    b.append('<svg class="year_widget" width="60" height="40">')
+    weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
+    for i, v in enumerate(weekdays):
+        _class = dow_dict[v]['class'] if 'class' in dow_dict[v].keys() else ''
+        _length = str(dow_dict[v]['count']) if 'count' in dow_dict[v].keys() else '0'
+        b.append('<g transform="translate(0,' + str(i*3+i) + ')"><rect class="' + _class + '" width="' + _length + '" height="3"></rect></g>')
+    b.append('<text x="30" y="33" dy=".35em">' + str(total) + '</text>')
+    b.append('</svg>')
+    return(' '.join(b))
+
 class GridCalendar(HTMLCalendar):
     """
     Generate HTML calendar with links on certain pages with styles

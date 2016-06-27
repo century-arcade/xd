@@ -1,8 +1,8 @@
 
 import cgi
-from collections import Counter
+from collections import Counter, defaultdict
 
-from xdfile.html import th, td, mkhref, tr_empty, td_with_class
+from xdfile.html import th, td, mkhref, mktag, tr_empty, td_with_class, year_widget
 from xdfile import utils, metadatabase as metadb
 import xdfile
 
@@ -43,23 +43,60 @@ def pubyear_html(pubyears=[]):
         g_all_pubyears = utils.parse_tsv_data(open("pub/pubyears.tsv").read(), "pubyear")
 
     pubs = {}
-    for pubid, year, num in g_all_pubyears:
+    """
+    for pubid, year, num, mon, tue, wed, thu, fri, sat, sun in g_all_pubyears:
         if pubid not in pubs:
             pubs[pubid] = Counter()
         try:
             pubs[pubid][int(year)] += int(num)
         except Exception as e:
             utils.log(str(e))
-
+    """
+    weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
+    dowl = []
+    b = [] # Body
+    
+    # For header
     allyears = "1910s 1920s 1930s".split() + [ str(y) for y in range(1940, 2017) ]
-
-    ret = '<table class="pubyears">'
+    
+    pubs = defaultdict(dict)
+    # generate widget each for each year
+    for dowl in g_all_pubyears:
+        dow = {}
+        pubid, year, total = dowl[:3]
+        for i, d in enumerate(dowl[3:]):
+            dow[weekdays[i]] = { 'count':d, 'class':'' }
+            dow[weekdays[i]]['class'] = 'sun' if i == 6 else 'ord'
+        pubs[pubid][year] = year_widget(dow, total)
+    #print(pubs) 
+    
+    b.append('<table class="pubyears">')
     yhdr = [ '&nbsp;' ] + [ split_year(y) for y in allyears ]
     yhdr.append("all")
-    ret += td_with_class(*yhdr, classes=get_pubheader_classes(*yhdr),
-                        rowclass="pubyearhead",tag="th")
-    # Insert empty row
-    ret += tr_empty()
+    b.append(td_with_class(*yhdr, classes=get_pubheader_classes(*yhdr),
+            rowclass="pubyearhead",tag="th"))
+    b.append(tr_empty()) 
+    for pubid in pubs.keys():
+        pub = metadb.xd_publications().get(pubid)
+        if pub:
+            pubname = pub.PublicationName
+            start, end = pub.FirstIssueDate, pub.LastIssueDate
+        else:
+            pubname, start, end = "", "", ""
+        # Pub id 
+        b.append(mktag('tr'))
+        b.append(mktag('td','pub'))
+        b.append(mkcell(pubname or pubid, "/pub/" + pubid, ))
+        b.append(mktag('/td'))
+        for y in pubs[pubid].keys():
+            print(y)
+            b.append(mktag('td'))
+            b.append(pubs[pubid][y])
+            b.append(mktag('/td'))
+        b.append(mktag('/tr'))
+    
+    return (" ".join(b))
+    ######
     
     def key_pubyears(x):
         pubid, y = x

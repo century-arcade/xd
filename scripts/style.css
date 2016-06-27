@@ -1,3 +1,17 @@
+.year_widget rect {
+    fill:green;
+}
+
+.year_widget rect.sun {
+    fill:red;
+}
+
+.year_widget text {
+    fill: black;
+    font: 10px sans-serif;
+    text-anchor: end;
+}
+
 table.year td {
     border: 1px solid black;
     vertical-align: top;
