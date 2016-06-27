@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-from collections import Counter
+from collections import Counter, defaultdict
 import re
 
 from xdfile.utils import progress, open_output, get_args, args_parser, COLUMN_SEPARATOR
 from xdfile import html, utils, catalog, pubyear
 from xdfile import metadatabase as metadb
-from xdfile.html import GridCalendar
+from xdfile.html import GridCalendar, mktag
 from xdfile.xdfile import num_cells
 import xdfile
 
@@ -102,10 +102,11 @@ def main():
     pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', 'Grid_1A_1D', 'ReusedCluePct', 'SimilarGrids' ]
     utils.log('generating index pages')
     
-    # dict to be used on header calendar with links
-    c_grids = {}
+    # dict to generate pub page with calendars
+    pub_grids = defaultdict(dict)
     
     for pair, pub in sorted(list(all_pubs.items())):
+        c_grids = {}
         pubid, year = pair
         progress(pubid)
    
@@ -144,16 +145,20 @@ def main():
 
             # Highlight only grids sized > 400 cells
             if num_cells(r.Size) >= 400:
-                c_grids[r.Date] = None
+                c_grids[r.Date] = { 'class' : 'biggrid' }
+            else:
+                c_grids[r.Date] = { 'class' : 'ordgrid' }
             
             row_dict = {} # Map row and style
             if similar_text and similar_text != "0":
                 # http://stackoverflow.com/questions/1418838/html-making-a-link-lead-to-the-anchor-centered-in-the-middle-of-the-page
-                # 
                 pubidtext = '<span class="anchor" id="%s">' % r.xdid 
                 pubidtext += '</span>'
                 pubidtext += html.mkhref(r.xdid, '/pub/' + r.xdid)
-                c_grids[r.Date] = '#' + r.xdid
+                c_grids[r.Date] = { 
+                        'link' : '/pub/%s%s/index.html#' % (pubid, year) + r.xdid,
+                        'class': 'pctfilled'
+                        }
                 row_dict['class'] = 'puzzlehl'
             else:
                 pubidtext = r.xdid
@@ -175,6 +180,8 @@ def main():
             outf.write_row('pub/%s%s.tsv' % (pubid, year), " ".join(pubyear_header), row)
             row_dict['row'] = row
             rows.append(row_dict)
+       
+        pub_grids[pubid][year] = c_grids
 
         # Generate calendar 
         onepubyear_html = GridCalendar(c_grids).formatyear(year, 6) + "<br>"
@@ -182,7 +189,8 @@ def main():
         # Generate html table
         onepubyear_html += html.html_table(rows, pubyear_header, "puzzle", "puzzles")
         outf.write_html("pub/%s%s/index.html" % (pubid, year), onepubyear_html, title="%s %s" % (pubid, year))
-       
+      
+        
         cluepct = ""
         wordpct = ""
         if total_clues:
@@ -198,15 +206,14 @@ def main():
             cluepct
             ])
 
-    pub_header = "Year NumberOfPuzzles SimilarPuzzles OriginalWordPct OriginalCluePct".split()            
 
-    for pubid, tsvrows in list(pubyear_rows.items()):
-        rows = []
-        for pubid, y, n, similarity, wordpct, cluepct in tsvrows:
-            pubhref = html.mkhref(str(y), '/pub/%s%s' % (pubid, y))
-            rows.append((pubhref, n, similarity, wordpct, cluepct))
-        pub_h = html.html_table(sorted(rows), pub_header, "onepub", "onepub")
-        outf.write_html("pub/%s/index.html" % pubid, pub_h, title="%s" % pubid)
+    # Generate /pub/[publisher][year] page
+    for pubid in pub_grids.keys():
+        body = []
+        for y in sorted(pub_grids[pubid], reverse=True):
+            body.append(GridCalendar(pub_grids[pubid][y]).formatyear(y, 12, vertical=True) + mktag('br','break'))
+        outf.write_html("pub/%s/index.html" % pubid, ''.join(body), title="%s" % pubid)
+    
 
     progress()
 
