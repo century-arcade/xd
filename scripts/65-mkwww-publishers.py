@@ -76,14 +76,10 @@ def main():
     args = get_args(parser=parser)
 
     outf = open_output()
-
     all_pubs = {}  # [(pubid,year)] -> PublicationStats
-
     pubyear_rows = {}
-
     similar = metadb.xd_similar()
     puzzles = metadb.xd_puzzles()
-
     outf.write_html('pub/index.html', pubyear.pubyear_html(), title='The xd crossword puzzle corpus')
 
     utils.log("collating puzzles")
@@ -144,11 +140,8 @@ def main():
                     reused_clue_pct = ''
 
             # Highlight only grids sized > 400 cells
-            if num_cells(r.Size) >= 400:
-                c_grids[r.Date] = { 'class' : 'biggrid' }
-            else:
-                c_grids[r.Date] = { 'class' : 'ordgrid' }
-            
+            c_grids[r.Date] = { 'class' : 'biggrid' } if num_cells(r.Size) >= 400 else { 'class' : 'ordgrid' }
+
             row_dict = {} # Map row and style
             if similar_text and similar_text != "0":
                 # http://stackoverflow.com/questions/1418838/html-making-a-link-lead-to-the-anchor-centered-in-the-middle-of-the-page
