@@ -153,6 +153,7 @@ def main():
                         'class': 'pctfilled'
                         }
                 row_dict['class'] = 'puzzlehl'
+                row_dict['param'] = 'onclick="location.href=\'/pub/%s\'"' % r.xdid
             else:
                 pubidtext = r.xdid
                 row_dict['class'] = 'puzzle'

@@ -127,15 +127,19 @@ def redirect_page(url):
 <script>window.location.replace("{url}");</script></head><body>Redirecting to <a href="{url}">{url}</a></body></html>""".format(url=url)
 
 
-def mktag(tagname, tagclass='', inner=None):
+def mktag(tagname, tagclass='', inner=None, tag_param=None):
     """ generates tag:
-        <tag class="class">
+        <tagname class="tagclass" tag_param>
+        or
+        <tagname clas="tagclass" tag_param>inner</tagname>
     """
     ret = ''
+    tparam = ' ' + str(tag_param) if tag_param else ''
+    
     if tagclass:
-        ret += '<%s class="%s">' % (tagname, tagclass)
+        ret += '<%s class="%s"%s>' % (tagname, tagclass, tparam)
     else:
-        ret += '<%s>' % (tagname)
+        ret += '<%s%s>' % (tagname, tparam)
 
     if inner is not None:
         ret += inner
@@ -247,11 +251,11 @@ def html_select_options(options, strmaker=str, force_top=""):
     return r
 
 
-def table_row(row, keys, rowclass="row", tag="td"):
+def table_row(row, keys, rowclass="row", tag="td", tag_param=None):
     if isinstance(row, dict):
         row = [row[k] for k in keys]
 
-    out = mktag('tr', rowclass)
+    out = mktag('tr', rowclass, tag_param=tag_param)
     for k, v in zip(keys, row):
         try:
             v = str(v or "")
@@ -269,7 +273,7 @@ def html_table(rows, colnames, rowclass="row", tableclass=""):
     """
     Generates html table with class defined
     each row can be a list - then rowclass applied
-    or dict - {row=row:class=rowclass}
+    or dict - {row:row, class:rowclass, param:rowparam}
     """
     out = mktag('table', tableclass)
     out += table_row(colnames, colnames, tag='th')
@@ -277,7 +281,8 @@ def html_table(rows, colnames, rowclass="row", tableclass=""):
     for r in rows:
         r_text = r['row'] if isinstance(r, dict) else r
         r_class = r['class'] if isinstance(r, dict) else rowclass
-        out += table_row(r_text, colnames, rowclass=r_class)
+        r_param = r['param'] if isinstance(r, dict) and 'param' in r.keys() else None
+        out += table_row(r_text, colnames, rowclass=r_class, tag_param=r_param)
 
     out += mktag('/table')  # end table
     return out
