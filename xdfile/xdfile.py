@@ -442,7 +442,10 @@ def year_from_date(dt):
 
 def dow_from_date(dt):
     # Return day of week out of date
-    return datetime.datetime.strptime(dt, '%Y-%m-%d').strftime('%a') 
+    try:
+        return datetime.datetime.strptime(dt, '%Y-%m-%d').strftime('%a') 
+    except:
+        return None
 
 
 class ClueAnswer:

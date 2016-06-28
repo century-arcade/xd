@@ -19,7 +19,8 @@ def main():
     for pubid, year, dow  in pubyears:
         if pubid not in pubs or int(year) not in pubs[pubid]:
             pubs[pubid][int(year)] = { k:0 for k in weekdays }
-        pubs[pubid][int(year)][dow] += 1
+        if dow:
+            pubs[pubid][int(year)][dow] += 1
 
     outf = utils.open_output()
 
