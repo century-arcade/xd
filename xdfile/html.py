@@ -127,19 +127,22 @@ def redirect_page(url):
 <script>window.location.replace("{url}");</script></head><body>Redirecting to <a href="{url}">{url}</a></body></html>""".format(url=url)
 
 
-def mktag(tagname, tagclass='', inner=None, tag_param=None):
+def mktag(tagname, tagclass='', inner=None, tag_params=None):
     """ generates tag:
-        <tagname class="tagclass" tag_param>
-        or
-        <tagname clas="tagclass" tag_param>inner</tagname>
+        <tagname * > or if tag_params dict passed <tagname * >inner</tagname>
+        * tagclass or if tag_params dict passed
+        ( tagclass will be overloaded by tag_params['class'] ) 
+        <tagname param1="value1" param2="value2">
     """
     ret = ''
-    tparam = ' ' + str(tag_param) if tag_param else ''
-    
-    if tagclass:
-        ret += '<%s class="%s"%s>' % (tagname, tagclass, tparam)
+    if tag_params:
+        _params = []
+        for p, v in tag_params.items():
+            _params.append('%s="%s"' % (p, v))
     else:
-        ret += '<%s%s>' % (tagname, tparam)
+        _params = [ 'class="%s"' % tagclass ] 
+    
+    ret += '<%s %s>' % (tagname, " ".join(_params))
 
     if inner is not None:
         ret += inner
@@ -251,11 +254,11 @@ def html_select_options(options, strmaker=str, force_top=""):
     return r
 
 
-def table_row(row, keys, rowclass="row", tag="td", tag_param=None):
+def table_row(row, keys, rowclass="row", tag="td", tag_params=None):
     if isinstance(row, dict):
         row = [row[k] for k in keys]
 
-    out = mktag('tr', rowclass, tag_param=tag_param)
+    out = mktag('tr', rowclass, tag_params=tag_params)
     for k, v in zip(keys, row):
         try:
             v = str(v or "")
@@ -280,9 +283,9 @@ def html_table(rows, colnames, rowclass="row", tableclass=""):
 
     for r in rows:
         r_text = r['row'] if isinstance(r, dict) else r
-        r_class = r['class'] if isinstance(r, dict) else rowclass
-        r_param = r['param'] if isinstance(r, dict) and 'param' in r.keys() else None
-        out += table_row(r_text, colnames, rowclass=r_class, tag_param=r_param)
+        r_class = r['class'] if isinstance(r, dict) and 'class' in r.keys() else rowclass
+        r_param = r['tag_params'] if isinstance(r, dict) and 'tag_params' in r.keys() else None
+        out += table_row(r_text, colnames, rowclass=r_class, tag_params=r_param)
 
     out += mktag('/table')  # end table
     return out

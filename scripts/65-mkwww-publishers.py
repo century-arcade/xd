@@ -152,8 +152,11 @@ def main():
                         'link' : '/pub/%s%s/index.html#' % (pubid, year) + r.xdid,
                         'class': 'pctfilled'
                         }
-                row_dict['class'] = 'puzzlehl'
-                row_dict['param'] = 'onclick="location.href=\'/pub/%s\'"' % r.xdid
+                #row_dict['class'] = 'puzzlehl'
+                row_dict['tag_params'] = {
+                    'onclick': 'location.href=\'/pub/%s\'' % r.xdid,
+                    'class': 'puzzlehl'
+                    }
             else:
                 pubidtext = r.xdid
                 row_dict['class'] = 'puzzle'
