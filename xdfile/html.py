@@ -130,9 +130,8 @@ def redirect_page(url):
 def mktag(tagname, tagclass='', inner=None, tag_params=None):
     """ generates tag:
         <tagname * > or if tag_params dict passed <tagname * >inner</tagname>
-        * tagclass or if tag_params dict passed
-        ( tagclass will be overloaded by tag_params['class'] ) 
-        <tagname param1="value1" param2="value2">
+        * tagclass or if tag_params dict passed will be overloaded by tag_params['class'] 
+        <tagname param1="value1" param2="value2" ...>
     """
     ret = ''
     if tag_params:
