@@ -60,8 +60,6 @@ def pubyear_html(pubyears=[]):
     allyears = "1910s 1920s 1930s".split() + [ str(y) for y in range(1940, 2017) ]
     
     pubs = defaultdict(dict)
-    totals = defaultdict(dict)
-    totals_hint = defaultdict(dict)
     # generate widget for each year
     for dowl in g_all_pubyears:
         dow = {}
@@ -72,9 +70,11 @@ def pubyear_html(pubyears=[]):
             dow[weekdays[i]]['class'] = 'red' if i == 6 else 'ord'
             hint += '%s - %s\n' % (weekdays[i], d)
         hint += 'Total: %s' % (total)
-        totals_hint[pubid][year] = hint
-        pubs[pubid][year] = year_widget(dow, total)
-        totals[pubid][year] = int(total)
+        pubs[pubid][year] = {
+                'widget': year_widget(dow, total),
+                'hint': hint,
+                'total': int(total),
+                }
    
     # main table
     b.append('<table class="pubyears">')
@@ -100,8 +100,8 @@ def pubyear_html(pubyears=[]):
         for yi in allyears:
             if yi in pubs[pubid].keys():
                 b.append(mktag('td','this'))
-                b.append(mkcell(pubs[pubid][yi], href="/pub/%s%s" % (pubid, yi), 
-                        title=totals_hint[pubid][yi]))
+                b.append(mkcell(pubs[pubid][yi]['widget'], href="/pub/%s%s" % (pubid, yi), 
+                        title=pubs[pubid][yi]['hint']))
                 b.append(mktag('/td'))
             else:
                 b.append(mktag('td', 'block'))
@@ -109,7 +109,7 @@ def pubyear_html(pubyears=[]):
                 b.append(mktag('/td'))
                 
         b.append(mktag('td'))
-        b.append(str(sum( [totals[pubid][x] for x in totals[pubid].keys() ])))
+        b.append(str(sum([ pubs[pubid][x]['total'] for x in pubs[pubid].keys() ])))
         b.append(mktag('/td'))
         b.append(mktag('/tr'))
    
