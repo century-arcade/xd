@@ -396,6 +396,10 @@ tr.puzzlehl {
     background: lightgreen;
 }
 
+tr.puzzlehl:hover {
+    cursor: pointer;
+}
+
 /* Pubyear header */
 
 .pubyearhead, .pubyearhead > th {
