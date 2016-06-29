@@ -5,6 +5,8 @@ from collections import Counter, defaultdict
 from xdfile.html import th, td, mkhref, mktag, tr_empty, td_with_class, year_widget
 from xdfile import utils, metadatabase as metadb
 import xdfile
+from datetime import date
+
 
 def mkcell(text, href="", title=""):
     r = '<div>'
@@ -37,27 +39,24 @@ def get_pubheader_classes(*years):
         
 
 g_all_pubyears = None
-def pubyear_html(pubyears=[]):
+def pubyear_html(pubyears=[], skip_decades=None):
+    """
+    skip_decades, default  { 'start': 1910, 'end': 1970 }
+    """
     global g_all_pubyears
     if not g_all_pubyears:
         g_all_pubyears = utils.parse_tsv_data(open("pub/pubyears.tsv").read(), "pubyear")
 
     pubs = {}
-    """
-    for pubid, year, num, mon, tue, wed, thu, fri, sat, sun in g_all_pubyears:
-        if pubid not in pubs:
-            pubs[pubid] = Counter()
-        try:
-            pubs[pubid][int(year)] += int(num)
-        except Exception as e:
-            utils.log(str(e))
-    """
     weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
-    dowl = []
     b = [] # Body
     
-    # For header
-    allyears = "1910s 1920s 1930s".split() + [ str(y) for y in range(1940, 2017) ]
+    # Making collapsed decaded depends on args
+    skip_decades = skip_decades if skip_decades else { 'start': 1910, 'end': 1970 } 
+    allyears = []
+    for i in range(skip_decades['start']//10, skip_decades['end']//10 + 1):
+        allyears.append("%s0s" % i)
+    allyears.extend([ str(y) for y in range(skip_decades['end'] + 10, date.today().year + 1) ])
     
     pubs = defaultdict(dict)
     # generate widget for each year
@@ -70,8 +69,9 @@ def pubyear_html(pubyears=[]):
             dow[weekdays[i]]['class'] = 'red' if i == 6 else 'ord'
             hint += '%s - %s\n' % (weekdays[i], d)
         hint += 'Total: %s' % (total)
+        # Fill pubs with defferent blocks will be used below
         pubs[pubid][year] = {
-                'widget': year_widget(dow, total),
+                'widget': year_widget(dow, total ),
                 'hint': hint,
                 'total': int(total),
                 }
@@ -96,7 +96,8 @@ def pubyear_html(pubyears=[]):
         b.append(mktag('td','pub'))
         b.append(mkcell(pubname or pubid, "/pub/" + pubid, ))
         b.append(mktag('/td'))
-        
+       
+        # Process each year not collapsed into decade
         for yi in allyears:
             if yi in pubs[pubid].keys():
                 b.append(mktag('td','this'))
