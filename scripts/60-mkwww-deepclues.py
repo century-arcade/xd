@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 #
-# Generate deep clues pages
+# Usage: $0 -c <corpus> -o wwwroot [<xdid>]
+#
+# Generate /pub/deep/<xdid> from given xdids or all similarpct > 25 in similar.tsv if if not given.
+# <xdid> may be full pathnames; the base xdid will be parsed out.
 
 from queries.similarity import grid_similarity, find_clue_variants, load_answers, load_clues
 #from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, grid_similarity
@@ -120,8 +123,10 @@ def main():
     outf = utils.open_output()
 
     similars = utils.parse_tsv('gxd/similar.tsv', 'Similar')
-    xdids_todo = args.inputs or [ xdid for xdid, matches in metadb.get_similar_grids().items() if matches ]
-    
+    xdids_todo = [ parse_pathname(fn).base for fn in args.inputs ] 
+    if not xdids_todo:
+        xdids_todo = [ xdid for xdid, matches in metadb.get_similar_grids().items() if matches ]
+
     for mainxdid in xdids_todo:
         progress(mainxdid)
 
@@ -129,6 +134,8 @@ def main():
             mainxd = xdfile.get_xd(mainxdid)
         except Exception as e:
             utils.log(str(e))
+            if args.debug:
+                raise
             continue
 
         matches = metadb.get_similar_grids().get(mainxdid, [])
@@ -137,21 +144,21 @@ def main():
         xddates[mainxdid] = mainxd.date() # Dict to store XD dates for further sort
         html_grids = {}
         html_clues = {}
-       
+
         # these are added directly to similar.tsv
         nstaleclues = 0
         nstaleanswers = 0
         ntotalclues = 0
-        
+
         poss_answers = [] # TODO: 
         pub_uses = {}  # [pubid] -> set(ClueAnswer)
-       
+
         dcl_html = '' 
         deepcl_html = [] # keep deep clues to parse later - per row
         for pos, mainclue, mainanswer in mainxd.iterclues():
             deepcl_html = [] # Temporary to be replaced lately
             mainca = ClueAnswer(mainxdid, mainxd.date(), mainanswer, mainclue)
-        
+
             # 'grid position' column
             deepcl_html.append('<td class="pos">%s.</td>' % pos)
 
@@ -171,7 +178,7 @@ def main():
             # add 'other uses' to clues_html
             stale = False
             deepcl_html.append('<td class="other-uses">')
-        
+
             if len(pub_uses) > 0:
                 sortable_uses = []
                 for pubid, uses in pub_uses.items():
@@ -189,7 +196,7 @@ def main():
 
             else:
                 deepcl_html.append('<div class="original">%s</div>' % esc(mainclue))
-        
+
             deepcl_html.append('</td>')
 
             # add 'other answers' to clues_html
@@ -276,6 +283,7 @@ def main():
             html_clues[xdid] = diff_l 
         
 
+        print('writing table')
         # Wrap into table
         diff_h = mktag('table') + mktag('tr')
         # Sort by date
@@ -298,7 +306,6 @@ def main():
         
         outf.write_html('pub/deep/%s/index.html' % mainxdid, diff_h, 
                     title='Deep clue comparison for ' + mainxdid)
-        quit()
 
 
 if __name__ == '__main__':
