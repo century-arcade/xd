@@ -95,13 +95,6 @@ def pubyear_html(pubyears=[], skip_decades=None):
                 'total': int(total),
                 }
     # Process for all decades
-    def gen_dec_widget():
-        dow = {}
-        for d in utils.WEEKDAYS:
-            dow[d] = { 'count': 30, 'class':'' }
-            dow[d]['class'] = 'red' if d == 'Sun' else 'ord'
-        return dow
-    
     for dec_year in [x for x in allyears if 's' in x]:
         for pubid in pubs:
             year_key = dec_year[:-2] # Remove last year and "s" from the end
