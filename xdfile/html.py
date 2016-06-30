@@ -4,23 +4,25 @@ from collections import Counter
 import xdfile
 from calendar import HTMLCalendar
 from datetime import date
+from xdfile import utils
 
 
-def year_widget(dow_dict, total, fill_class='white'):
+def year_widget(dow_dict, total, fill_class=None):
     # Generate SVG based widget for day of week dispersion for year
+    fill_class = fill_class if fill_class else 'white'
     b = []
     b.append('<svg class="year_widget" width="30" height="30">')
     b.append('<g transform="translate(0,0)"><rect class="%s" width="30" height="30"></rect></g>' % fill_class)
-    weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
-    for i, v in enumerate(weekdays):
+    for i, v in enumerate(utils.WEEKDAYS):
         _class = dow_dict[v]['class'] if 'class' in dow_dict[v].keys() else ''
         _length = str(dow_dict[v]['count']) if 'count' in dow_dict[v].keys() else '0'
         b.append('<g transform="translate(0,' + str(i*3+i) + ')"><rect class="' + _class + '" width="' + _length + '" height="3"></rect></g>')
     b.append('</svg>')
     return(' '.join(b))
 
-def decade_widget(total, fill_class='green'):
+def decade_widget(total, fill_class=None):
     # Generate SVG based widget for decade showing total
+    fill_class = fill_class if fill_class else 'green'
     b = []
     b.append('<svg class="year_widget" width="30" height="30">')
     b.append('<g transform="translate(0,0)"><rect class="%s" width="30" height="30"></rect></g>' % fill_class)
