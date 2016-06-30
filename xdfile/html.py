@@ -16,7 +16,15 @@ def year_widget(dow_dict, total, fill_class='white'):
         _class = dow_dict[v]['class'] if 'class' in dow_dict[v].keys() else ''
         _length = str(dow_dict[v]['count']) if 'count' in dow_dict[v].keys() else '0'
         b.append('<g transform="translate(0,' + str(i*3+i) + ')"><rect class="' + _class + '" width="' + _length + '" height="3"></rect></g>')
-    #b.append('<text x="30" y="33" dy=".35em">' + str(total) + '</text>')
+    b.append('</svg>')
+    return(' '.join(b))
+
+def decade_widget(total, fill_class='green'):
+    # Generate SVG based widget for decade showing total
+    b = []
+    b.append('<svg class="year_widget" width="30" height="30">')
+    b.append('<g transform="translate(0,0)"><rect class="%s" width="30" height="30"></rect></g>' % fill_class)
+    b.append('<text x="25" y="18">' + str(total) + '</text>')
     b.append('</svg>')
     return(' '.join(b))
 

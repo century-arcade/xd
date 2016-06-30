@@ -2,7 +2,7 @@
 import cgi
 from collections import Counter, defaultdict
 
-from xdfile.html import th, td, mkhref, mktag, tr_empty, td_with_class, year_widget
+from xdfile.html import th, td, mkhref, mktag, tr_empty, td_with_class, year_widget, decade_widget
 from xdfile import utils, metadatabase as metadb
 import xdfile
 from datetime import date
@@ -71,11 +71,33 @@ def pubyear_html(pubyears=[], skip_decades=None):
         hint += 'Total: %s' % (total)
         # Fill pubs with defferent blocks will be used below
         pubs[pubid][year] = {
-                'widget': year_widget(dow, total ),
+                'dow_data': dow,
+                'widget': year_widget(dow, total),
                 'hint': hint,
                 'total': int(total),
                 }
-   
+    # Process for all decades
+    def gen_dec_widget():
+        dow = {}
+        for d in weekdays:
+            dow[d] = { 'count': 30, 'class':'' }
+            dow[d]['class'] = 'red' if d == 'Sun' else 'ord'
+        return dow
+    
+    for dec_year in [x for x in allyears if 's' in x]:
+        for pubid in pubs:
+            year_key = dec_year[:-2] # Remove last year and "s" from the end
+            total = 0
+            for yf in [x for x in pubs[pubid] if year_key in x]:
+                total += pubs[pubid][yf]['total']
+            hint = 'Total: %s' % (total)
+            pubs[pubid][dec_year] = {
+                    'widget': decade_widget(total),
+                    'hint': hint,
+                    'total': int(total),
+                    }
+    
+    
     # main table
     b.append('<table class="pubyears">')
     yhdr = [ '&nbsp;' ] + [ split_year(y) for y in allyears ]
@@ -99,9 +121,11 @@ def pubyear_html(pubyears=[], skip_decades=None):
        
         # Process each year not collapsed into decade
         for yi in allyears:
-            if yi in pubs[pubid].keys():
+            if yi in pubs[pubid].keys() and pubs[pubid][yi]['total'] > 0:
                 b.append(mktag('td','this'))
-                b.append(mkcell(pubs[pubid][yi]['widget'], href="/pub/%s%s" % (pubid, yi), 
+                # Put link directly to year or to decade
+                href = "/pub/%s%s" % (pubid, yi) if 's' not in yi else "/pub/%s/index.html#%s" % (pubid, yi[:-1])
+                b.append(mkcell(pubs[pubid][yi]['widget'], href=href, 
                         title=pubs[pubid][yi]['hint']))
                 b.append(mktag('/td'))
             else:
