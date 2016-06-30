@@ -71,13 +71,13 @@ class GridCalendar(HTMLCalendar):
         
         # Align header horizontally
         if not vertical:
-            a('<tr><th colspan="%d" class="year">%s</th></tr>' % (width, theyear))
+            a('<tr><th colspan="%d" class="year" id="%s">%s</th></tr>' % (width, theyear, theyear))
         for i in range(January, January+12, width):
             # months in this row
             months = range(i, min(i+width, 13))
             a('<tr>')
             if vertical:
-                a('<td class="year-v">%s</td>' % ('<br>'.join(str(theyear))))
+                a('<td class="year-v" id="%s">%s</td>' % (theyear, '<br>'.join(str(theyear))))
             for m in months:
                 a('<td>')
                 a(self.formatmonth(theyear, m, withyear=False))
