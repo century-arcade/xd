@@ -30,6 +30,16 @@ g_logfp = sys.stderr
 # save on start to auto-log at end
 g_scriptname = None
 
+WEEKDAYS = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
+
+def space_with_nbsp(text):
+    """ Replace spaces with ;nbsp; """
+    return text.replace(' ', '&nbsp;')
+
+def split_xdid(xdid):
+    """ Split xdid [nyt2015-07-01] into set """
+    m = re.match('([a-z]+)(\d{4})-(\d{2})-(\d{2})', xdid)
+    return m.groups() if m else None 
 
 def get_log():
     return EOL.join(g_logs) + EOL

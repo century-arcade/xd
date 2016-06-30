@@ -1,9 +1,9 @@
-
 import cgi
 from collections import Counter, defaultdict
 
 from xdfile.html import th, td, mkhref, mktag, tr_empty, td_with_class, year_widget, decade_widget
 from xdfile import utils, metadatabase as metadb
+from xdfile.utils import space_with_nbsp
 import xdfile
 from datetime import date
 
@@ -47,8 +47,18 @@ def pubyear_html(pubyears=[], skip_decades=None):
     if not g_all_pubyears:
         g_all_pubyears = utils.parse_tsv_data(open("pub/pubyears.tsv").read(), "pubyear")
 
-    pubs = {}
-    weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
+    
+    # Read similars to make background of widgets
+    similar_d = defaultdict(dict) 
+    for xdid, v in utils.parse_tsv('gxd/similar.tsv', "similar").items():
+        xd_split = utils.split_xdid(xdid)
+        if xd_split:
+            pubid, year, mon, day = xd_split
+            if year in similar_d[pubid]:
+                similar_d[pubid][year].append(int(v.similar_grid_pct))
+            else:
+                similar_d[pubid][year] = [ int(v.similar_grid_pct) ] 
+
     b = [] # Body
     
     # Making collapsed decaded depends on args
@@ -64,22 +74,30 @@ def pubyear_html(pubyears=[], skip_decades=None):
         dow = {}
         pubid, year, total = dowl[:3]
         hint = ''
-        for i, d in enumerate(dowl[3:]):
-            dow[weekdays[i]] = { 'count': int(d)/2, 'class':'' }
-            dow[weekdays[i]]['class'] = 'red' if i == 6 else 'ord'
-            hint += '%s - %s\n' % (weekdays[i], d)
-        hint += 'Total: %s' % (total)
+        for d, v in zip(utils.WEEKDAYS, dowl[3:]):
+            dow[d] = { 'count': int(v)/2, 'class':'' }
+            dow[d]['class'] = 'red' if d == 'Sun' else 'ord'
+            hint += '%s - %s\n' % (d, v)
+        hint += 'Total: %s\n' % (total)
+        # Define fill class based on average similarity
+        fill_class = None # default fill class for widget
+        if year in similar_d[pubid]:
+            s_avg = sum(similar_d[pubid][year]) / len(similar_d[pubid][year]) 
+            hint += 'Avg similarity: %.2f%%' % (s_avg)
+            # Example if average > 10 %
+            fill_class = 'similar10' if s_avg >= 10 else None
+
         # Fill pubs with defferent blocks will be used below
         pubs[pubid][year] = {
                 'dow_data': dow,
-                'widget': year_widget(dow, total),
+                'widget': year_widget(dow, total, fill_class),
                 'hint': hint,
                 'total': int(total),
                 }
     # Process for all decades
     def gen_dec_widget():
         dow = {}
-        for d in weekdays:
+        for d in utils.WEEKDAYS:
             dow[d] = { 'count': 30, 'class':'' }
             dow[d]['class'] = 'red' if d == 'Sun' else 'ord'
         return dow
@@ -112,11 +130,10 @@ def pubyear_html(pubyears=[], skip_decades=None):
             pubname = pub.PublicationName
         else:
             pubname = ''
-        
         # Pub id to first column 
         b.append(mktag('tr'))
         b.append(mktag('td','pub'))
-        b.append(mkcell(pubname or pubid, "/pub/" + pubid, ))
+        b.append(mkcell(space_with_nbsp(pubname or pubid), "/pub/" + pubid, ))
         b.append(mktag('/td'))
        
         # Process each year not collapsed into decade
