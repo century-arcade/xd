@@ -301,6 +301,15 @@ def parse_tsv(fn, objname=None):
         return {}
 
 
+def parse_tsv_rows(fn, objname=None):
+    try:
+        fp = codecs.open(fn, encoding='utf-8')
+        return [r for r in parse_tsv_data(fp.read(), objname)]
+    except Exception as e:
+        log(str(e))
+        return []
+
+
 class OutputZipFile(zipfile.ZipFile):
     def __init__(self, fnzip, toplevel=""):
         zipfile.ZipFile.__init__(self, fnzip, 'w', allowZip64=True)

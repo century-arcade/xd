@@ -4,7 +4,7 @@ import codecs
 from collections import Counter, namedtuple
 
 from .html import mkhref, html_select_options
-from .utils import COLSEP, EOL, parse_tsv, parse_pathname
+from .utils import COLSEP, EOL
 from .xdfile import corpus
 
 from xdfile import utils
@@ -79,23 +79,27 @@ xd_puzzles_header = COLSEP.join([
 # yields dict corresponding to each row of receipts.tsv, in sequential order
 @utils.memoize
 def xd_receipts():
-    return parse_tsv(RECEIPTS_TSV, "Receipt")
+    return utils.parse_tsv(RECEIPTS_TSV, "Receipt")
+
+@utils.memoize
+def xd_receipts_rows():
+    return utils.parse_tsv_rows(RECEIPTS_TSV, "Receipt")
 
 @utils.memoize
 def xd_publications():
-    return parse_tsv(PUBLICATIONS_TSV, "Publication")
+    return utils.parse_tsv(PUBLICATIONS_TSV, "Publication")
 
 @utils.memoize
 def xd_puzzles():
-    return parse_tsv(PUZZLES_TSV, "Puzzle")
+    return utils.parse_tsv(PUZZLES_TSV, "Puzzle")
 
 @utils.memoize
 def xd_similar():
-    return parse_tsv(SIMILAR_TSV, "Similar")
+    return utils.parse_tsv(SIMILAR_TSV, "Similar")
 
 @utils.memoize
 def xd_puzzle_sources():
-    return parse_tsv(PUZZLE_SOURCES_TSV, "PuzzleSource")
+    return utils.parse_tsv(PUZZLE_SOURCES_TSV, "PuzzleSource")
 
 def append_receipts(receipts):
     if receipts:
@@ -121,7 +125,7 @@ def get_last_receipt_id():
     except IOError:
         codecs.open(RECEIPTS_TSV, 'w', encoding='utf-8').write(xd_receipts_header)
         return 0
-        
+
 
 # for each row in fnDownloadZip:*.tsv, assigns ReceiptId, ReceivedTime, and appends to receipts.tsv.  
 def xd_receipts_row(ReceiptId="", CaptureTime="", ReceivedTime="", ExternalSource="", InternalSource="", SourceFilename="", xdid=""):
@@ -138,7 +142,7 @@ def xd_receipts_row(ReceiptId="", CaptureTime="", ReceivedTime="", ExternalSourc
 
 def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
     return COLSEP.join([
-		"",  # ReceiptId
+        "",  # ReceiptId
         SourceFilename,
         DownloadTime,
         ExternalSource

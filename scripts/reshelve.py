@@ -18,14 +18,25 @@ def main():
 
     all_receipts = metadb.xd_receipts_header
 
-    for r in sorted(metadb.xd_receipts().values(), key=lambda x: int(x.ReceiptId)):
-        oldpubid = ""
-        if r.xdid:
-            oldpubid = utils.parse_pubid(r.xdid)
+    receipts = metadb.xd_receipts_rows()
+    rids = set()  # set of ReceiptId
 
-        newpubid = catalog.find_pubid("|".join(r))
+    for r in receipts:
+        oldpubid = ""
+        oldpubid = utils.parse_pubid(r.xdid or '')
+
+        newpubid = catalog.find_pubid("|".join((str(x) for x in r)))
 
         d = r._asdict()
+
+        if int(r.ReceiptId) in rids:
+            d["ReceiptId"] = max(rids) + 1
+
+        try:
+            rids.add(int(d["ReceiptId"]))
+        except:
+            # omit any lines without receiptId
+            continue
 
         if newpubid and newpubid != oldpubid:
             seqnum = utils.parse_seqnum(r.xdid or r.SourceFilename)
