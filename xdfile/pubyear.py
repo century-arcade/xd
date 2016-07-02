@@ -102,12 +102,12 @@ def pubyear_html(pubyears=[], skip_decades=None):
             for yf in [x for x in pubs[pubid] if year_key in x]:
                 total += pubs[pubid][yf]['total']
             hint = 'Total: %s' % (total)
-            pubs[pubid][dec_year] = {
+            if total > 0:
+                pubs[pubid][dec_year] = {
                     'widget': decade_widget(total),
                     'hint': hint,
                     'total': int(total),
                     }
-    
     
     # main table
     b.append('<table class="pubyears">')
@@ -116,13 +116,11 @@ def pubyear_html(pubyears=[], skip_decades=None):
     b.append(td_with_class(*yhdr, classes=get_pubheader_classes(*yhdr),
             rowclass="pubyearhead",tag="th"))
     b.append(tr_empty()) 
-    
-    for pubid in sorted(pubs.keys()):
+   
+    # Process each pubid sorted by earliest year 
+    for pubid in sorted(pubs, key=lambda x:min(pubs[x])):
         pub = metadb.xd_publications().get(pubid)
-        if pub:
-            pubname = pub.PublicationName
-        else:
-            pubname = ''
+        pubname = pub.PublicationName if pub else ''
         # Pub id to first column 
         b.append(mktag('tr'))
         b.append(mktag('td','pub'))
@@ -131,7 +129,7 @@ def pubyear_html(pubyears=[], skip_decades=None):
        
         # Process each year not collapsed into decade
         for yi in allyears:
-            if yi in pubs[pubid].keys() and pubs[pubid][yi]['total'] > 0:
+            if yi in pubs[pubid] and pubs[pubid][yi]['total'] > 0:
                 b.append(mktag('td','this'))
                 # Put link directly to year or to decade
                 href = "/pub/%s%s" % (pubid, yi) if 's' not in yi else "/pub/%s/index.html#%s" % (pubid, yi[:-1])
