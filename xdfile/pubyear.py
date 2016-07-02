@@ -75,7 +75,7 @@ def pubyear_html(pubyears=[], skip_decades=None):
         pubid, year, total = dowl[:3]
         hint = ''
         for d, v in zip(utils.WEEKDAYS, dowl[3:]):
-            dow[d] = { 'count': int(v)/2, 'class':'' }
+            dow[d] = { 'count': int(v)//2, 'class':'' }
             dow[d]['class'] = 'red' if d == 'Sun' else 'ord'
             hint += '%s - %s\n' % (d, v)
         hint += 'Total: %s\n' % (total)
