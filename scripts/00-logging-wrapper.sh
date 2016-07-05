@@ -17,19 +17,19 @@ export LOGFILE=${OUTBASE}-pipeline.log
 
 exec > >(tee -i ${LOGFILE}) 2>&1
 
-/bin/bash scripts/01-import.sh
-/bin/bash scripts/02-analyze.sh
-/bin/bash scripts/03-mkwww.sh
+/bin/bash scripts/10-import.sh
+/bin/bash scripts/20-analyze.sh
+/bin/bash scripts/30-mkwww.sh
 
 # commit new puzzles and saved analysis results
-/bin/bash scripts/29-git-commit.sh incoming_$TODAY
+/bin/bash scripts/41-git-commit.sh incoming_$TODAY
 
 # capture all logs even if other scripts fail
-scripts/95-mkwww-logs.py -o $WWW/$NOW/log.html $TMP
+scripts/39-mkwww-logs.py -o $WWW/$NOW/log.html $TMP
 
-/bin/bash scripts/04-deploy.sh
+/bin/bash scripts/40-deploy.sh
 
 aws s3 cp --region ${REGION} ${LOGFILE} ${S3PRIV}/logs/
 
-scripts/send-email.py $ADMIN_EMAIL "execution logs for $TODAY" ${LOGFILE}
+src/aws/send-email.py $ADMIN_EMAIL "execution logs for $TODAY" ${LOGFILE}
 
