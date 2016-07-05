@@ -37,7 +37,8 @@ class GridCalendar(HTMLCalendar):
                 if self.grids[cdate]['class']:
                     cssclass += ' ' + self.grids[cdate]['class']
                 if 'link' in self.grids[cdate].keys():
-                    body = mkhref(str(day), self.grids[cdate]['link']) 
+                    htitle = self.grids[cdate]['title'] if self.grids[cdate]['title'] else ''
+                    body = mkhref(str(day), self.grids[cdate]['link'], htitle) 
                 else:
                     body = str(day)
                 return self.day_cell(cssclass, '%s' % (body))

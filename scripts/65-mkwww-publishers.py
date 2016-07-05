@@ -150,7 +150,8 @@ def main():
                 pubidtext += html.mkhref(r.xdid, '/pub/' + r.xdid)
                 c_grids[r.Date] = { 
                         'link' : '/pub/%s%s/index.html#' % (pubid, year) + r.xdid,
-                        'class': 'pctfilled'
+                        'class': 'pctfilled',
+                        'title': similar_text,
                         }
                 #row_dict['class'] = 'puzzlehl'
                 row_dict['tag_params'] = {
