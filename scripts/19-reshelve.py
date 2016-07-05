@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
-
 # Usage: $0 [-c <corpus>] <regex> <pubid>
 #
 #   rewrites receipts.tsv and fills in any blanks based on regex
 #
 #   git mv all .xd with pubid of <src> to have a pubid of <dest> (simple file rename)
 # 
-#
-
+#   
 import re
-
 from xdfile import utils, metadatabase as metadb, catalog
 
 
