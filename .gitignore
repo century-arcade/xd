@@ -9,3 +9,5 @@ wwwroot/
 gxd/
 pub/
 tags
+Session.vim
+*.swp

@@ -31,6 +31,10 @@ g_logfp = sys.stderr
 g_scriptname = None
 
 
+def br_with_n(text):
+    """ Replace br with \n """
+    return re.sub(r'<br.*?>','\n', text, flags=re.IGNORECASE)
+
 def get_log():
     return EOL.join(g_logs) + EOL
 
