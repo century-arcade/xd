@@ -4,6 +4,7 @@ from collections import Counter, defaultdict
 import re
 
 from xdfile.utils import progress, open_output, get_args, args_parser, COLUMN_SEPARATOR
+from xdfile.utils import br_with_n
 from xdfile import html, utils, catalog, pubyear
 from xdfile import metadatabase as metadb
 from xdfile.html import GridCalendar, mktag, year_widget
@@ -151,7 +152,7 @@ def main():
                 c_grids[r.Date] = { 
                         'link' : '/pub/%s%s/index.html#' % (pubid, year) + r.xdid,
                         'class': 'pctfilled',
-                        'title': similar_text,
+                        'title': br_with_n(similar_text),
                         }
                 #row_dict['class'] = 'puzzlehl'
                 row_dict['tag_params'] = {
