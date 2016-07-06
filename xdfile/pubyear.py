@@ -1,10 +1,12 @@
-
 import cgi
 from collections import Counter, defaultdict
 
-from xdfile.html import th, td, mkhref, mktag, tr_empty, td_with_class, year_widget
+from xdfile.html import th, td, mkhref, mktag, tr_empty, td_with_class, year_widget, decade_widget
 from xdfile import utils, metadatabase as metadb
+from xdfile.utils import space_with_nbsp
 import xdfile
+from datetime import date
+
 
 def mkcell(text, href="", title=""):
     r = '<div>'
@@ -37,40 +39,76 @@ def get_pubheader_classes(*years):
         
 
 g_all_pubyears = None
-def pubyear_html(pubyears=[]):
+def pubyear_html(pubyears=[], skip_decades=None):
+    """
+    skip_decades, default  { 'start': 1910, 'end': 1970 }
+    """
     global g_all_pubyears
     if not g_all_pubyears:
         g_all_pubyears = utils.parse_tsv_data(open("pub/pubyears.tsv").read(), "pubyear")
 
-    pubs = {}
-    """
-    for pubid, year, num, mon, tue, wed, thu, fri, sat, sun in g_all_pubyears:
-        if pubid not in pubs:
-            pubs[pubid] = Counter()
-        try:
-            pubs[pubid][int(year)] += int(num)
-        except Exception as e:
-            utils.log(str(e))
-    """
-    weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
-    dowl = []
+    
+    # Read similars to make background of widgets
+    similar_d = defaultdict(dict) 
+    for xdid, v in utils.parse_tsv('gxd/similar.tsv', "similar").items():
+        xd_split = utils.split_xdid(xdid)
+        if xd_split:
+            pubid, year, mon, day = xd_split
+            if year in similar_d[pubid]:
+                similar_d[pubid][year].append(int(v.similar_grid_pct))
+            else:
+                similar_d[pubid][year] = [ int(v.similar_grid_pct) ] 
+
     b = [] # Body
     
-    # For header
-    allyears = "1910s 1920s 1930s".split() + [ str(y) for y in range(1940, 2017) ]
+    # Making collapsed decaded depends on args
+    skip_decades = skip_decades if skip_decades else { 'start': 1910, 'end': 1970 } 
+    allyears = []
+    for i in range(skip_decades['start']//10, skip_decades['end']//10 + 1):
+        allyears.append("%s0s" % i)
+    allyears.extend([ str(y) for y in range(skip_decades['end'] + 10, date.today().year + 1) ])
     
     pubs = defaultdict(dict)
-    totals = defaultdict(int)
     # generate widget for each year
     for dowl in g_all_pubyears:
         dow = {}
         pubid, year, total = dowl[:3]
-        for i, d in enumerate(dowl[3:]):
-            dow[weekdays[i]] = { 'count':d, 'class':'' }
-            dow[weekdays[i]]['class'] = 'sun' if i == 6 else 'ord'
-        pubs[pubid][year] = year_widget(dow, total)
-        totals[pubid] += int(total)
-   
+        hint = ''
+        for d, v in zip(utils.WEEKDAYS, dowl[3:]):
+            dow[d] = { 'count': int(v)//2, 'class':'' }
+            dow[d]['class'] = 'red' if d == 'Sun' else 'ord'
+            hint += '%s - %s\n' % (d, v)
+        hint += 'Total: %s\n' % (total)
+        # Define fill class based on average similarity
+        fill_class = None # default fill class for widget
+        if year in similar_d[pubid]:
+            s_avg = sum(similar_d[pubid][year]) / len(similar_d[pubid][year]) 
+            hint += 'Avg similarity: %.2f%%' % (s_avg)
+            # Example if average > 10 %
+            fill_class = 'similar10' if s_avg >= 10 else None
+
+        # Fill pubs with defferent blocks will be used below
+        pubs[pubid][year] = {
+                'dow_data': dow,
+                'widget': year_widget(dow, total, fill_class),
+                'hint': hint,
+                'total': int(total),
+                }
+    # Process for all decades
+    for dec_year in [x for x in allyears if 's' in x]:
+        for pubid in pubs:
+            year_key = dec_year[:-2] # Remove last year and "s" from the end
+            total = 0
+            for yf in [x for x in pubs[pubid] if year_key in x]:
+                total += pubs[pubid][yf]['total']
+            hint = 'Total: %s' % (total)
+            if total > 0:
+                pubs[pubid][dec_year] = {
+                    'widget': decade_widget(total),
+                    'hint': hint,
+                    'total': int(total),
+                    }
+    
     # main table
     b.append('<table class="pubyears">')
     yhdr = [ '&nbsp;' ] + [ split_year(y) for y in allyears ]
@@ -78,24 +116,25 @@ def pubyear_html(pubyears=[]):
     b.append(td_with_class(*yhdr, classes=get_pubheader_classes(*yhdr),
             rowclass="pubyearhead",tag="th"))
     b.append(tr_empty()) 
-    
-    for pubid in sorted(pubs.keys()):
+   
+    # Process each pubid sorted by earliest year 
+    for pubid in sorted(pubs, key=lambda x:min(pubs[x])):
         pub = metadb.xd_publications().get(pubid)
-        if pub:
-            pubname = pub.PublicationName
-        else:
-            pubname = ''
-        
+        pubname = pub.PublicationName if pub else ''
         # Pub id to first column 
         b.append(mktag('tr'))
         b.append(mktag('td','pub'))
-        b.append(mkcell(pubname or pubid, "/pub/" + pubid, ))
+        b.append(mkcell(space_with_nbsp(pubname or pubid), "/pub/" + pubid, ))
         b.append(mktag('/td'))
-        
+       
+        # Process each year not collapsed into decade
         for yi in allyears:
-            if yi in pubs[pubid].keys():
+            if yi in pubs[pubid] and pubs[pubid][yi]['total'] > 0:
                 b.append(mktag('td','this'))
-                b.append(mkcell(pubs[pubid][yi], href="/pub/%s%s" % (pubid, yi)))
+                # Put link directly to year or to decade
+                href = "/pub/%s%s" % (pubid, yi) if 's' not in yi else "/pub/%s/index.html#%s" % (pubid, yi[:-1])
+                b.append(mkcell(pubs[pubid][yi]['widget'], href=href, 
+                        title=pubs[pubid][yi]['hint']))
                 b.append(mktag('/td'))
             else:
                 b.append(mktag('td', 'block'))
@@ -103,7 +142,7 @@ def pubyear_html(pubyears=[]):
                 b.append(mktag('/td'))
                 
         b.append(mktag('td'))
-        b.append(str(totals[pubid]))
+        b.append(str(sum([ pubs[pubid][x]['total'] for x in pubs[pubid].keys() ])))
         b.append(mktag('/td'))
         b.append(mktag('/tr'))
    

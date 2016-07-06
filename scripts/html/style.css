@@ -2,8 +2,20 @@
     fill:green;
 }
 
-.year_widget rect.sun {
+.year_widget rect.red {
     fill:red;
+}
+
+.year_widget rect.lightblue {
+    fill:lightblue;
+}
+
+.year_widget rect.white {
+    fill:white;
+}
+
+.year_widget rect.similar10 {
+    fill:lightsalmon;
 }
 
 .year_widget text {
@@ -400,6 +412,14 @@ tr.puzzlehl:hover {
     cursor: pointer;
 }
 
+.rowlink::before {
+    content: "";
+    display: block;
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 1.5em;
+}
 /* Pubyear header */
 
 .pubyearhead, .pubyearhead > th {
