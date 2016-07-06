@@ -133,10 +133,18 @@ def main():
                     classes.append('full')
                 if max_pct >= 100:
                     classes.append('exact')
-
                 # Highlight only grids sized > 400 cells
                 if num_cells(r.Size) >= 400:
                     classes.append('biggrid')
+                # Check for pub similarity
+                pubid, y, m, d = utils.split_xdid(r.xdid)
+                ymd = '%s%s%s' % (y, m, d)
+                if pubid not in [ x[0] for x in matches ]:
+                    for m in [ x[0] for x in matches ]:
+                        p, y1, m1, d1 = utils.split_xdid(m)
+                        ymd1 = '%s%s%s' % (y1, m1, d1)
+                        if ymd1 < ymd and p != pubid:
+                            classes.append('stolen')
 
             return ' '.join(classes)
 
@@ -175,7 +183,6 @@ def main():
                 c_grids[r.Date] = { 
                         'link' : '/pub/%s%s/index.html#' % (pubid, year) + r.xdid,
                         'class': get_cell_classes(r), 
-                        #'class': 'pctfilled',
                         'title': br_with_n(similar_text),
                         }
                 print(c_grids[r.Date])
