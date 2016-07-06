@@ -154,7 +154,6 @@ def main():
                         'class': 'pctfilled',
                         'title': br_with_n(similar_text),
                         }
-                #row_dict['class'] = 'puzzlehl'
                 row_dict['tag_params'] = {
                     'onclick': 'location.href=\'/pub/%s\'' % r.xdid,
                     'class': 'puzzlehl'
