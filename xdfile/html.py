@@ -46,7 +46,7 @@ class GridCalendar(HTMLCalendar):
             # If links in supplied link and not empty
             if cdate in self.grids.keys():
                 # Supply class or link via dict
-                if self.grids[cdate]['class']:
+                if 'class' in self.grids[cdate].keys():
                     cssclass += ' ' + self.grids[cdate]['class']
                 if 'link' in self.grids[cdate].keys():
                     htitle = self.grids[cdate]['title'] if self.grids[cdate]['title'] else ''
