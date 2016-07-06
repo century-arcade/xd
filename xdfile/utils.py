@@ -14,8 +14,6 @@ import datetime
 import time
 import argparse
 
-from .html import html_header, html_footer
-
 EOL = '\n'
 COLSEP = '\t'
 COLUMN_SEPARATOR = COLSEP
@@ -356,6 +354,8 @@ class OutputFile:
         self.write(COLUMN_SEPARATOR.join(fields) + EOL)
 
     def write_html(self, fn, innerhtml, title=""):
+        from .html import html_header, html_footer
+
         htmlstr = html_header(title=title) + innerhtml + html_footer
         self.write(htmlstr.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
 
@@ -424,6 +424,8 @@ class OutputDirectory:
         log("wrote %s to %s" % (fn, self.toplevel))
 
     def write_html(self, fn, innerhtml, title=""):
+        from .html import html_header, html_footer
+
         htmlstr = html_header(title=title) + innerhtml + html_footer
         self.write_file(fn, htmlstr.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
 
