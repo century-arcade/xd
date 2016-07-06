@@ -185,7 +185,6 @@ def main():
                         'class': get_cell_classes(r), 
                         'title': br_with_n(similar_text),
                         }
-                print(c_grids[r.Date])
                 row_dict['tag_params'] = {
                     'onclick': 'location.href=\'/pub/%s\'' % r.xdid,
                     'class': 'puzzlehl'
