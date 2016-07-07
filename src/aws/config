@@ -1,6 +1,7 @@
-export KEY=
-export EC2_REGION=
-export BUCKET=
-export BRANCH=master
-export AWS_ACCESS_KEY=
-export AWS_SECRET_KEY=
+export KEY=century-arcade-west
+export EC2_REGION=us-west-2
+export BUCKET=xd-beta.saul.pw
+export BRANCH=staging
+export AWS_ACCESS_KEY=AKIAJSYPEYFY3ANPYEQA
+export AWS_SECRET_KEY=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
+

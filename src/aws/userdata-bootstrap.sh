@@ -5,10 +5,10 @@
 # have to be specified inline here.
 
 export REGION=us-west-2
-export BRANCH=master
-export BUCKET=xd.saul.pw
-export EMAIL=xd@saul.pw
-
+export BRANCH=staging
+export BUCKET=xd-beta.saul.pw
+export EMAIL=andjel@gmail.com
+export GXD_GIT=git@gitlab.com:rabidrat/gxd.git
 export LOGFILE=/tmp/`date +"%Y-%m-%d"`.log
 
 exec > >(tee -i ${LOGFILE}) 2>&1
@@ -20,11 +20,15 @@ sudo apt-get update && \
 
 cd /tmp
 
-wget https://raw.githubusercontent.com/century-arcade/xd/${BRANCH}/src/aws/get-recent-xd.sh
+git clone https://github.com/century-arcade/xd
 
-/bin/bash -x /tmp/get-recent-xd.sh
+cd xd/
+git checkout ${BRANCH}
+
+git clone ${GXD_GIT}
+
+/bin/bash -x scripts/00-logging-wrapper.sh
 
 aws s3 cp --region ${REGION} ${LOGFILE} s3://${BUCKET}/logs/
 
-sudo poweroff
-
+#sudo poweroff

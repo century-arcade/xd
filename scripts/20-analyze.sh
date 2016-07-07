@@ -2,6 +2,7 @@
 # analyzes all puzzles in gxd/
 set -e
 
+echo "PUB dir is ${PUB}"
 mkdir -p $PUB
 rm -f $PUB/*
 

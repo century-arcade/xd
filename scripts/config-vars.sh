@@ -1,7 +1,6 @@
-
 # account-specific variables
-export ACCOUNTID=165509303398
-export DOMAIN=xd.saul.pw
+export ACCOUNTID=441803714406
+export DOMAIN=xd-beta.saul.pw
 export XDPRIV=xd-private
 export REGION=us-west-2
 
@@ -11,7 +10,7 @@ export GITURL=git@gitlab.com:rabidrat/gxd.git
 export UPLOAD_EMAIL=upload@${DOMAIN}
 
 # the address to send logs
-export ADMIN_EMAIL=xd@saul.pw
+export ADMIN_EMAIL=andjel@gmail.com
 
 # local directory structure
 export GXD=gxd       # the corpus; input-only except for shelve/git-commit
