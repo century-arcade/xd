@@ -17,8 +17,8 @@ if [ -n "$BRANCH" ] ; then
     git checkout -b $BRANCH || git checkout $BRANCH
     git add .
     git commit -m "incoming for $TODAY"
-    git push --set-upstream origin $BRANCH
-
+    ssh-agent bash -c "ssh-add ~/.ssh/gxd_rsa; git push --set-upstream origin $BRANCH"
+    
     # submit pull request
     git request-pull master ${GITURL} $BRANCH
     git checkout master
