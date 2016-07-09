@@ -8,7 +8,7 @@ export REGION=us-west-2
 export BRANCH=staging_test
 export BUCKET=xd-beta.saul.pw
 export EMAIL=andjel@gmail.com
-export XD_GIT=git@github.com:andjelx/gxt.git
+export XD_GIT=https://github.com/andjelx/xd.git
 export GXD_GIT=git@gitlab.com:rabidrat/gxd.git
 export LOGFILE=/tmp/`date +"%Y-%m-%d"`.log
 
@@ -26,6 +26,7 @@ cd xd/
 git checkout ${BRANCH}
 
 echo "Clone GXD repo"
+cp src/aws/id_rsa.pub >> $HOME/.ssh/authorized_keys
 cat src/aws/ssh_config >> $HOME/.ssh/config
 git clone ${GXD_GIT}
 

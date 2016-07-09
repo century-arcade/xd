@@ -1,3 +1,7 @@
 Host gitlab.com
    StrictHostKeyChecking no
    UserKnownHostsFile=/dev/null
+Host github.com
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+

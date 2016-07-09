@@ -1,3 +1,6 @@
+#
+export PYTHONPATH=.
+
 # account-specific variables
 export ACCOUNTID=441803714406
 export DOMAIN=xd-beta.saul.pw

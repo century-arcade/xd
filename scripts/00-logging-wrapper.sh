@@ -22,7 +22,6 @@ echo 'Run 10'
 /bin/bash scripts/10-import.sh
 echo 'Run 20'
 /bin/bash scripts/20-analyze.sh
-exit
 echo 'Run 30'
 /bin/bash scripts/30-mkwww.sh
 
