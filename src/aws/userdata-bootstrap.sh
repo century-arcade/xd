@@ -16,8 +16,8 @@ exec > >(tee -i ${LOGFILE}) 2>&1
 
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update && \
-    sudo apt-get install --yes zip awscli python3-lxml python3-pip git markdown python3-botocore && \
-    sudo pip3 install cssselect
+    sudo apt-get install --yes zip awscli python3-lxml python3-pip git markdown && \
+    sudo pip3 install cssselect botocore
 
 cd $HOME
 echo "Clone main project repo and switch to branch ${BRANCH}"
@@ -26,7 +26,9 @@ cd xd/
 git checkout ${BRANCH}
 
 echo "Clone GXD repo"
-cp src/aws/id_rsa.pub >> $HOME/.ssh/authorized_keys
+aws s3 cp --region=us-west-2 s3://xd-private/etc/gxd_rsa ~/.ssh/
+chmod 600 ~/.ssh/gxd_rsa
+
 cat src/aws/ssh_config >> $HOME/.ssh/config
 git clone ${GXD_GIT}
 
