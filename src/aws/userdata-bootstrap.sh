@@ -1,5 +1,8 @@
 #!/bin/bash -x
 
+set -x
+set -e
+
 # This script is passed as userdata to the launch-config, which the base AMI
 # executes at the end of initialization.  These configuration parameters
 # have to be specified inline here.
@@ -25,12 +28,13 @@ git clone ${XD_GIT}
 cd xd/
 git checkout ${BRANCH}
 
+mkdir -p ~/.ssh
 echo "Clone GXD repo"
 aws s3 cp --region=us-west-2 s3://xd-private/etc/gxd_rsa ~/.ssh/
 chmod 600 ~/.ssh/gxd_rsa
 
 cat src/aws/ssh_config >> $HOME/.ssh/config
-git clone ${GXD_GIT}
+ssh-agent bash -c "ssh-add ~/.ssh/gxd_rsa; git clone ${GXD_GIT}"
 
 echo "Run deploy script"
 /bin/bash -x scripts/00-logging-wrapper.sh
