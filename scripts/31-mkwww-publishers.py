@@ -90,11 +90,8 @@ def main():
             k = (pubid, year or 9999)
             if k not in all_pubs:
                 all_pubs[k] = PublicationStats(pubid)
-
             pubyear_rows[pubid] = []
-
             all_pubs[k].add(puzrow)
-
 
     pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', 'Grid_1A_1D', 'ReusedCluePct', 'SimilarGrids' ]
     utils.log('generating index pages')
@@ -138,13 +135,14 @@ def main():
                     classes.append('biggrid')
                 # Check for pub similarity
                 pubid, y, m, d = utils.split_xdid(r.xdid)
-                ymd = '%s%s%s' % (y, m, d)
-                if pubid not in [ x[0] for x in matches ]:
-                    for m in [ x[0] for x in matches ]:
-                        p, y1, m1, d1 = utils.split_xdid(m)
-                        ymd1 = '%s%s%s' % (y1, m1, d1)
-                        if ymd1 < ymd and p != pubid:
-                            classes.append('stolen')
+                if pubid:
+                    ymd = '%s%s%s' % (y, m, d)
+                    if pubid not in [ x[0] for x in matches ]:
+                        for m in [ x[0] for x in matches ]:
+                            p, y1, m1, d1 = utils.split_xdid(m)
+                            ymd1 = '%s%s%s' % (y1, m1, d1)
+                            if ymd1 < ymd and p != pubid:
+                                classes.append('stolen')
 
             return ' '.join(classes)
 
@@ -158,7 +156,8 @@ def main():
                 if similar_pct > 0:
                     matches = [x.split('=') for x in rsim.matches.split()]
                     for xdid, pct in matches:
-                        similar_text += '(%s%%) %s [%s]<br/>' % (pct, puzzles[xdid].Author, xdid)
+                        if xdid in puzzles.keys():
+                            similar_text += '(%s%%) %s [%s]<br/>' % (pct, puzzles[xdid].Author, xdid)
                     total_similar.append(similar_pct)
                 else:
                     similar_text = "0"

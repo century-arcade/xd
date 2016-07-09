@@ -14,7 +14,7 @@ cp scripts/html/*.html $WWW/
 aws s3 sync --region $REGION $WWW ${S3WWW}/ --acl public-read
 
 # concatenate all logfiles from working dirs and copy to cloud
-ALLLOGS=$WWW/$TODAY-logs.txt
+ALLLOGS=$WWW/log/$TODAY-logs.txt
 scripts/49-cat-logs.py -o $ALLLOGS $PUB $PRIV $TMP
 aws s3 cp --region $REGION $ALLLOGS ${S3WWW}/log/ --acl public-read
 
