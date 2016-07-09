@@ -5,9 +5,10 @@
 # have to be specified inline here.
 
 export REGION=us-west-2
-export BRANCH=staging
+export BRANCH=staging_test
 export BUCKET=xd-beta.saul.pw
 export EMAIL=andjel@gmail.com
+export XD_GIT=git@github.com:andjelx/gxt.git
 export GXD_GIT=git@gitlab.com:rabidrat/gxd.git
 export LOGFILE=/tmp/`date +"%Y-%m-%d"`.log
 
@@ -15,12 +16,12 @@ exec > >(tee -i ${LOGFILE}) 2>&1
 
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update && \
-    sudo apt-get install --yes zip awscli python3-lxml python3-pip git && \
+    sudo apt-get install --yes zip awscli python3-lxml python3-pip git markdown && \
     sudo pip3 install cssselect
 
 cd /tmp
 
-git clone https://github.com/century-arcade/xd
+git clone ${XD_GIT}
 
 cd xd/
 git checkout ${BRANCH}
