@@ -19,17 +19,18 @@ sudo apt-get update && \
     sudo apt-get install --yes zip awscli python3-lxml python3-pip git markdown && \
     sudo pip3 install cssselect
 
-cd /tmp
-
+cd $HOME
+echo "Clone main project repo and switch to branch ${BRANCH}"
 git clone ${XD_GIT}
-
 cd xd/
 git checkout ${BRANCH}
 
+echo "Clone GXD repo"
+cat src/aws/ssh_config >> $HOME/.ssh/config
 git clone ${GXD_GIT}
 
+echo "Run deploy script"
 /bin/bash -x scripts/00-logging-wrapper.sh
 
+echo "Copy logs"
 aws s3 cp --region ${REGION} ${LOGFILE} s3://${BUCKET}/logs/
-
-#sudo poweroff
