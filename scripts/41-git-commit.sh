@@ -2,6 +2,10 @@
 
 # commit all changes to gxd
 
+git config --global user.email $ADMIN_EMAIL
+git config --global user.name $ADMIN_NAME
+
+
 set -e
 
 BRANCH=$1

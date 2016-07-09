@@ -14,6 +14,7 @@ export UPLOAD_EMAIL=upload@${DOMAIN}
 
 # the address to send logs
 export ADMIN_EMAIL=andjel@gmail.com
+export ADMIN_NAME="Saul Pwanson"
 
 # local directory structure
 export GXD=gxd       # the corpus; input-only except for shelve/git-commit
