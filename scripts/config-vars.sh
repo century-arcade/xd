@@ -6,6 +6,7 @@ export ACCOUNTID=441803714406
 export DOMAIN=xd-beta.saul.pw
 export XDPRIV=xd-private
 export REGION=us-west-2
+export AWS_DEFAULT_REGION=$REGION
 
 export GITURL=git@gitlab.com:rabidrat/gxd.git
 
