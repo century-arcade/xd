@@ -92,10 +92,8 @@ def main():
     for mainxdid in xdids_todo:
         progress(mainxdid)
 
-        try:
-            mainxd = xdfile.get_xd(mainxdid)
-        except Exception as e:
-            utils.log(str(e))
+        mainxd = xdfile.get_xd(mainxdid)
+        if not mainxd:
             continue
 
         matches = metadb.get_similar_grids().get(mainxdid, [])
@@ -120,6 +118,9 @@ def main():
         # Process for all matches
         for xdid in matches:
             xd = xdfile.get_xd(xdid)
+            # Continue if can't load xdid
+            if not xd:
+                continue
             xddates[xdid] = xd.date()
             # output each grid
             html_grids[xdid] = grid_diff_html(xd, compare_with=mainxd)
