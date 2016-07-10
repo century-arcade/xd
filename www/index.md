@@ -27,6 +27,11 @@ The basic collection/analysis/presentation pipeline is operational.  This pipeli
 xd needs a legal entity (for the content) and a succession plan.
 
 
+### Crossword Publishers
+
+Register your crosswords with the .xd project and let us add them to the corpus!
+
+
 ### Help improve the curation, analysis, or presentation
 
 - View the entire codebase at http://github.com/century-arcade/xd[github.com/century-arcade/xd]
@@ -43,5 +48,7 @@ xd needs a legal entity (for the content) and a succession plan.
 ### Future Ideas
 
 * separate puzzles from periodicals vs books
+* organize litzing efforts for other crosswords
+* create web process for merging crossword fixes
 
 

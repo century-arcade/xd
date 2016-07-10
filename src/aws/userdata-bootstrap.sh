@@ -1,11 +1,9 @@
-#!/bin/bash -x
+#!/bin/bash
 
 set -x
-set -e
 
 # This script is passed as userdata to the launch-config, which the base AMI
-# executes at the end of initialization.  These configuration parameters
-# have to be specified inline here.
+# executes at the end of initialization.
 
 export LC_ALL="en_US.UTF-8"
 export LOGFILE=/tmp/`date +"%Y-%m-%d"`.log
