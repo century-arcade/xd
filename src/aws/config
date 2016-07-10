@@ -5,3 +5,9 @@ export BRANCH=
 export AWS_ACCESS_KEY=
 export AWS_SECRET_KEY=
 
+export REGION=us-west-2
+export BRANCH=staging_test
+export BUCKET=xd-beta.saul.pw
+export EMAIL=andjel@gmail.com
+export XD_GIT=https://github.com/andjelx/xd.git
+export GXD_GIT=git@gitlab.com:rabidrat/gxd.git
