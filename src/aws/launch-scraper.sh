@@ -4,6 +4,8 @@ source src/aws/config
 
 XD_PROFILE="arn:aws:iam::165509303398:instance-profile/xd-scraper" 
 
+echo aws s3 cp src/aws/config.century-arcade s3://xd-private/etc/config
+
 ami_id=ami-75fd3b15 #Ubuntu Server 16.04 LTS (HVM)
 
 #  created via IAM console: role/xd-scraper

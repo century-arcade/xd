@@ -2,6 +2,10 @@
 
 set -x
 
+if [ -z "$HOME" ] ; then
+    HOME=/tmp
+fi
+
 # This script is passed as userdata to the launch-config, which the base AMI
 # executes at the end of initialization.
 
@@ -17,7 +21,7 @@ sudo apt-get update && \
 
 cd $HOME
 # Get config file from AWS
-aws s3 cp --region=us-west-2 s3://xd-private/etc/config ${HOME}/config
+aws s3 cp --region=us-west-2 s3://xd-private/etc/config $HOME/config
 source $HOME/config
 
 echo "Clone main project repo and switch to branch ${BRANCH}"
@@ -25,13 +29,13 @@ git clone ${XD_GIT}
 cd xd/
 git checkout ${BRANCH}
 
-mkdir -p ${HOME}/.ssh
+mkdir -p $HOME/.ssh
 echo "Clone GXD repo"
-aws s3 cp --region=us-west-2 s3://xd-private/etc/gxd_rsa ${HOME}/.ssh/
-chmod 600 ${HOME}/.ssh/gxd_rsa
+aws s3 cp --region=us-west-2 s3://xd-private/etc/gxd_rsa $HOME/.ssh/
+chmod 600 $HOME/.ssh/gxd_rsa
 
 cat src/aws/ssh_config >> $HOME/.ssh/config
-ssh-agent bash -c "ssh-add ${HOME}/.ssh/gxd_rsa; git clone ${GXD_GIT}"
+ssh-agent bash -c "ssh-add $HOME/.ssh/gxd_rsa; git clone ${GXD_GIT}"
 
 echo "Run deploy script"
 /bin/bash -x scripts/00-logging-wrapper.sh
