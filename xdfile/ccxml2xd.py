@@ -5,62 +5,20 @@ import string
 import re
 from lxml import etree
 import xdfile
+from xdfile.utils import escape, remove_cons_lines, xml_escape_table
 
-
-def __dict_replace(s, d):
-    """Replace substrings of a string using a dictionary."""
-    for key, value in d.items():
-        s = s.replace(key, value)
-    return s
-
-def escape(data, entities={}):
-    """Escape a string of data.
-    based on: xml.sax.saxutils escape()
-    """
-    if entities:
-        data = __dict_replace(data, entities)
-    return data
 
 HEADER_RENAMES = {
     'Creator': 'Author'
 }
 
-def remove_cons_lines(text):
-    """ Remove two consequative lines if equal """
-    ret = []
-    for l in text.splitlines():
-        if not ret:
-            ret.append(l)
-        elif l != ret[-1]:
-            ret.append(l)
-    return '\n'.join(ret)
-    
-
 # data is bytes()
 def parse_ccxml(data, filename):
     content = data.decode('utf-8', errors='replace')
-    escape_table = {
-        "<b>": "{*",
-        "</b>": "*}",
-        "<i>": "{/",
-        "</i>": "/}",
-        "<em>": "{/",
-        "</em>": "/}",
-        "<u>": "{_",
-        "</u>": "_}",
-        "<strike>": "{-",
-        "</strike>": "-}",
-        "&" : "&amp;",
-        "<92>" : "&apos;",
-        '"<"' : '"&lt;"',
-        '="" ' : "='' ",
-        '\x05': '',
-    } 
-    
-    content = escape(content, escape_table)
+    content = escape(content, xml_escape_table)
     content = re.sub(r'(=["]{2}([^"]+?)["]{2})+',r'="&quot;\2&quot;"', content) # Replace double quotes
-    #re.sub(r'["]{2}([^"]+?)["]{2}',r'&quot;;apos;\1;apos;&quot;', content) # Replace double quotes
     content = remove_cons_lines(content)
+    # TO BE REMOVED
     c1 = content
     content = content.encode('utf-8')
 

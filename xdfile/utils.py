@@ -503,3 +503,49 @@ def memoize(obj):
         return cache[args]
     return memoizer
 
+
+xml_escape_table = {
+    "<b>": "{*",
+    "</b>": "*}",
+    "<i>": "{/",
+    "</i>": "/}",
+    "<em>": "{/",
+    "</em>": "/}",
+    "<u>": "{_",
+    "</u>": "_}",
+    "<strike>": "{-",
+    "</strike>": "-}",
+    "&" : "&amp;",
+    "<92>" : "&apos;",
+    '"<"' : '"&lt;"',
+    '="" ' : "='' ",
+    '\x05': "'", # ^E seems to be junk
+    "''" : '&quot;',
+    "\x12" : "'",  # ^R seems to be '
+} 
+
+
+def __dict_replace(s, d):
+    """Replace substrings of a string using a dictionary."""
+    for key, value in d.items():
+        s = s.replace(key, value)
+    return s
+
+def escape(data, entities={}):
+    """Escape a string of data.
+    based on: xml.sax.saxutils escape()
+    """
+    if entities:
+        data = __dict_replace(data, entities)
+    return data
+
+def remove_cons_lines(text):
+    """ Remove two consequative lines if equal """
+    ret = []
+    for l in text.splitlines():
+        if not ret:
+            ret.append(l)
+        elif l != ret[-1]:
+            ret.append(l)
+    return '\n'.join(ret)
+

@@ -5,6 +5,7 @@ from urllib.parse import unquote
 from lxml import etree
 
 import xdfile
+from xdfile.utils import escape, remove_cons_lines, xml_escape_table
 
 
 def udecode(s):
@@ -26,7 +27,7 @@ def parse_uxml(content, filename):
         except:
             pass  # last ditch effort, just try the original string
 
-    content = content.replace("&", "&amp;")
+    content = escape(content, xml_escape_table)
     content = content.replace('"<"', '"&lt;"')
     content = content.replace("''", '&quot;')
     content = content.replace("\x12", "'")  # ^R seems to be '
