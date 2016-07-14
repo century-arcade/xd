@@ -29,6 +29,17 @@ g_scriptname = None
 
 WEEKDAYS = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 def space_with_nbsp(text):
     """ Replace spaces with ;nbsp; """
     return text.replace(' ', '&nbsp;')
@@ -45,8 +56,13 @@ def br_with_n(text):
 def get_log():
     return EOL.join(g_logs) + EOL
 
+def log(s, minverbose=0, severity='INFO'):
+    # This can be made in more Python way
+    if severity.lower() == 'warning':
+        s = bcolors.WARNING + s + bcolors.ENDC
+    if severity.lower() == 'error':
+        s = bcolors.FAIL + s + bcolors.ENDC
 
-def log(s, minverbose=0):
     if g_logfp:
         g_logfp.write(s + "\n")
     g_logs.append("%s: %s" % (g_currentProgress or g_scriptname, s))

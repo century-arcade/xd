@@ -1,31 +1,66 @@
+# -*- coding: utf-8 -*- 
 #!/usr/bin/env python3
 
 import string
 import re
 from lxml import etree
-
 import xdfile
 
+
+def __dict_replace(s, d):
+    """Replace substrings of a string using a dictionary."""
+    for key, value in d.items():
+        s = s.replace(key, value)
+    return s
+
+def escape(data, entities={}):
+    """Escape a string of data.
+    based on: xml.sax.saxutils escape()
+    """
+    if entities:
+        data = __dict_replace(data, entities)
+    return data
 
 HEADER_RENAMES = {
     'Creator': 'Author'
 }
 
+def remove_cons_lines(text):
+    """ Remove two consequative lines if equal """
+    ret = []
+    for l in text.splitlines():
+        if not ret:
+            ret.append(l)
+        elif l != ret[-1]:
+            ret.append(l)
+    return ''.join(ret)
+    
 
 # data is bytes()
 def parse_ccxml(data, filename):
-    content = data.decode('utf-8')
-    content = content.replace("<b>", "{*")
-    content = content.replace("</b>", "*}")
-    content = content.replace("<i>", "{/")
-    content = content.replace("</i>", "/}")
-    content = content.replace("<em>", "{/")
-    content = content.replace("</em>", "/}")
-    content = content.replace("<u>", "{_")
-    content = content.replace("</u>", "_}")
-    content = content.replace("<strike>", "{-")
-    content = content.replace("</strike>", "-}")
+    content = data.decode('utf-8', errors='replace')
+    escape_table = {
+        "<b>": "{*",
+        "</b>": "*}",
+        "<i>": "{/",
+        "</i>": "/}",
+        "<em>": "{/",
+        "</em>": "/}",
+        "<u>": "{_",
+        "</u>": "_}",
+        "<strike>": "{-",
+        "</strike>": "-}",
+        "&" : "&amp;",
+        "<92>" : "&apos;",
+        '"<"' : '"&lt;"',
+    } 
+    
+    content = escape(content, escape_table)
+    content = re.sub(r'["]{2}([^"]+?)["]{2}',r'";apos;\1;apos;"', content) # Replace double quotes
+    #content = content.encode('utf-8')
+    content = remove_cons_lines(content)
     content = content.encode('utf-8')
+    print(content)
 
     ns = {
         'puzzle': 'http://crossword.info/xml/rectangular-puzzle'
