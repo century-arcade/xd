@@ -33,7 +33,7 @@ def remove_cons_lines(text):
             ret.append(l)
         elif l != ret[-1]:
             ret.append(l)
-    return ''.join(ret)
+    return '\n'.join(ret)
     
 
 # data is bytes()
@@ -53,21 +53,28 @@ def parse_ccxml(data, filename):
         "&" : "&amp;",
         "<92>" : "&apos;",
         '"<"' : '"&lt;"',
+        '="" ' : "='' ",
+        '\x05': '',
     } 
     
     content = escape(content, escape_table)
-    content = re.sub(r'["]{2}([^"]+?)["]{2}',r'";apos;\1;apos;"', content) # Replace double quotes
-    #content = content.encode('utf-8')
+    content = re.sub(r'(=["]{2}([^"]+?)["]{2})+',r'="&quot;\2&quot;"', content) # Replace double quotes
+    #re.sub(r'["]{2}([^"]+?)["]{2}',r'&quot;;apos;\1;apos;&quot;', content) # Replace double quotes
     content = remove_cons_lines(content)
+    c1 = content
     content = content.encode('utf-8')
-    print(content)
 
     ns = {
         'puzzle': 'http://crossword.info/xml/rectangular-puzzle'
     }
-
-    root = etree.fromstring(content)
-
+    try:
+        root = etree.fromstring(content)
+    except Exception as e:
+        print(c1)
+        print(content)
+        print('Exception %s' % e)
+        exit
+    
     # init crossword
     grid = root.xpath('//puzzle:crossword/puzzle:grid', namespaces=ns)
     if not grid:
