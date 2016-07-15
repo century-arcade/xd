@@ -226,8 +226,11 @@ def parse_xdid(path):
 
 
 def parse_pathname(path):
+    # Fix to proper split names like file.xml.1
+    ext = os.extsep + os.extsep.join(os.path.basename(path).split(os.extsep)[1:])
     path, fn = os.path.split(path)
-    base, ext = os.path.splitext(fn)
+    ext = ext if fn else ''
+    base = os.path.splitext(fn)[0]
     nt = namedtuple('Pathname', 'path base ext filename')
     return nt(path=path, base=base, ext=ext, filename=fn)
 
@@ -520,7 +523,7 @@ xml_escape_table = {
     '"<"' : '"&lt;"',
     '="" ' : "='' ",
     '\x05': "'", # ^E seems to be junk
-    "''" : '&quot;',
+    #"''" : '&quot;',
     "\x12" : "'",  # ^R seems to be '
 } 
 
