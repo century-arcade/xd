@@ -33,6 +33,8 @@ def main():
     global args
     parsers = {
         '.xml': [parse_ccxml, parse_uxml],
+        '.xml.1': [parse_ccxml, parse_uxml],
+        '.xml.2': [parse_ccxml, parse_uxml],
         '.json': [parse_ujson],
         '.puz': [parse_puz],
         '.html': [parse_xwordinfo],
@@ -82,7 +84,7 @@ def main():
                 ExternalSource = args.source or srcrow.ExternalSource
                 SourceFilename = innerfn
             else:
-                log("%s not in sources.tsv" % innerfn)
+                # log("%s not in sources.tsv" % innerfn)
                 CaptureTime = iso8601(dt)
                 ExternalSource = args.source or parse_pathname(input_source).filename
                 SourceFilename = innerfn
