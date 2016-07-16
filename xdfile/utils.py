@@ -70,6 +70,11 @@ def log(s, minverbose=0, severity='INFO'):
 #    if not g_args or g_args.verbose >= minverbose:
 #        print(" " + s)
 
+def log_warning(_s, _m=0):
+    log(_s, minverbose=_m, severity='warning')
+
+def log_error(_s, _m=0):
+    log(_s, minverbose=_m, severity='error')
 
 # print without logging if -d
 def debug(s):
@@ -521,9 +526,9 @@ xml_escape_table = {
     "&" : "&amp;",
     "<92>" : "&apos;",
     '"<"' : '"&lt;"',
-    '="" ' : "='' ",
+    '="" ' : "=''",
+    '=""' + EOL : "=''" + EOL,
     '\x05': "'", # ^E seems to be junk
-    #"''" : '&quot;',
     "\x12" : "'",  # ^R seems to be '
 } 
 
@@ -542,13 +547,13 @@ def escape(data, entities={}):
         data = __dict_replace(data, entities)
     return data
 
-def remove_cons_lines(text):
-    """ Remove two consequative lines if equal """
+def consecutive(text):
+    """ Remove two consecutive lines if equal """
     ret = []
     for l in text.splitlines():
         if not ret:
             ret.append(l)
         elif l != ret[-1]:
             ret.append(l)
-    return '\n'.join(ret)
+    return EOL.join(ret)
 

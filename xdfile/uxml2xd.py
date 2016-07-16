@@ -5,7 +5,7 @@ from urllib.parse import unquote
 from lxml import etree
 
 import xdfile
-from xdfile.utils import escape, remove_cons_lines, xml_escape_table
+from xdfile.utils import escape, consecutive, xml_escape_table
 
 
 def udecode(s):
@@ -29,12 +29,9 @@ def parse_uxml(content, filename):
 
     content = escape(content, xml_escape_table)
     content = re.sub(r'(=["]{2}([^"]+?)["]{2})+',r'="&quot;\2&quot;"', content) # Replace double quotes
-    content = re.sub(r'=""(\S)', r'="&quot;\1', content)  # one case has c=""foo"".  sheesh
-    content = re.sub(r'(\.)""', r'\1&quot;"', content)
-    content_xml = content.encode("utf-8")
 
     try:
-        root = etree.fromstring(content_xml)
+        root = etree.fromstring(content.encode("utf-8"))
     except:
         # TODO: catch the specific exception
         xml = re.search(r"<(\w+).*?</\1>", content, flags=re.DOTALL).group()
@@ -66,11 +63,7 @@ def parse_uxml(content, filename):
     for clue_type in ('across', 'down'):
         for clue in root.xpath('//crossword/' + clue_type)[0].getchildren():
             number = int(clue.attrib['cn'])
-            try:
-                text = udecode(clue.attrib['c'].strip())
-            except:
-                print("Clue: %s" % clue)
-                exit
+            text = udecode(clue.attrib['c'].strip())
             solution = clue.attrib['a'].strip()
             xd.clues.append(((clue_type[0].upper(), number), text, solution))
 

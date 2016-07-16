@@ -5,7 +5,7 @@ import string
 import re
 from lxml import etree
 import xdfile
-from xdfile.utils import escape, remove_cons_lines, xml_escape_table
+from xdfile.utils import escape, consecutive, xml_escape_table
 
 
 HEADER_RENAMES = {
@@ -16,23 +16,20 @@ HEADER_RENAMES = {
 def parse_ccxml(data, filename):
     content = data.decode('utf-8', errors='replace')
     content = escape(content, xml_escape_table)
+    content = consecutive(content)
     content = re.sub(r'(=["]{2}([^"]+?)["]{2})+',r'="&quot;\2&quot;"', content) # Replace double quotes
-    content = remove_cons_lines(content)
-    # TO BE REMOVED
-    c1 = content
-    content = content.encode('utf-8')
+    content_xml = content.encode('utf-8')
 
     ns = {
         'puzzle': 'http://crossword.info/xml/rectangular-puzzle'
     }
     try:
-        root = etree.fromstring(content)
+        root = etree.fromstring(content_xml)
     except Exception as e:
-        print(c1)
-        print(content)
         print('Exception %s' % e)
+        print(content)
         exit
-    
+
     # init crossword
     grid = root.xpath('//puzzle:crossword/puzzle:grid', namespaces=ns)
     if not grid:
