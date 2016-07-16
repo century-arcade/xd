@@ -454,7 +454,7 @@ class OutputDirectory:
     def write_file(self, fn, contents, timet=None):
         with self.open_file(fn, 'w') as f:
             f.write(contents)
-        log("wrote %s to %s" % (fn, self.toplevel))
+        debug("wrote %s to %s" % (fn, self.toplevel))
 
     def write_html(self, fn, innerhtml, title=""):
         from .html import html_header, html_footer

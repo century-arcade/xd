@@ -15,7 +15,7 @@ from xdfile import IncompletePuzzleParse
 
 from xdfile.utils import log, debug, log_error
 from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, strip_toplevel
-from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output
+from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output, progress
 
 from xdfile import metadatabase as metadb
 
@@ -57,6 +57,7 @@ def main():
         # collect 'sources' metadata
         source_files = {}
         for fn, contents, dt in find_files_with_time(input_source, ext='.tsv'):
+            progress(fn)
 #            assert fn.endswith('sources.tsv'), fn
             for row in parse_tsv_data(contents.decode('utf-8'), "Source"):
                 innerfn = strip_toplevel(row.SourceFilename)
@@ -144,7 +145,7 @@ def main():
                         xdid = prev_xdid or catalog.deduce_xdid(xd, mdtext)
                         path = catalog.get_shelf_path(xd, args.pubid, mdtext)
                         outf.write_file(path + ".xd", xdstr, dt)
-                        log("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
+                        debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
                         rejected = ""
                         break  # stop after first successful parsing
                     except xdfile.NoShelfError as e:
