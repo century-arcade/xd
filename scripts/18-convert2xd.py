@@ -13,7 +13,7 @@ import zipfile
 
 from xdfile import IncompletePuzzleParse
 
-from xdfile.utils import log, debug
+from xdfile.utils import log, debug, log_error
 from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, strip_toplevel
 from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output
 
@@ -125,9 +125,9 @@ def main():
                         try:
                             xd = parsefunc(contents, fn)
                         except IncompletePuzzleParse as e:
-                            log("%s  %s" % (fn, e))
+                            log_error("%s  %s" % (fn, e))
                             xd = e.xd
-
+                        
                         if not xd:
                             continue
 
@@ -148,16 +148,16 @@ def main():
                         rejected = ""
                         break  # stop after first successful parsing
                     except xdfile.NoShelfError as e:
-                        log("could not shelve: %s" % str(e))
+                        log_error("could not shelve: %s" % str(e))
                         rejected += "[shelver] %s  " % str(e)
                     except Exception as e:
-                        log("%s could not convert: %s" % (parsefunc.__name__, str(e)))
+                        log_error("%s could not convert [%s]: %s" % (parsefunc.__name__, fn, str(e)))
                         rejected += "[%s] %s  " % (parsefunc.__name__, str(e))
-                        if args.debug:
-                            raise
+                        #if args.debug:
+                        #    raise
 
                 if rejected:
-                    log("could not convert: %s" % rejected)
+                    log_error("could not convert: %s" % rejected)
 
                 # only add receipt if first time converting this source
                 if xdid and not already_received:
