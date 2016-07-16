@@ -1,37 +1,34 @@
+# -*- coding: utf-8 -*- 
 #!/usr/bin/env python3
 
 import string
 import re
 from lxml import etree
-
 import xdfile
+from xdfile.utils import escape, consecutive, xml_escape_table
 
 
 HEADER_RENAMES = {
     'Creator': 'Author'
 }
 
-
 # data is bytes()
 def parse_ccxml(data, filename):
-    content = data.decode('utf-8')
-    content = content.replace("<b>", "{*")
-    content = content.replace("</b>", "*}")
-    content = content.replace("<i>", "{/")
-    content = content.replace("</i>", "/}")
-    content = content.replace("<em>", "{/")
-    content = content.replace("</em>", "/}")
-    content = content.replace("<u>", "{_")
-    content = content.replace("</u>", "_}")
-    content = content.replace("<strike>", "{-")
-    content = content.replace("</strike>", "-}")
-    content = content.encode('utf-8')
+    content = data.decode('utf-8', errors='replace')
+    content = escape(content, xml_escape_table)
+    content = consecutive(content)
+    content = re.sub(r'(=["]{2}([^"]+?)["]{2})+',r'="&quot;\2&quot;"', content) # Replace double quotes
+    content_xml = content.encode('utf-8')
 
     ns = {
         'puzzle': 'http://crossword.info/xml/rectangular-puzzle'
     }
-
-    root = etree.fromstring(content)
+    try:
+        root = etree.fromstring(content_xml)
+    except Exception as e:
+        print('Exception %s' % e)
+        print(content)
+        exit
 
     # init crossword
     grid = root.xpath('//puzzle:crossword/puzzle:grid', namespaces=ns)
