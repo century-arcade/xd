@@ -33,8 +33,6 @@ def main():
     global args
     parsers = {
         '.xml': [parse_ccxml, parse_uxml],
-        '.xml.1': [parse_ccxml, parse_uxml],
-        '.xml.2': [parse_ccxml, parse_uxml],
         '.json': [parse_ujson],
         '.puz': [parse_puz],
         '.html': [parse_xwordinfo],
