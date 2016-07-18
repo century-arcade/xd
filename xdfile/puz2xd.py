@@ -99,10 +99,10 @@ def parse_puz(contents, filename):
                         if ch in rebus_shorthands:
                             cellch = ch
                             rebus_shorthands.remove(ch)
-                            log("unknown grid character '%s', assuming rebus of itself" % ch)
+                            log("%s: unknown grid character '%s', assuming rebus of itself" % (filename, ch))
                         else:
                             cellch = rebus_shorthands.pop()
-                            log("unknown grid character '%s', assuming rebus (as '%s')" % (ch, cellch))
+                            log("%s: unknown grid character '%s', assuming rebus (as '%s')" % (filename, ch, cellch))
 
                         xd.set_header("Rebus", xd.get_header("Rebus") + " %s=%s" % (cellch, ch))
 

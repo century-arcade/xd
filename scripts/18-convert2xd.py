@@ -145,7 +145,8 @@ def main():
                         xdid = prev_xdid or catalog.deduce_xdid(xd, mdtext)
                         path = catalog.get_shelf_path(xd, args.pubid, mdtext)
                         outf.write_file(path + ".xd", xdstr, dt)
-                        debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
+                        #progress("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
+                        
                         rejected = ""
                         break  # stop after first successful parsing
                     except xdfile.NoShelfError as e:

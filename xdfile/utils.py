@@ -360,8 +360,9 @@ class OutputZipFile(zipfile.ZipFile):
         zi.external_attr = 0o444 << 16
         zi.compress_type = zipfile.ZIP_DEFLATED
         self.writestr(zi, contents)
-
-        log("wrote %s to %s" % (fullfn, self.filename))
+        
+        if g_args.debug:
+            log("wrote %s to %s" % (fullfn, self.filename))
 
     def write(self, data):
         raise Exception("can't write directly to .zip")
