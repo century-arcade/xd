@@ -8,17 +8,25 @@ import tempfile
 import shutil
 import zipfile
 import tarfile
-from xdfile.utils import progress
+from xdfile.utils import progress, iso8601, get_args, args_parser, open_output, parse_pathname
+from xdfile.metadatabase import xd_sources_row, xd_sources_header
 
 
-if len(sys.argv) > 1:
-    source = sys.argv[1]
+p = args_parser('process huge puzzles archive into separate .zip and create sources.tsv')
+p.add_argument('-s', '--source', default=None, help='ExternalSource')
+#p.add_argument('-i', '--input', default=None, help='Input')
+args = get_args(parser=p)
+
+outf = open_output()
+
+if args.inputs:
+    source = args.inputs[0]
 else:
     print('Supply path | .zip | .tar.gz with puzzles to be processed')
     sys.exit(2)
 
-if os.path.isdir(source) and not len(sys.argv) > 2:
-    print('Provide source name for dir input')
+if os.path.isdir(source) and not args.source:
+    print('Provide source name for path input')
     sys.exit(2)
 
 tempdirs = {}
@@ -72,13 +80,21 @@ for root, dirs, files in os.walk(ztemp):
         if ret:
             os.remove(fullname)
 
+outbase = parse_pathname(args.output).base
+sources = []
+
 for p in tempdirs:
     td = tempdirs[p]
     zip_file = p + '.zip'
-    with zipfile.ZipFile(zip_file, 'w') as myzip:
+    zip_file_fp = zip_file if archive else os.path.join(ztemp, zip_file)
+    with zipfile.ZipFile(zip_file_fp, 'w') as myzip:
         for f in [f for f in os.listdir(td) if os.path.isfile(os.path.join(td, f))]:
-            print("Zipping file %s to %s" % (f, zip_file))
+            print("Zipping file %s to %s" % (f, zip_file_fp))
             myzip.write(os.path.join(td, f), arcname=f)
+        sources.append(xd_sources_row(zip_file, source, iso8601())))
+
+
+outf.write_file("%s.tsv" % outbase, xd_sources_header + "".join(sources))
 
 print('Temp dirs cleanup')
 if archive:
