@@ -4,10 +4,6 @@
 import os
 import sys
 import re
-import tempfile
-import shutil
-import zipfile
-import tarfile
 from xdfile.utils import progress, iso8601, get_args, args_parser, open_output, parse_pathname
 from xdfile.utils import filetime
 import xdfile.utils
@@ -16,7 +12,6 @@ from xdfile.metadatabase import xd_sources_row, xd_sources_header
 
 p = args_parser('process huge puzzles archive into separate .zip and create sources.tsv')
 p.add_argument('-s', '--source', default=None, help='ExternalSource')
-#p.add_argument('-i', '--input', default=None, help='Input')
 args = get_args(parser=p)
 
 outf = open_output()
