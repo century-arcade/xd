@@ -9,6 +9,8 @@ import shutil
 import zipfile
 import tarfile
 from xdfile.utils import progress, iso8601, get_args, args_parser, open_output, parse_pathname
+from xdfile.utils import filetime
+import xdfile.utils
 from xdfile.metadatabase import xd_sources_row, xd_sources_header
 
 
@@ -19,86 +21,37 @@ args = get_args(parser=p)
 
 outf = open_output()
 
-if args.inputs:
-    source = args.inputs[0]
+if args.source:
+    source = args.source
 else:
-    print('Supply path | .zip | .tar.gz with puzzles to be processed')
-    sys.exit(2)
+    source = parse_pathname(args.inputs[0]).base
 
-if os.path.isdir(source) and not args.source:
-    print('Provide source name for path input')
-    sys.exit(2)
+subzips = {}
 
-tempdirs = {}
-
-archive = True
-if os.path.isdir(source):
-    archive = False
-    ztemp = source
-    source = sys.argv[2]
-elif zipfile.is_zipfile(source):
-    zipfile = zipfile.ZipFile(source, 'r')
-    zitems = zipfile.namelist()
-elif tarfile.is_tarfile(source):
-    zipfile = tarfile.open(source, 'r:*')
-    zitems = zipfile.getnames()
-else:
-    print('Incorrect archive supplied')
-    sys.exit(2)
-
-if archive:
-    # First unpack .zip
-    ztemp = tempfile.mkdtemp()
-    print('Extracting to %s' % ztemp)
-    for f in zitems:
-        progress('Extracting %s' % f)
-        zipfile.extract(f, path=ztemp)
-
-for root, dirs, files in os.walk(ztemp):
-    for file in files:
-        fullname = os.path.join(root,file)
-        # Remove dotfiles
-        if file[0] == '.':
-            os.remove(fullname)
+for inputfn in args.inputs:
+    for fn, contents, dt in xdfile.utils.find_files_with_time(inputfn):
+        if not contents:
             continue
 
-        # Dont process .zip
-        if '.zip' in file:
-            continue
-
-        m = re.match(r'^([a-z]{2,4})[\-0-9]{1}.*', file, flags=re.IGNORECASE)
+        m = re.match(r'^([a-z]{2,4})[\-0-9]{1}.*', parse_pathname(fn).base, flags=re.IGNORECASE)
         if not m:
             # Don't process those not matched pattern
             continue
         
         prefix = m.group(1).lower()
-        if prefix not in tempdirs:
-            tempdirs[prefix] = tempfile.mkdtemp(prefix=prefix + "_")
+        if prefix not in subzips:
+            zf = xdfile.utils.OutputZipFile(os.path.join(args.output, prefix + ".zip"), parse_pathname(source).base)
+            sources = []
+            subzips[prefix] = (zf, sources)
+        else:
+            zf, sources = subzips[prefix]
         
-        print("Processing file %s -> %s" % (fullname, tempdirs[prefix]))
-        ret = shutil.copy2(fullname, tempdirs[prefix])
-        if ret:
-            os.remove(fullname)
+        progress("Processing %s -> %s" % (fn, prefix))
+       
+        zf.write_file(fn, contents, dt)
 
-outbase = parse_pathname(args.output).base
-sources = []
+        sources.append(xd_sources_row(fn, source, iso8601(dt)))
 
-for p in tempdirs:
-    td = tempdirs[p]
-    zip_file = p + '.zip'
-    zip_file_fp = zip_file if archive else os.path.join(ztemp, zip_file)
-    with zipfile.ZipFile(zip_file_fp, 'w') as myzip:
-        for f in [f for f in os.listdir(td) if os.path.isfile(os.path.join(td, f))]:
-            print("Zipping file %s to %s" % (f, zip_file_fp))
-            myzip.write(os.path.join(td, f), arcname=f)
-        sources.append(xd_sources_row(zip_file, source, iso8601())))
+for zf, sources in subzips.values():
+    zf.write_file("sources.tsv", xd_sources_header + "".join(sources))
 
-
-outf.write_file("%s.tsv" % outbase, xd_sources_header + "".join(sources))
-
-print('Temp dirs cleanup')
-if archive:
-    shutil.rmtree(ztemp)
-
-for p in tempdirs:
-    shutil.rmtree(tempdirs[p])
