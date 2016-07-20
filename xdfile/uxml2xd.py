@@ -5,6 +5,7 @@ from urllib.parse import unquote
 from lxml import etree
 
 import xdfile
+from xdfile.utils import escape, consecutive, xml_escape_table
 
 
 def udecode(s):
@@ -26,19 +27,11 @@ def parse_uxml(content, filename):
         except:
             pass  # last ditch effort, just try the original string
 
-    content = content.replace("&", "&amp;")
-    content = content.replace('"<"', '"&lt;"')
-    content = content.replace("''", '&quot;')
-    content = content.replace("\x12", "'")  # ^R seems to be '
-    content = content.replace("\x05", "'")  # ^E seems to be junk
-
-    content = re.sub(r'=""(\S)', r'="&quot;\1', content)  # one case has c=""foo"".  sheesh
-    content = re.sub(r'(\.)""', r'\1&quot;"', content)
-
-    content = content.encode("utf-8")
+    content = escape(content, xml_escape_table)
+    content = re.sub(r'(=["]{2}([^"]+?)["]{2})+',r'="&quot;\2&quot;"', content) # Replace double quotes
 
     try:
-        root = etree.fromstring(content)
+        root = etree.fromstring(content.encode("utf-8"))
     except:
         # TODO: catch the specific exception
         xml = re.search(r"<(\w+).*?</\1>", content, flags=re.DOTALL).group()
