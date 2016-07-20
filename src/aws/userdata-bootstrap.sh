@@ -34,8 +34,7 @@ echo "Clone GXD repo"
 aws s3 cp --region=us-west-2 s3://xd-private/etc/gxd_rsa $HOME/.ssh/
 chmod 600 $HOME/.ssh/gxd_rsa
 
-#alias ssh="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-cat src/aws/ssh_config >> /root/.ssh/config
+cat src/aws/ssh_config >> $HOME/.ssh/config
 ssh-agent bash -c "ssh-add $HOME/.ssh/gxd_rsa; git clone ${GXD_GIT}"
 
 echo "Run deploy script"
