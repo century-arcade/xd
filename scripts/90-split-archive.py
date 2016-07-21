@@ -28,11 +28,11 @@ for inputfn in args.inputs:
         if not contents:
             continue
 
-        m = re.match(r'^([a-z]{2,4})[\-0-9]{1}.*', parse_pathname(fn).base, flags=re.IGNORECASE)
+        m = re.match(r'^([a-z]{2,4})[\-0-9]{1}\d.*', parse_pathname(fn).base, flags=re.IGNORECASE)
         prefix = m.group(1).lower() if m else 'misc'
         
         if prefix not in subzips:
-            zf = xdfile.utils.OutputZipFile(os.path.join(args.output, prefix + ".zip"), parse_pathname(source).base)
+            zf = xdfile.utils.OutputZipFile(os.path.join(args.output, prefix + ".zip"))
             sources = []
             subzips[prefix] = (zf, sources)
         else:

@@ -21,9 +21,12 @@ def reparse_date(s):
 
 def decode(s):
     s = s.replace('\x92', "'")
+    s = s.replace('\xc3\x82',"")
+    s = s.replace('\xa0'," ")
+    s = s.replace('\xe0'," ")
     s = s.replace('\x93', '"')
     s = s.replace('\x94', '"')
-    s = s.replace('\x85', '...')
+    s = s.replace('\x85', '…')
     s = s.replace('\x86', '†')
     s = urllib.parse.unquote(s)
     return s

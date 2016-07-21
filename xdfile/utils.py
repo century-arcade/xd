@@ -514,6 +514,7 @@ def memoize(obj):
 
 
 xml_escape_table = {
+    "’" : "'",
     "<b>": "{*",
     "</b>": "*}",
     "<i>": "{/",
@@ -526,11 +527,15 @@ xml_escape_table = {
     "</strike>": "-}",
     "&" : "&amp;",
     "<92>" : "&apos;",
-    '"<"' : '"&lt;"',
+    '"<"' : '"%3C"',
     '="" ' : "=''",
+    "\xC3\x82" : "", # Don't know what it this symbol for
     '=""' + EOL : "=''" + EOL,
-    '\x05': "'", # ^E seems to be junk
+    "\x05": "'", # ^E seems to be junk
     "\x12" : "'",  # ^R seems to be '
+    "\xC2\xA0" : " ", # replace nbsp with space
+    "%C2%A0" : " ", # replace nbsp with space
+    "\xA0" : " ", # replace what left from nbsp with space
 } 
 
 

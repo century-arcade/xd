@@ -83,7 +83,7 @@ def main():
                 ExternalSource = args.source or srcrow.ExternalSource
                 SourceFilename = innerfn
             else:
-                # log("%s not in sources.tsv" % innerfn)
+                debug("%s not in sources.tsv" % innerfn)
                 CaptureTime = iso8601(dt)
                 ExternalSource = args.source or parse_pathname(input_source).filename
                 SourceFilename = innerfn
