@@ -535,6 +535,7 @@ xml_escape_table = {
     "\x12" : "'",  # ^R seems to be '
     "\xC2\xA0" : " ", # replace nbsp with space
     "%C2%A0" : " ", # replace nbsp with space
+    "%C3%82%27" : "'", # apostrophe
     "\xA0" : " ", # replace what left from nbsp with space
 } 
 
