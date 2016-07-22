@@ -29,7 +29,7 @@ def decode(s):
     s = s.replace('\xe0'," ")
     s = s.replace('\x93', '"')
     s = s.replace('\x94', '"')
-    s = s.replace('\x85', '…')
+    s = s.replace('\x85', '...')
     s = s.replace('\x86', '†')
     s = s.replace('\xd3','"')
     s = s.replace('\xd4','"')
@@ -134,7 +134,7 @@ def parse_puz(contents, filename):
                 raise xdfile.IncompletePuzzleParse(xd, "Clue number doesn't match grid: " + cluenum)
             xd.clues.append((("A", number), decode(clue), answers.get(cluenum, "")))
 
-        xd.append_clue_break()
+        # xd.append_clue_break()
 
         for number, clue in puzzle.clues.down():
             cluenum = "D" + str(number)

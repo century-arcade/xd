@@ -529,6 +529,7 @@ xml_escape_table = {
     "<92>" : "&apos;",
     '"<"' : '"%3C"',
     '="" ' : "=''",
+    '…' : "...",
     "\xC3\x82" : "", # Don't know what it this symbol for
     '=""' + EOL : "=''" + EOL,
     "\x05": "'", # ^E seems to be junk

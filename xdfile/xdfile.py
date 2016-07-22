@@ -349,6 +349,8 @@ class xdfile:
                     continue
 
                 cluedir, cluenum = pos
+                if prevdir and prevdir != cluedir: # Blank line between cluedirs
+                    r += EOL
                 prevdir = cluedir
 
                 r += "%s%s. %s ~ %s" % (cluedir, cluenum, (clue or "[XXX]").strip(), answer)
