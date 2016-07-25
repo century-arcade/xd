@@ -18,6 +18,7 @@ from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, stri
 from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output, progress
 
 from xdfile import metadatabase as metadb
+from xdfile import metasql as metasql
 
 from xdfile.ccxml2xd import parse_ccxml
 from xdfile.uxml2xd import parse_uxml
@@ -51,7 +52,8 @@ def main():
 
     outf = open_output()
 
-    nextReceiptId = metadb.get_last_receipt_id() + 1
+    #nextReceiptId = metadb.get_last_receipt_id() + 1
+    nextReceiptId = metasql.get_last_receipt_id() + 1
 
     for input_source in args.inputs:
       try:
@@ -95,17 +97,15 @@ def main():
             ReceivedTime = iso8601(time.time())
             InternalSource = args.intsrc or parse_pathname(input_source).filename
 
-            already_received = list(r for r in metadb.xd_receipts().values()
-                           if r.ExternalSource == ExternalSource
-                           and r.SourceFilename == SourceFilename)
-
+            #already_received = list(r for r in metadb.xd_receipts().values()
+            #               if r.ExternalSource == ExternalSource
+            #               and r.SourceFilename == SourceFilename)
+            already_received = metasql.check_already_recieved(ExternalSource, SourceFilename)
             xdid = ""
             prev_xdid = ""  # unshelved by default
 
             existing_xdids = set(r.xdid for r in already_received)
-
             if existing_xdids:
-
                 if len(existing_xdids) > 1:
                     log('previously received this same file under multiple xdids:' + ' '.join(existing_xdids))
                 else:
@@ -164,6 +164,16 @@ def main():
 
                 # only add receipt if first time converting this source
                 if xdid and not already_received:
+                    metasql.append_receipts([
+                        ReceiptId,
+                        CaptureTime,
+                        ReceivedTime,
+                        ExternalSource,
+                        InternalSource,
+                        SourceFilename,
+                        xdid
+                        ])
+                    """
                     this_receipt = metadb.xd_receipts_row(ReceiptId=ReceiptId,
                         CaptureTime=CaptureTime,
                         ReceivedTime=ReceivedTime,
@@ -173,6 +183,7 @@ def main():
                         xdid=xdid)
 
                     metadb.append_receipts(this_receipt)
+                    """
 
       except Exception as e:
           log(str(e))
