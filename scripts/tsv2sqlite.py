@@ -22,7 +22,6 @@ def main():
     rows = [list(r) for r in xdfile.utils.parse_tsv(args.inputs[0], "Receipt").values()]
     cur.executemany('INSERT INTO receipts VALUES (?,?,?,?,?,?,?)', rows)
     sqlconn.commit()
-    
 
 if __name__ == "__main__":
     main()

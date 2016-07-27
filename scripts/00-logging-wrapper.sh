@@ -13,7 +13,7 @@ fi
 
 mkdir -p ${OUTBASEDIR}
 
-export LOGFILE=${OUTBASE}-pipeline.log 
+export LOGFILE=${OUTBASE}-pipeline.log
 
 exec > >(tee -i ${LOGFILE}) 2>&1
 

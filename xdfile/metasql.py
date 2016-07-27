@@ -113,11 +113,10 @@ def xd_puzzle_sources():
 
 def append_receipts(receipts):
     if receipts:
-        print("RCPT: %s" % receipts)
-
         INS_TMPL = ",".join('?' * len(xd_receipt._fields))
-        print(INS_TMPL)
-        cursor.execute("INSERT INTO %s VALUES (%s)" % (METADB_RECEIPTS, INS_TMPL),([str(x) for x in receipts]))
+        r = [str(x) for x in receipts]
+        utils.debug('INSERT %s' % ' '.join(r))
+        cursor.execute("INSERT INTO %s VALUES (%s)" % (METADB_RECEIPTS, INS_TMPL),r)
         sqlconn.commit()
 
 
@@ -133,9 +132,9 @@ def append_row(tsvpath, headerstr, row, to_sql=False):
         fp.close()
     else:
         cur = sqlconn.cursor()
-        print(headerstr)
+        #print(headerstr)
         INS_TMPL = ",".join('?' * len(COLSEP.split(headerstr)))
-        print(INS_TMPL)
+        #print(INS_TMPL)
         cur.execute("INSERT INTO %s VALUES (%s)" % (METADB_RECEIPTS, INS_TMPL),([str(x) for x in row]))
         sqlconn.commit()
 

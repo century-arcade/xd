@@ -129,7 +129,6 @@ def main():
                         except IncompletePuzzleParse as e:
                             log_error("%s  %s" % (fn, e))
                             xd = e.xd
-                        
                         if not xd:
                             continue
 
@@ -147,7 +146,7 @@ def main():
                         path = catalog.get_shelf_path(xd, args.pubid, mdtext)
                         outf.write_file(path + ".xd", xdstr, dt)
                         #progress("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
-                        
+
                         rejected = ""
                         break  # stop after first successful parsing
                     except xdfile.NoShelfError as e:
@@ -163,7 +162,9 @@ def main():
                     log_error("could not convert: %s" % rejected)
 
                 # only add receipt if first time converting this source
-                if xdid and not already_received:
+                if already_received:
+                    debug("already received %s:%s" % (ExternalSource, SourceFilename))
+                else:
                     metasql.append_receipts([
                         ReceiptId,
                         CaptureTime,
