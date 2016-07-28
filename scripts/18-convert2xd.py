@@ -56,140 +56,135 @@ def main():
     nextReceiptId = metasql.get_last_receipt_id() + 1
 
     for input_source in args.inputs:
-      try:
-        # collect 'sources' metadata
-        source_files = {}
-        for fn, contents, dt in find_files_with_time(input_source, ext='.tsv'):
-            progress(fn)
-#            assert fn.endswith('sources.tsv'), fn
-            for row in parse_tsv_data(contents.decode('utf-8'), "Source"):
-                innerfn = strip_toplevel(row.SourceFilename)
-                if innerfn in source_files:
-                    log("%s: already in source_files!" % innerfn)
+        try:
+            # collect 'sources' metadata
+            source_files = {}
+            # collect receipts
+            receipts = []
+
+            for fn, contents, dt in find_files_with_time(input_source, ext='.tsv'):
+                progress(fn)
+                # assert fn.endswith('sources.tsv'), fn
+                for row in parse_tsv_data(contents.decode('utf-8'), "Source"):
+                    innerfn = strip_toplevel(row.SourceFilename)
+                    if innerfn in source_files:
+                        log("%s: already in source_files!" % innerfn)
+                        continue
+                    source_files[innerfn] = row
+
+            # enumerate all files in this source, reverse-sorted by time
+            #  (so most recent edition gets main slot in case of shelving
+            #  conflict)
+            for fn, contents, dt in sorted(find_files_with_time(input_source, strip_toplevel=False), reverse=True, key=lambda x: x[2]):
+                if fn.endswith(".tsv") or fn.endswith(".log"):
                     continue
-                source_files[innerfn] = row
 
-        # enumerate all files in this source, reverse-sorted by time
-        #  (so most recent edition gets main slot in case of shelving
-        #  conflict)
-        for fn, contents, dt in sorted(find_files_with_time(input_source, strip_toplevel=False), reverse=True, key=lambda x: x[2]):
-            if fn.endswith(".tsv") or fn.endswith(".log"):
-                continue
+                if not contents:  # 0-length files
+                    continue
 
-            if not contents:  # 0-length files
-                continue
-
-            innerfn = strip_toplevel(fn)
-            if innerfn in source_files:
-                srcrow = source_files[innerfn]
-                CaptureTime = srcrow.DownloadTime
-                ExternalSource = args.extsrc or srcrow.ExternalSource
-                SourceFilename = innerfn
-            else:
-                debug("%s not in sources.tsv" % innerfn)
-                CaptureTime = iso8601(dt)
-                ExternalSource = args.extsrc or parse_pathname(input_source).filename
-                SourceFilename = innerfn
-
-            ReceiptId = nextReceiptId
-            nextReceiptId += 1
-
-            ReceivedTime = iso8601(time.time())
-            InternalSource = args.intsrc or parse_pathname(input_source).filename
-
-            #already_received = list(r for r in metadb.xd_receipts().values()
-            #               if r.ExternalSource == ExternalSource
-            #               and r.SourceFilename == SourceFilename)
-            already_received = metasql.check_already_recieved(ExternalSource, SourceFilename)
-            xdid = ""
-            prev_xdid = ""  # unshelved by default
-
-            existing_xdids = set(r.xdid for r in already_received)
-            if existing_xdids:
-                if len(existing_xdids) > 1:
-                    log('previously received this same file under multiple xdids:' + ' '.join(existing_xdids))
+                innerfn = strip_toplevel(fn)
+                if innerfn in source_files:
+                    srcrow = source_files[innerfn]
+                    CaptureTime = srcrow.DownloadTime
+                    ExternalSource = args.extsrc or srcrow.ExternalSource
+                    SourceFilename = innerfn
                 else:
-                    prev_xdid = existing_xdids.pop()
-                    debug('already received as %s' % prev_xdid)
+                    debug("%s not in sources.tsv" % innerfn)
+                    CaptureTime = iso8601(dt)
+                    ExternalSource = args.extsrc or parse_pathname(input_source).filename
+                    SourceFilename = innerfn
 
-            # try each parser by extension
-            ext = parse_pathname(fn).ext.lower()
-            possible_parsers = parsers.get(ext, parsers[".puz"])
+                ReceiptId = nextReceiptId
+                nextReceiptId += 1
 
-            if ext == ".xd":
-                outf.write_file(fn, contents.decode('utf-8'), dt)
-            elif not possible_parsers:
-                rejected = "no parser"
-            else:
-                rejected = ""
-                for parsefunc in possible_parsers:
-                    try:
+                ReceivedTime = iso8601(time.time())
+                InternalSource = args.intsrc or parse_pathname(input_source).filename
+
+                #already_received = list(r for r in metadb.xd_receipts().values()
+                #               if r.ExternalSource == ExternalSource
+                #               and r.SourceFilename == SourceFilename)
+                already_received = metasql.check_already_recieved(ExternalSource, SourceFilename)
+                xdid = ""
+                prev_xdid = ""  # unshelved by default
+
+                existing_xdids = set(r.xdid for r in already_received)
+                if existing_xdids:
+                    if len(existing_xdids) > 1:
+                        log('previously received this same file under multiple xdids:' + ' '.join(existing_xdids))
+                    else:
+                        prev_xdid = existing_xdids.pop()
+                        debug('already received as %s' % prev_xdid)
+
+                # try each parser by extension
+                ext = parse_pathname(fn).ext.lower()
+                possible_parsers = parsers.get(ext, parsers[".puz"])
+
+                if ext == ".xd":
+                    outf.write_file(fn, contents.decode('utf-8'), dt)
+                elif not possible_parsers:
+                    rejected = "no parser"
+                else:
+                    rejected = ""
+                    for parsefunc in possible_parsers:
                         try:
-                            xd = parsefunc(contents, fn)
-                        except IncompletePuzzleParse as e:
-                            log_error("%s  %s" % (fn, e))
-                            xd = e.xd
-                        if not xd:
-                            continue
+                            try:
+                                xd = parsefunc(contents, fn)
+                            except IncompletePuzzleParse as e:
+                                log_error("%s  %s" % (fn, e))
+                                xd = e.xd
+                            if not xd:
+                                continue
 
-                        xd.filename = replace_ext(strip_toplevel(fn), ".xd")
-                        if not xd.get_header("Copyright"):
-                            if args.copyright:
-                                xd.set_header("Copyright", args.copyright)
+                            xd.filename = replace_ext(strip_toplevel(fn), ".xd")
+                            if not xd.get_header("Copyright"):
+                                if args.copyright:
+                                    xd.set_header("Copyright", args.copyright)
 
-                        catalog.deduce_set_seqnum(xd)
+                            catalog.deduce_set_seqnum(xd)
 
-                        xdstr = xd.to_unicode()
+                            xdstr = xd.to_unicode()
 
-                        mdtext = "|".join((ExternalSource,InternalSource,SourceFilename))
-                        xdid = prev_xdid or catalog.deduce_xdid(xd, mdtext)
-                        path = catalog.get_shelf_path(xd, args.pubid, mdtext)
-                        outf.write_file(path + ".xd", xdstr, dt)
-                        #progress("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
+                            mdtext = "|".join((ExternalSource,InternalSource,SourceFilename))
+                            xdid = prev_xdid or catalog.deduce_xdid(xd, mdtext)
+                            path = catalog.get_shelf_path(xd, args.pubid, mdtext)
+                            outf.write_file(path + ".xd", xdstr, dt)
+                            #progress("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
 
-                        rejected = ""
-                        break  # stop after first successful parsing
-                    except xdfile.NoShelfError as e:
-                        log_error("could not shelve: %s" % str(e))
-                        rejected += "[shelver] %s  " % str(e)
-                    except Exception as e:
-                        log_error("%s could not convert [%s]: %s" % (parsefunc.__name__, fn, str(e)))
-                        rejected += "[%s] %s  " % (parsefunc.__name__, str(e))
-                        #if args.debug:
-                        #    raise
+                            rejected = ""
+                            break  # stop after first successful parsing
+                        except xdfile.NoShelfError as e:
+                            log_error("could not shelve: %s" % str(e))
+                            rejected += "[shelver] %s  " % str(e)
+                        except Exception as e:
+                            log_error("%s could not convert [%s]: %s" % (parsefunc.__name__, fn, str(e)))
+                            rejected += "[%s] %s  " % (parsefunc.__name__, str(e))
+                            #if args.debug:
+                            #    raise
 
-                if rejected:
-                    log_error("could not convert: %s" % rejected)
+                    if rejected:
+                        log_error("could not convert: %s" % rejected)
 
-                # only add receipt if first time converting this source
-                if already_received:
-                    debug("already received %s:%s" % (ExternalSource, SourceFilename))
-                else:
-                    metasql.append_receipts([
-                        ReceiptId,
-                        CaptureTime,
-                        ReceivedTime,
-                        ExternalSource,
-                        InternalSource,
-                        SourceFilename,
-                        xdid
-                        ])
-                    """
-                    this_receipt = metadb.xd_receipts_row(ReceiptId=ReceiptId,
-                        CaptureTime=CaptureTime,
-                        ReceivedTime=ReceivedTime,
-                        ExternalSource=ExternalSource,
-                        InternalSource=InternalSource,
-                        SourceFilename=SourceFilename,
-                        xdid=xdid)
+                    # only add receipt if first time converting this source
+                    if already_received:
+                        debug("already received %s:%s" % (ExternalSource, SourceFilename))
+                    else:
+                        receipts.append([
+                            ReceiptId,
+                            CaptureTime,
+                            ReceivedTime,
+                            ExternalSource,
+                            InternalSource,
+                            SourceFilename,
+                            xdid
+                            ])
 
-                    metadb.append_receipts(this_receipt)
-                    """
+            if receipts:
+                metasql.append_receipts(receipts)
 
-      except Exception as e:
-          log(str(e))
-          if args.debug:
-              raise
+        except Exception as e:
+            log(str(e))
+            if args.debug:
+                raise
 
 
 if __name__ == "__main__":

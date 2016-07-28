@@ -25,6 +25,8 @@ RECENT_DOWNLOADS_TSV = "gxd/recents.tsv"
 sqlconn = sqlite3.connect(METADB)
 sqlconn.row_factory = sqlite3.Row
 cursor = sqlconn.cursor()
+cursor.execute('PRAGMA journal_mode = MEMORY;')
+sqlconn.commit()
 
 class Error(Exception):
     pass
@@ -112,13 +114,17 @@ def xd_puzzle_sources():
     return utils.parse_tsv(PUZZLE_SOURCES_TSV, "PuzzleSource")
 
 def append_receipts(receipts):
-    if receipts:
-        INS_TMPL = ",".join('?' * len(xd_receipt._fields))
-        r = [str(x) for x in receipts]
-        utils.debug('INSERT %s' % ' '.join(r))
-        cursor.execute("INSERT INTO %s VALUES (%s)" % (METADB_RECEIPTS, INS_TMPL),r)
-        sqlconn.commit()
+    INS_TMPL = ",".join('?' * len(xd_receipt._fields))
+    utils.debug('Going to insert %s rows' % len(receipts))
+    cursor.executemany("INSERT INTO %s VALUES (%s)" % (METADB_RECEIPTS, INS_TMPL),receipts) 
+    sqlconn.commit()
 
+def append_receipt(receipt):
+    INS_TMPL = ",".join('?' * len(xd_receipt._fields))
+    r = [str(x) for x in receipt]
+    utils.debug('INSERT %s' % ' '.join(r))
+    cursor.execute("INSERT INTO %s VALUES (%s)" % (METADB_RECEIPTS, INS_TMPL),r)
+    sqlconn.commit()
 
 def append_row(tsvpath, headerstr, row, to_sql=False):
     if not to_sql:
