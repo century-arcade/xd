@@ -6,7 +6,6 @@
 # <xdid> may be full pathnames; the base xdid will be parsed out.
 
 from queries.similarity import grid_similarity, find_clue_variants, load_answers, load_clues
-#from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, grid_similarity
 import difflib
 import datetime
 from xdfile import utils
@@ -14,7 +13,6 @@ from xdfile.html import mktag, mkhref, html_select_options
 import cgi
 
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
-#from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 from xdfile import BLOCK_CHAR, ClueAnswer
 from xdfile import metadatabase as metadb
 import xdfile
@@ -130,12 +128,8 @@ def main():
     for mainxdid in xdids_todo:
         progress(mainxdid)
 
-        try:
-            mainxd = xdfile.get_xd(mainxdid)
-        except Exception as e:
-            utils.log(str(e))
-            if args.debug:
-                raise
+        mainxd = xdfile.get_xd(mainxdid)
+        if not mainxd:
             continue
 
         matches = metadb.get_similar_grids().get(mainxdid, [])
@@ -242,7 +236,9 @@ def main():
             dcl_html += '<tr>' + ' '.join(deepcl_html) + '</tr>'   
 
         # Store in list to make further formatting as html table easier
-        html_grids[mainxdid] = grid_diff_html(xdfile.get_xd(mainxdid))
+        mainxd = xdfile.get_xd(mainxdid)
+        if mainxd:
+            html_grids[mainxdid] = grid_diff_html(mainxd)
 
         # Add for main XD
         diff_l = []
@@ -256,6 +252,8 @@ def main():
         # Process for all matches
         for xdid in matches:
             xd = xdfile.get_xd(xdid)
+            if not xd:
+                continue
             xddates[xdid] = xd.date()
             # output each grid
             html_grids[xdid] = grid_diff_html(xd, compare_with=mainxd)

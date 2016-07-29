@@ -45,9 +45,11 @@ def space_with_nbsp(text):
     return text.replace(' ', '&nbsp;')
 
 def split_xdid(xdid):
-    """ Split xdid [nyt2015-07-01] into set """
+    """ Split xdid [nyt2015-07-01] into set
+    If not matched return None
+    """
     m = re.match('([a-z]+)(\d{4})-(\d{2})-(\d{2})', xdid)
-    return m.groups() if m else None 
+    return m.groups() if m else [ None, None, None, None ] 
 
 def br_with_n(text):
     """ Replace br with \n """

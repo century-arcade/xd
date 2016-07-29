@@ -1,6 +1,7 @@
-export KEY=
-export EC2_REGION=
+# Place it on AWS bucket
+export REGION=
+export BRANCH=
 export BUCKET=
-export BRANCH=master
-export AWS_ACCESS_KEY=
-export AWS_SECRET_KEY=
+export EMAIL=
+export XD_GIT=
+export GXD_GIT=

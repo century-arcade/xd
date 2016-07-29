@@ -3,6 +3,7 @@
 set -e
 
 mkdir -p $WWW
+echo "PUB dir is ${PUB}"
 mkdir -p $PUB
 rm -f $PUB/*
 
