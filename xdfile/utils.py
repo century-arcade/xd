@@ -362,8 +362,9 @@ class OutputZipFile(zipfile.ZipFile):
         zi.external_attr = 0o444 << 16
         zi.compress_type = zipfile.ZIP_DEFLATED
         self.writestr(zi, contents)
-
-        log("wrote %s to %s" % (fullfn, self.filename))
+        
+        if g_args.debug:
+            log("wrote %s to %s" % (fullfn, self.filename))
 
     def write(self, data):
         raise Exception("can't write directly to .zip")
@@ -515,6 +516,7 @@ def memoize(obj):
 
 
 xml_escape_table = {
+    "’" : "'",
     "<b>": "{*",
     "</b>": "*}",
     "<i>": "{/",
@@ -527,11 +529,17 @@ xml_escape_table = {
     "</strike>": "-}",
     "&" : "&amp;",
     "<92>" : "&apos;",
-    '"<"' : '"&lt;"',
+    '"<"' : '"%3C"',
     '="" ' : "=''",
+    '…' : "...",
+    "\xC3\x82" : "", # Don't know what it this symbol for
     '=""' + EOL : "=''" + EOL,
-    '\x05': "'", # ^E seems to be junk
+    "\x05": "'", # ^E seems to be junk
     "\x12" : "'",  # ^R seems to be '
+    "\xC2\xA0" : " ", # replace nbsp with space
+    "%C2%A0" : " ", # replace nbsp with space
+    "%C3%82%27" : "'", # apostrophe
+    "\xA0" : " ", # replace what left from nbsp with space
 } 
 
 

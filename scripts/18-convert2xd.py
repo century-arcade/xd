@@ -44,7 +44,8 @@ def main():
 
     p = args_parser('convert crosswords to .xd format')
     p.add_argument('--copyright', default=None, help='Default value for unspecified Copyright headers')
-    p.add_argument('--source', default=None, help='Value for receipts.ExternalSource')
+    p.add_argument('--extsrc', default=None, help='Value for receipts.ExternalSource')
+    p.add_argument('--intsrc', default=None, help='Value for receipts.InternalSource')
     p.add_argument('--pubid', default=None, help='PublicationAbbr (pubid) to use')
     args = get_args(parser=p)
 
@@ -80,19 +81,19 @@ def main():
             if innerfn in source_files:
                 srcrow = source_files[innerfn]
                 CaptureTime = srcrow.DownloadTime
-                ExternalSource = args.source or srcrow.ExternalSource
+                ExternalSource = args.extsrc or srcrow.ExternalSource
                 SourceFilename = innerfn
             else:
-                # log("%s not in sources.tsv" % innerfn)
+                debug("%s not in sources.tsv" % innerfn)
                 CaptureTime = iso8601(dt)
-                ExternalSource = args.source or parse_pathname(input_source).filename
+                ExternalSource = args.extsrc or parse_pathname(input_source).filename
                 SourceFilename = innerfn
 
             ReceiptId = nextReceiptId
             nextReceiptId += 1
 
             ReceivedTime = iso8601(time.time())
-            InternalSource = parse_pathname(input_source).filename
+            InternalSource = args.intsrc or parse_pathname(input_source).filename
 
             already_received = list(r for r in metadb.xd_receipts().values()
                            if r.ExternalSource == ExternalSource
@@ -145,7 +146,8 @@ def main():
                         xdid = prev_xdid or catalog.deduce_xdid(xd, mdtext)
                         path = catalog.get_shelf_path(xd, args.pubid, mdtext)
                         outf.write_file(path + ".xd", xdstr, dt)
-                        debug("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
+                        #progress("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
+                        
                         rejected = ""
                         break  # stop after first successful parsing
                     except xdfile.NoShelfError as e:

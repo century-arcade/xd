@@ -21,10 +21,18 @@ def reparse_date(s):
 
 def decode(s):
     s = s.replace('\x92', "'")
+    s = s.replace('\xc2\x92', "'")
+    s = s.replace('\xc3\x82',"")
+    s = s.replace('\xc3\xa8',"è") # +A5. Crème de la crème ~ ELITE
+    s = s.replace('\xc2', " ") # Change rest ot 0xC2 to 0x20
+    s = s.replace('\xa0'," ")
+    s = s.replace('\xe0'," ")
     s = s.replace('\x93', '"')
     s = s.replace('\x94', '"')
     s = s.replace('\x85', '...')
     s = s.replace('\x86', '†')
+    s = s.replace('\xd3','"')
+    s = s.replace('\xd4','"')
     s = urllib.parse.unquote(s)
     return s
 
@@ -99,10 +107,10 @@ def parse_puz(contents, filename):
                         if ch in rebus_shorthands:
                             cellch = ch
                             rebus_shorthands.remove(ch)
-                            log("unknown grid character '%s', assuming rebus of itself" % ch)
+                            log("%s: unknown grid character '%s', assuming rebus of itself" % (filename, ch))
                         else:
                             cellch = rebus_shorthands.pop()
-                            log("unknown grid character '%s', assuming rebus (as '%s')" % (ch, cellch))
+                            log("%s: unknown grid character '%s', assuming rebus (as '%s')" % (filename, ch, cellch))
 
                         xd.set_header("Rebus", xd.get_header("Rebus") + " %s=%s" % (cellch, ch))
 
@@ -126,7 +134,7 @@ def parse_puz(contents, filename):
                 raise xdfile.IncompletePuzzleParse(xd, "Clue number doesn't match grid: " + cluenum)
             xd.clues.append((("A", number), decode(clue), answers.get(cluenum, "")))
 
-        xd.append_clue_break()
+        # xd.append_clue_break()
 
         for number, clue in puzzle.clues.down():
             cluenum = "D" + str(number)

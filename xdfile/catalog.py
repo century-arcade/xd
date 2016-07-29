@@ -55,7 +55,7 @@ def find_pubid(rowstr):
 
     matching = set()
     for r in regexes:
-        m = re.search(r['regex'], rowstr)
+        m = re.search(r['regex'], rowstr, flags=re.IGNORECASE)
         if m:
             matching.add(r['pubid'])
 
