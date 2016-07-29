@@ -19,7 +19,7 @@ git checkout master . && git clean -df && cd ..
 
 ./scripts/05-sql-import-receipts.sh ${METADB}
 
-numtsv=$(cat receipts.tsv | grep -v receiptid | wc -l)
+numtsv=$(cat ${GXD}'/receipts.tsv' | grep -v receiptid | wc -l)
 numsql=$(sqlite3 ${METADB} 'select count(ReceiptId) from receipts')
 echo "amount of receipts before run: $numtsv/$numsql tsv/sql" | tee > $SUMMARYLOG
 
