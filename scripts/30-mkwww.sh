@@ -8,7 +8,7 @@ source scripts/colorsh.sh
 
 CORPUS="-c $GXD"
 mkdir -p $WWW/pub/gxd
-# 
+#
 cp $GXD/*.tsv $WWW/pub/gxd/
 cp $PUB/*.tsv $WWW/pub/
 
