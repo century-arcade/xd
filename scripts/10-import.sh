@@ -30,7 +30,7 @@ $sh scripts/11-download-puzzles.py -o $WWWZIP --recents $RECENTS
 $aws s3 cp --region $REGION $WWWZIP ${S3PRIV}/sources/
 
 # convert everything to .xd, shelve in the proper location, and commit
-$sh scripts/18-convert2xd.py -o $GXD $EMAILZIP $WWWZIP
+$sh scripts/18-convert2xd.py -o $GXD/ $EMAILZIP $WWWZIP
 
 # updates receipts.tsv with xdid according to current rules
 $sh scripts/19-reshelve.py
