@@ -12,11 +12,6 @@ if [ -d ${OUTBASEDIR} ] ; then
 fi
 
 mkdir -p ${OUTBASEDIR}
-export LOGFILE=${OUTBASEDIR}/pipeline.log 
-
-echo 'Start'
-echo "Logging to ${LOGFILE}"
-exec > >(tee -i ${LOGFILE}) 2>&1
 
 echo 'Run 10'
 /bin/bash scripts/10-import.sh
@@ -33,8 +28,4 @@ scripts/39-mkwww-logs.py -o $WWW/$NOW/log.html $TMP
 
 echo 'Run 40'
 /bin/bash scripts/40-deploy.sh
-
-aws s3 cp --region ${REGION} ${LOGFILE} ${S3PRIV}/logs/
-
-src/aws/send-email.py $ADMIN_EMAIL "execution logs for $TODAY" ${LOGFILE}
 

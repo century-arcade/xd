@@ -11,12 +11,15 @@ fi
 
 export LC_ALL="en_US.UTF-8"
 export LOGFILE=/tmp/`date +"%Y-%m-%d"`.log
+export SUMLOGFILE=/tmp/`date +"%Y-%m-%d"`summary.log
+
 
 exec > >(tee -i ${LOGFILE}) 2>&1
+echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update && \
-    sudo apt-get install --yes language-pack-en-base zip awscli python3-lxml python3-pip git markdown python3-boto3 && \
+    sudo apt-get install --yes language-pack-en-base zip awscli python3-lxml python3-pip git markdown python3-boto3 sqlite3 && \
     sudo pip3 install cssselect botocore
 
 cd $HOME
@@ -38,7 +41,19 @@ cat src/aws/ssh_config >> $HOME/.ssh/config
 ssh-agent bash -c "ssh-add $HOME/.ssh/gxd_rsa; git clone ${GXD_GIT}"
 
 echo "Run deploy script"
-/bin/bash -x scripts/00-logging-wrapper.sh
+/bin/bash -x scripts/05-full-pipeline.sh
 
-echo "Copy logs"
 aws s3 cp --region ${REGION} ${LOGFILE} s3://${BUCKET}/logs/
+
+echo 'SUMMARY: End time '`date +'%Y-%m-%d %H:%M'`
+# Parse log to get summary to be mailed
+egrep -i 'ERROR|WARNING|SUMMARY' ${LOGFILE} > ${SUMLOGFILE}
+echo -e '\n' >> ${SUMLOGFILE}
+
+scripts/05-sql-import-receipts.sh
+scripts/48-stats.sh >> ${SUMLOGFILE}
+echo -e '\n' >> ${SUMLOGFILE}
+
+echo "SUMMARY: Full log file http://$BUCKET/logs/`basename ${LOGFILE}`"
+
+scripts/send-email.py $ADMIN_EMAIL "execution logs for $TODAY" ${SUMLOGFILE} 
