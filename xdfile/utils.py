@@ -60,14 +60,15 @@ def get_log():
 
 def log(s, minverbose=0, severity='INFO'):
     # This can be made in more Python way
-    if severity.lower() == 'warning':
-        s = bcolors.WARNING + s + bcolors.ENDC
-    if severity.lower() == 'error':
-        s = bcolors.FAIL + s + bcolors.ENDC
+    if g_logfp.isatty(): # Colors only for atty term
+        if severity.lower() == 'warning':
+            s = bcolors.WARNING + s + bcolors.ENDC
+        if severity.lower() == 'error':
+            s = bcolors.FAIL + s + bcolors.ENDC
 
     if g_logfp:
         g_logfp.write(s + "\n")
-    g_logs.append("%s: %s" % (g_currentProgress or g_scriptname, s))
+    g_logs.append("%s: [%s] %s" % (g_currentProgress or g_scriptname, severity.upper(), s))
 
 #    if not g_args or g_args.verbose >= minverbose:
 #        print(" " + s)
@@ -78,6 +79,12 @@ def log_warning(_s, _m=0):
 def log_error(_s, _m=0):
     log(_s, minverbose=_m, severity='error')
 
+def summary(_s, _m=0):
+    log(_s, minverbose=_m, severity='summary')
+
+error=log_error
+warn=log_warning
+
 # print without logging if -d
 def debug(s):
     if g_args.debug:
@@ -86,6 +93,8 @@ def debug(s):
 
 def progress(rest=None, every=1):
     global g_currentProgress, g_numProgress
+    if not sys.stdout.isatty():
+        return
     if rest:
         g_numProgress += 1
         g_currentProgress = rest

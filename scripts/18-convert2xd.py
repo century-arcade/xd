@@ -13,7 +13,7 @@ import zipfile
 
 from xdfile import IncompletePuzzleParse
 
-from xdfile.utils import log, debug, log_error
+from xdfile.utils import log, debug, error
 from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, strip_toplevel
 from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output, progress
 
@@ -68,7 +68,7 @@ def main():
                 for row in parse_tsv_data(contents.decode('utf-8'), "Source"):
                     innerfn = strip_toplevel(row.SourceFilename)
                     if innerfn in source_files:
-                        log("%s: already in source_files!" % innerfn)
+                        warn("%s: already in source_files!" % innerfn)
                         continue
                     source_files[innerfn] = row
 
@@ -110,7 +110,7 @@ def main():
                 existing_xdids = set(r.xdid for r in already_received)
                 if existing_xdids:
                     if len(existing_xdids) > 1:
-                        log('previously received this same file under multiple xdids:' + ' '.join(existing_xdids))
+                        warn('previously received this same file under multiple xdids:' + ' '.join(existing_xdids))
                     else:
                         prev_xdid = existing_xdids.pop()
                         debug('already received as %s' % prev_xdid)
@@ -130,7 +130,7 @@ def main():
                             try:
                                 xd = parsefunc(contents, fn)
                             except IncompletePuzzleParse as e:
-                                log_error("%s  %s" % (fn, e))
+                                error("%s  %s" % (fn, e))
                                 xd = e.xd
                             if not xd:
                                 continue
@@ -153,16 +153,16 @@ def main():
                             rejected = ""
                             break  # stop after first successful parsing
                         except xdfile.NoShelfError as e:
-                            log_error("could not shelve: %s" % str(e))
+                            error("could not shelve: %s" % str(e))
                             rejected += "[shelver] %s  " % str(e)
                         except Exception as e:
-                            log_error("%s could not convert [%s]: %s" % (parsefunc.__name__, fn, str(e)))
+                            error("%s could not convert [%s]: %s" % (parsefunc.__name__, fn, str(e)))
                             rejected += "[%s] %s  " % (parsefunc.__name__, str(e))
                             #if args.debug:
                             #    raise
 
                     if rejected:
-                        log_error("could not convert: %s" % rejected)
+                        error("could not convert: %s" % rejected)
 
                     # only add receipt if first time converting this source
                     if already_received:
@@ -182,7 +182,7 @@ def main():
                 metasql.append_receipts(receipts)
 
         except Exception as e:
-            log(str(e))
+            error(str(e))
             if args.debug:
                 raise
 

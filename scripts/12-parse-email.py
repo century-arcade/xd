@@ -49,10 +49,13 @@ def main():
             continue
 
         email_sources_tsv = []
-        for puzfn, puzdata, puzdt in generate_email_files(msg):
+        email_files = generate_email_files(msg)
+        for puzfn, puzdata, puzdt in email_files:
             # a basic sanity check of filesize
             # accommodate small puzzles and .pdf
             log("%s: %s from %s" % (puzfn, iso8601(puzdt), upload_src))
+
+        summary("%s puzzles from %s" % (len(email_files), upload_src))
 
             if len(puzdata) > 1000 and len(puzdata) < 100000:
                 email_sources_tsv.append(xd_sources_row(puzfn, upload_src, iso8601(puzdt)))
