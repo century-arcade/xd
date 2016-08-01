@@ -2,7 +2,7 @@
 
 source src/aws/config
 
-XD_PROFILE="arn:aws:iam::165509303398:instance-profile/xd-scraper" 
+XD_PROFILE="arn:aws:iam::165509303398:instance-profile/xd-scraper"
 
 echo aws s3 cp src/aws/config.century-arcade s3://xd-private/etc/config
 
@@ -15,6 +15,5 @@ aws ec2 run-instances \
       --instance-type r3.large \
       --instance-initiated-shutdown-behavior terminate \
       --iam-instance-profile Arn="$XD_PROFILE" \
-      --user-data file://src/aws/userdata-bootstrap.sh \
+      --user-data file://scripts/00-aws-bootstrap.sh \
       --image-id $ami_id
-

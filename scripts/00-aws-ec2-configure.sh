@@ -18,8 +18,8 @@ as-create-launch-config \
     ${AUTH} \
   --iam-instance-profile xd-scraper \
   --key $KEY \
-  --instance-type t2.small \
-  --user-data-file src/aws/userdata-bootstrap.sh \
+  --instance-type t2.medium \
+  --user-data-file scripts/00-aws-bootstrap.sh \
   --image-id $ami_id
 
 as-create-auto-scaling-group \
