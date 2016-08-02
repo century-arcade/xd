@@ -6,7 +6,6 @@
 # <xdid> may be full pathnames; the base xdid will be parsed out.
 
 from queries.similarity import grid_similarity, find_clue_variants, load_answers, load_clues
-#from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, grid_similarity
 import difflib
 import datetime
 from xdfile import utils
@@ -14,7 +13,6 @@ from xdfile.html import mktag, mkhref, html_select_options
 import cgi
 
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
-#from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 from xdfile import BLOCK_CHAR, ClueAnswer
 from xdfile import metadatabase as metadb
 import xdfile
@@ -123,19 +121,15 @@ def main():
     outf = utils.open_output()
 
     similars = utils.parse_tsv('gxd/similar.tsv', 'Similar')
-    xdids_todo = [ parse_pathname(fn).base for fn in args.inputs ] 
+    xdids_todo = [ parse_pathname(fn).base for fn in args.inputs ]
     if not xdids_todo:
         xdids_todo = [ xdid for xdid, matches in metadb.get_similar_grids().items() if matches ]
 
     for mainxdid in xdids_todo:
         progress(mainxdid)
 
-        try:
-            mainxd = xdfile.get_xd(mainxdid)
-        except Exception as e:
-            utils.log(str(e))
-            if args.debug:
-                raise
+        mainxd = xdfile.get_xd(mainxdid)
+        if not mainxd:
             continue
 
         matches = metadb.get_similar_grids().get(mainxdid, [])
@@ -150,13 +144,13 @@ def main():
         nstaleanswers = 0
         ntotalclues = 0
 
-        poss_answers = [] # TODO: 
+        poss_answers = [] # TODO:
         pub_uses = {}  # [pubid] -> set(ClueAnswer)
 
-        dcl_html = '' 
+        dcl_html = ''
         deepcl_html = [] # keep deep clues to parse later - per row
         for pos, mainclue, mainanswer in mainxd.iterclues():
-            deepcl_html = [] # Temporary to be replaced lately
+            deepcl_html = [] # Temporary to be replaced late
             mainca = ClueAnswer(mainxdid, mainxd.date(), mainanswer, mainclue)
 
             # 'grid position' column
@@ -239,10 +233,12 @@ def main():
                 nstaleclues += 1
             ntotalclues += 1
             # Quick and dirty - to be replaced
-            dcl_html += '<tr>' + ' '.join(deepcl_html) + '</tr>'   
+            dcl_html += '<tr>' + ' '.join(deepcl_html) + '</tr>'
 
         # Store in list to make further formatting as html table easier
-        html_grids[mainxdid] = grid_diff_html(xdfile.get_xd(mainxdid))
+        mainxd = xdfile.get_xd(mainxdid)
+        if mainxd:
+            html_grids[mainxdid] = grid_diff_html(mainxd)
 
         # Add for main XD
         diff_l = []
@@ -252,18 +248,18 @@ def main():
             diff_h += mktag('span', tagclass='main', inner='&nbsp;~&nbsp;' + mainanswer.upper())
             diff_l.append(diff_h)
         html_clues[mainxdid] = diff_l
-       
         # Process for all matches
         for xdid in matches:
             xd = xdfile.get_xd(xdid)
+            if not xd:
+                continue
             xddates[xdid] = xd.date()
             # output each grid
             html_grids[xdid] = grid_diff_html(xd, compare_with=mainxd)
-           
             diff_l = []
             # output comparison of each set of clues
             for pos, clue, answer in xd.iterclues():
-                diff_h = mktag('div','fullgrid') + '%s.&nbsp;' %pos 
+                diff_h = mktag('div','fullgrid') + '%s.&nbsp;' %pos
                 # Sometimes can return clue == None
                 sm = difflib.SequenceMatcher(lambda x: x == ' ', mainxd.get_clue(pos) or '', clue)
                 if sm.ratio() < 0.50:
@@ -276,35 +272,30 @@ def main():
                             diff_h += '<span class="match">%s</span>' % clue[b1:b2]
                         else:
                             diff_h += '<span class="diff">%s</span>' % clue[b1:b2]
-                    
                 diff_h += mktag('span', tagclass=(answer == mainxd.get_answer(pos)) and 'match' or 'diff', inner='&nbsp;~&nbsp;' + answer.upper())
                 diff_h += mktag('/div')
                 diff_l.append(diff_h)
-            html_clues[xdid] = diff_l 
-        
+            html_clues[xdid] = diff_l
 
-        print('writing table')
         # Wrap into table
         diff_h = mktag('table') + mktag('tr')
         # Sort by date
-        sortedkeys = sorted(xddates.items(), key=operator.itemgetter(1)) 
+        sortedkeys = sorted(xddates.items(), key=operator.itemgetter(1))
         for w, dt in sortedkeys:
             # Wrap into table
             diff_h += mktag('td') + html_grids[w] + mktag('/td')
         diff_h += mktag('/tr')
-        
         for i, clue in enumerate(html_clues[sortedkeys[0][0]]):
             diff_h += mktag('tr')
             for w, dt in sortedkeys:
                 if i < len(html_clues[w]):
                     diff_h += mktag('td') + html_clues[w][i] + mktag('/td')
-            diff_h += mktag('/tr') 
+            diff_h += mktag('/tr')
         # Process deepclues
-        diff_h += mktag('table') + dcl_html + mktag('/table') 
+        diff_h += mktag('table') + dcl_html + mktag('/table')
 
         diff_h += mktag('/table')
-        
-        outf.write_html('pub/deep/%s/index.html' % mainxdid, diff_h, 
+        outf.write_html('pub/deep/%s/index.html' % mainxdid, diff_h,
                     title='Deep clue comparison for ' + mainxdid)
 
 

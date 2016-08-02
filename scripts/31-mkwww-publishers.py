@@ -90,11 +90,8 @@ def main():
             k = (pubid, year or 9999)
             if k not in all_pubs:
                 all_pubs[k] = PublicationStats(pubid)
-
             pubyear_rows[pubid] = []
-
             all_pubs[k].add(puzrow)
-
 
     pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', 'Grid_1A_1D', 'ReusedCluePct', 'SimilarGrids' ]
     utils.log('generating index pages')
@@ -114,6 +111,41 @@ def main():
 
         rows = []
         
+        # Assign class based on xdid and similars
+        def get_cell_classes(r):
+            """ Return cell classes based on parameters """
+            # TODO: Implement check that authors same
+            classes = []
+            rsim = similar.get(r.xdid)
+            if rsim and float(rsim.similar_grid_pct) > 0:
+                matches = [x.split('=') for x in rsim.matches.split()]
+                # Get max for matches for class definition
+                max_pct = int(max([ x[1] for x in matches ]))
+                # < 40%: 'theme', 40-90%: 'partial', 90-99%: 'full', 100%: 'exact'
+                if max_pct > 0 and max_pct < 40:
+                    classes.append('pctfilled')
+                if max_pct >= 40 and max_pct < 90:
+                    classes.append('partial')
+                if max_pct >= 90 and max_pct <= 99:
+                    classes.append('full')
+                if max_pct >= 100:
+                    classes.append('exact')
+                # Highlight only grids sized > 400 cells
+                if num_cells(r.Size) >= 400:
+                    classes.append('biggrid')
+                # Check for pub similarity
+                pubid, y, m, d = utils.split_xdid(r.xdid)
+                if pubid:
+                    ymd = '%s%s%s' % (y, m, d)
+                    if pubid not in [ x[0] for x in matches ]:
+                        for m in [ x[0] for x in matches ]:
+                            p, y1, m1, d1 = utils.split_xdid(m)
+                            ymd1 = '%s%s%s' % (y1, m1, d1)
+                            if ymd1 < ymd and p != pubid:
+                                classes.append('stolen')
+
+            return ' '.join(classes)
+
         for r in pub.puzzles_meta:
             similar_text = ""
             reused_clue_pct = "n/a"
@@ -124,7 +156,8 @@ def main():
                 if similar_pct > 0:
                     matches = [x.split('=') for x in rsim.matches.split()]
                     for xdid, pct in matches:
-                        similar_text += '(%s%%) %s [%s]<br/>' % (pct, puzzles[xdid].Author, xdid)
+                        if xdid in puzzles.keys():
+                            similar_text += '(%s%%) %s [%s]<br/>' % (pct, puzzles[xdid].Author, xdid)
                     total_similar.append(similar_pct)
                 else:
                     similar_text = "0"
@@ -140,9 +173,6 @@ def main():
                 else:
                     reused_clue_pct = ''
 
-            # Highlight only grids sized > 400 cells
-            c_grids[r.Date] = { 'class' : 'biggrid' } if num_cells(r.Size) >= 400 else { 'class' : 'ordgrid' }
-
             row_dict = {} # Map row and style
             if similar_text and similar_text != "0":
                 # http://stackoverflow.com/questions/1418838/html-making-a-link-lead-to-the-anchor-centered-in-the-middle-of-the-page
@@ -151,7 +181,7 @@ def main():
                 pubidtext += html.mkhref(r.xdid, '/pub/' + r.xdid)
                 c_grids[r.Date] = { 
                         'link' : '/pub/%s%s/index.html#' % (pubid, year) + r.xdid,
-                        'class': 'pctfilled',
+                        'class': get_cell_classes(r), 
                         'title': br_with_n(similar_text),
                         }
                 row_dict['tag_params'] = {

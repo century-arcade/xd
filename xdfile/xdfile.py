@@ -7,7 +7,7 @@ import functools
 import re
 import datetime
 
-from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
+from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid, log
 
 g_corpus = []  # list of xdfile
 g_all_clues = []  # list of ClueAnswer
@@ -349,6 +349,8 @@ class xdfile:
                     continue
 
                 cluedir, cluenum = pos
+                if prevdir and prevdir != cluedir: # Blank line between cluedirs
+                    r += EOL
                 prevdir = cluedir
 
                 r += "%s%s. %s ~ %s" % (cluedir, cluenum, (clue or "[XXX]").strip(), answer)
@@ -485,7 +487,12 @@ def get_shelf(path):
 
 @memoize
 def get_xd(xdid):
-    xd = xdfile(corpus_contents()[xdid].decode("utf-8"), xdid)
+    """ Try to load xdfile and return None if error """
+    try:
+        xd = xdfile(corpus_contents()[xdid].decode("utf-8"), xdid)
+    except Exception as e:
+        log(str(e))
+        return None
     return xd
 
 def num_cells(size):

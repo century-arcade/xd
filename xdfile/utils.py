@@ -29,14 +29,27 @@ g_scriptname = None
 
 WEEKDAYS = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 def space_with_nbsp(text):
     """ Replace spaces with ;nbsp; """
     return text.replace(' ', '&nbsp;')
 
 def split_xdid(xdid):
-    """ Split xdid [nyt2015-07-01] into set """
+    """ Split xdid [nyt2015-07-01] into set
+    If not matched return None
+    """
     m = re.match('([a-z]+)(\d{4})-(\d{2})-(\d{2})', xdid)
-    return m.groups() if m else None 
+    return m.groups() if m else [ None, None, None, None ] 
 
 def br_with_n(text):
     """ Replace br with \n """
@@ -45,15 +58,32 @@ def br_with_n(text):
 def get_log():
     return EOL.join(g_logs) + EOL
 
+def log(s, minverbose=0, severity='INFO'):
+    # This can be made in more Python way
+    if g_logfp.isatty(): # Colors only for atty term
+        if severity.lower() == 'warning':
+            s = bcolors.WARNING + s + bcolors.ENDC
+        if severity.lower() == 'error':
+            s = bcolors.FAIL + s + bcolors.ENDC
 
-def log(s, minverbose=0):
     if g_logfp:
         g_logfp.write(s + "\n")
-    g_logs.append("%s: %s" % (g_currentProgress or g_scriptname, s))
+    g_logs.append("%s: [%s] %s" % (g_currentProgress or g_scriptname, severity.upper(), s))
 
 #    if not g_args or g_args.verbose >= minverbose:
 #        print(" " + s)
 
+def log_warning(_s, _m=0):
+    log(_s, minverbose=_m, severity='warning')
+
+def log_error(_s, _m=0):
+    log(_s, minverbose=_m, severity='error')
+
+def summary(_s, _m=0):
+    log(_s, minverbose=_m, severity='summary')
+
+error=log_error
+warn=log_warning
 
 # print without logging if -d
 def debug(s):
@@ -63,6 +93,8 @@ def debug(s):
 
 def progress(rest=None, every=1):
     global g_currentProgress, g_numProgress
+    if not sys.stdout.isatty():
+        return
     if rest:
         g_numProgress += 1
         g_currentProgress = rest
@@ -210,8 +242,11 @@ def parse_xdid(path):
 
 
 def parse_pathname(path):
+    # Fix to proper split names like file.xml.1
+    ext = os.extsep + os.extsep.join(os.path.basename(path).split(os.extsep)[1:])
     path, fn = os.path.split(path)
-    base, ext = os.path.splitext(fn)
+    ext = ext if fn else ''
+    base = os.path.splitext(fn)[0]
     nt = namedtuple('Pathname', 'path base ext filename')
     return nt(path=path, base=base, ext=ext, filename=fn)
 
@@ -336,8 +371,9 @@ class OutputZipFile(zipfile.ZipFile):
         zi.external_attr = 0o444 << 16
         zi.compress_type = zipfile.ZIP_DEFLATED
         self.writestr(zi, contents)
-
-        log("wrote %s to %s" % (fullfn, self.filename))
+        
+        if g_args.debug:
+            log("wrote %s to %s" % (fullfn, self.filename))
 
     def write(self, data):
         raise Exception("can't write directly to .zip")
@@ -430,7 +466,7 @@ class OutputDirectory:
     def write_file(self, fn, contents, timet=None):
         with self.open_file(fn, 'w') as f:
             f.write(contents)
-        log("wrote %s to %s" % (fn, self.toplevel))
+        debug("wrote %s to %s" % (fn, self.toplevel))
 
     def write_html(self, fn, innerhtml, title=""):
         from .html import html_header, html_footer
@@ -486,4 +522,57 @@ def memoize(obj):
             cache[args] = obj(*args, **kwargs)
         return cache[args]
     return memoizer
+
+
+xml_escape_table = {
+    "’" : "'",
+    "<b>": "{*",
+    "</b>": "*}",
+    "<i>": "{/",
+    "</i>": "/}",
+    "<em>": "{/",
+    "</em>": "/}",
+    "<u>": "{_",
+    "</u>": "_}",
+    "<strike>": "{-",
+    "</strike>": "-}",
+    "&" : "&amp;",
+    "<92>" : "&apos;",
+    '"<"' : '"%3C"',
+    '="" ' : "=''",
+    '…' : "...",
+    "\xC3\x82" : "", # Don't know what it this symbol for
+    '=""' + EOL : "=''" + EOL,
+    "\x05": "'", # ^E seems to be junk
+    "\x12" : "'",  # ^R seems to be '
+    "\xC2\xA0" : " ", # replace nbsp with space
+    "%C2%A0" : " ", # replace nbsp with space
+    "%C3%82%27" : "'", # apostrophe
+    "\xA0" : " ", # replace what left from nbsp with space
+} 
+
+
+def __dict_replace(s, d):
+    """Replace substrings of a string using a dictionary."""
+    for key, value in d.items():
+        s = s.replace(key, value)
+    return s
+
+def escape(data, entities={}):
+    """Escape a string of data.
+    based on: xml.sax.saxutils escape()
+    """
+    if entities:
+        data = __dict_replace(data, entities)
+    return data
+
+def consecutive(text):
+    """ Remove two consecutive lines if equal """
+    ret = []
+    for l in text.splitlines():
+        if not ret:
+            ret.append(l)
+        elif l != ret[-1]:
+            ret.append(l)
+    return EOL.join(ret)
 

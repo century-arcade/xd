@@ -5,6 +5,9 @@ from xdfile import utils
 from xdfile import metadatabase as metadb
 import xdfile
 
+PUBREGEX_TSV = 'gxd/pubregex.tsv'
+
+
 def get_publication(xd):
     matching_publications = set()
 
@@ -41,16 +44,19 @@ def get_publication(xd):
     return sorted(matching_pubs)[0][1]
 
 # some regex heuristics for shelving
-PUBREGEX_TSV = 'gxd/pubregex.tsv'
-
 def find_pubid(rowstr):
-    '''rowstr is a concatentation of all metadata fields'''
-
-    regexes = utils.parse_tsv_data(open(PUBREGEX_TSV, 'r').read())
+    '''rowstr is a concatentation of all metadata fields
+    Returns None if file not exist or empty
+    '''
+    try:
+        regexes = utils.parse_tsv_data(open(PUBREGEX_TSV, 'r').read())
+    except FileNotFoundError:
+        utils.log("File not exists: %s" % PUBREGEX_TSV, severity='WARNING')
+        return None
 
     matching = set()
     for r in regexes:
-        m = re.search(r['regex'], rowstr)
+        m = re.search(r['regex'], rowstr, flags=re.IGNORECASE)
         if m:
             matching.add(r['pubid'])
 
@@ -84,7 +90,15 @@ def deduce_set_seqnum(xd):
 
 
 def deduce_xdid(xd, mdtext):
-    pubid = find_pubid(mdtext) or get_publication(xd).PublicationAbbr
+
+    pubid = find_pubid(mdtext)
+    if not pubid:
+        publication = get_publication(xd)
+        pubid = publication.PublicationAbbr
+        # Return None if no pub data
+        if not pubid:
+            return None
+
     num = xd.get_header('Number')
     if num:
         return "%s-%03d" % (pubid, int(num))
@@ -104,7 +118,10 @@ def get_shelf_path(xd, pubid, mdtext):
         publ = metadb.xd_publications()[pubid]
     else:
         publ = get_publication(xd)
-        pubid = publ.PublicationAbbr
+        if publ:
+            pubid = publ.PublicationAbbr
+        else:
+            return None
 
     if not pubid:
         utils.log("unknown pubid for '%s'" % xd.filename)

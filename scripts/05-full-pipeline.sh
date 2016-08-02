@@ -13,12 +13,11 @@ fi
 
 mkdir -p ${OUTBASEDIR}
 
-export LOGFILE=${OUTBASE}-pipeline.log 
-
-exec > >(tee -i ${LOGFILE}) 2>&1
-
+echo 'Run 10'
 /bin/bash scripts/10-import.sh
+echo 'Run 20'
 /bin/bash scripts/20-analyze.sh
+echo 'Run 30'
 /bin/bash scripts/30-mkwww.sh
 
 # commit new puzzles and saved analysis results
@@ -27,9 +26,6 @@ exec > >(tee -i ${LOGFILE}) 2>&1
 # capture all logs even if other scripts fail
 scripts/39-mkwww-logs.py -o $WWW/$NOW/log.html $TMP
 
+echo 'Run 40'
 /bin/bash scripts/40-deploy.sh
-
-aws s3 cp --region ${REGION} ${LOGFILE} ${S3PRIV}/logs/
-
-src/aws/send-email.py $ADMIN_EMAIL "execution logs for $TODAY" ${LOGFILE}
 

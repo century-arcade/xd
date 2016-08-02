@@ -10,7 +10,7 @@ import urllib.request, urllib.error, urllib.parse
 import datetime
 import re
 
-from xdfile.utils import get_args, log, debug, get_log, find_files, parse_pathname, open_output, parse_tsv, datestr_to_datetime, args_parser
+from xdfile.utils import get_args, log, error, warn, summary, debug, find_files, parse_pathname, open_output, parse_tsv, datestr_to_datetime, args_parser
 from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sources, xd_recent_download, xd_recents_header
 
 
@@ -54,13 +54,13 @@ def main():
         most_recent[pubid] = row.date
 
         if pubid not in puzzle_sources:
-            log("unknown puzzle source for '%s'" % pubid)
+            warn("unknown puzzle source for '%s', skipping" % pubid)
             continue
 
         puzsrc = puzzle_sources[pubid]
 
         if not puzsrc.urlfmt or puzsrc.urlfmt.startswith("#"):
-            log("no source url for '%s'" % pubid)
+            warn("no source url for '%s', skipping" % pubid)
             continue
 
 
@@ -68,10 +68,10 @@ def main():
         to_date = today
         dates_to_get = get_dates_between(from_date, to_date, int(puzsrc.freq))
         if not dates_to_get:
-            log("*** %s: nothing to get since %s" % (pubid, from_date))
+            warn("*** %s: nothing to get since %s" % (pubid, from_date))
             continue
 
-        log("*** %s: downloading %d puzzles from %s to %s" % (pubid, len(dates_to_get), from_date, to_date))
+        summary("*** %s: downloading %d puzzles from %s to %s" % (pubid, len(dates_to_get), from_date, to_date))
 
         for dt in sorted(dates_to_get):
             try:
@@ -88,9 +88,9 @@ def main():
 
                 most_recent[pubid] = todaystr
             except (urllib.error.HTTPError, urllib.error.URLError) as err:
-                log('%s [%s] %s: %s' % (xdid, err.code, err.reason, url))
+                error('%s [%s] %s: %s' % (xdid, err.code, err.reason, url))
             except Exception as e:
-                log(str(e))
+                error(str(e))
 
             sources_tsv += xd_sources_row(fn, url, todaystr)
 
