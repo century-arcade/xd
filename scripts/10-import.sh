@@ -8,8 +8,8 @@
 RECENTS=$GXD/recent-downloads.tsv
 EMAILZIP=$TMP/$NOW-email.zip
 WWWZIP=$TMP/$NOW-www.zip
-sh="echo sh"
-aws="echo aws"
+sh="sh"
+aws="aws"
 
 set -e
 set -x
