@@ -10,6 +10,7 @@ EMAILZIP=$TMP/$NOW-email.zip
 WWWZIP=$TMP/$NOW-www.zip
 sh="sh"
 aws="aws"
+python="/usr/bin/env python3"
 
 set -e
 set -x
@@ -26,14 +27,14 @@ if find $TMP/incoming -mindepth 1 -print -quit | grep -q .; then
 fi
 
 # download from www
-$sh scripts/11-download-puzzles.py -o $WWWZIP --recents $RECENTS
+$python scripts/11-download-puzzles.py -o $WWWZIP --recents $RECENTS
 $aws s3 cp --region $REGION $WWWZIP ${S3PRIV}/sources/
 
 # convert everything to .xd, shelve in the proper location, and commit
-$sh scripts/18-convert2xd.py -o $GXD/ $EMAILZIP $WWWZIP
+$python scripts/18-convert2xd.py -o $GXD/ $EMAILZIP $WWWZIP
 
 # updates receipts.tsv with xdid according to current rules
-$sh scripts/19-reshelve.py
+$python scripts/19-reshelve.py
 
 # regenerate receipts.tsv
 $sh scripts/19b-receipts-tsv.sh
