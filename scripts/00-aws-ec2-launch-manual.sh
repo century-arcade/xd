@@ -1,5 +1,19 @@
 #!/bin/bash -x
+#
+# Usage: $0 <config file>
+# see format below
+#
+# export KEY=
+# export BRANCH=
+# export REGION=
+# export AWS_ACCESS_KEY=
+# export AWS_SECRET_KEY=
+# export BUCKET=
+# export EMAIL=
+# export XD_GIT=
+# export GXD_GIT=
 
+#
 #source src/aws/config
 
 aws="aws"
