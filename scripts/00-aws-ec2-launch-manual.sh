@@ -12,14 +12,13 @@
 # export EMAIL=
 # export XD_GIT=
 # export GXD_GIT=
+# export XD_PROFILE=
 
 #
 #source src/aws/config
 
 aws="aws"
 sh="bash"
-
-XD_PROFILE="arn:aws:iam::165509303398:instance-profile/xd-scraper"
 
 XDCONFIG=$1
 if [ -n "$XDCONFIG" ]; then
