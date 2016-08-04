@@ -1,5 +1,8 @@
 #!/bin/bash
-# Usage: $0 <config file>
+#
+# Usage: $0 <config file> [NODRY]
+# specify NODRY for actual execution
+#
 # see format below
 #
 # export KEY=
@@ -15,6 +18,8 @@
 
 
 XDCONFIG=$1
+NODRY=$2
+
 if [ -n "$XDCONFIG" ]; then
     source $XDCONFIG
     # source config
@@ -26,10 +31,15 @@ if [ -n "$XDCONFIG" ]; then
     #AUTH="--access-key-id ${AWS_ACCESS_KEY} --secret-key ${AWS_SECRET_KEY}"
 
     # one-time setup of xd-scraper
-    echo aws iam create-instance-profile --instance-profile-name xd-scraper
-    echo aws iam add-role-to-instance-profile --instance-profile-name xd-scraper --role-name xd-scraper
+    #echo aws iam create-instance-profile --instance-profile-name xd-scraper
+    #echo aws iam add-role-to-instance-profile --instance-profile-name xd-scraper --role-name xd-scraper
 
-    aws="echo -e \naws"
+    if [ -n "$NODRY" ]; then
+        aws="aws"
+    else
+        aws="echo -e \naws"
+    fi
+
     # from https://alestic.com/2011/11/ec2-schedule-instance/
     $aws autoscaling delete-scheduled-action \
         --scheduled-action-name "xd-schedule-start" \
@@ -45,6 +55,7 @@ if [ -n "$XDCONFIG" ]; then
     $aws autoscaling delete-launch-configuration \
         --launch-configuration-name ${launch_config}
 
+    echo "Wait 10-15 seconds for delete execution"
 else
     echo "Supply config file: $0 <config>"
     exit 1
