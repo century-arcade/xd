@@ -34,6 +34,9 @@ if [ -n "$XDCONFIG" ]; then
         aws="echo -e \naws"
     fi
 
+    # copy config on shared s3 storage
+    $aws s3 cp $XDCONFIG s3://xd-private/etc/config
+
     $aws iam create-instance-profile --instance-profile-name xd-scraper
     $aws iam add-role-to-instance-profile --instance-profile-name xd-scraper --role-name xd-scraper
 
