@@ -15,7 +15,11 @@
 # export XD_GIT=
 # export GXD_GIT=
 # export XD_PROFILE=
-
+# export AMI_ID=ami-75fd3b15 #Ubuntu Server 16.04 LTS (HVM)
+# export SSH_SECURITY_GID=sg-e00fbe87 # SSH access
+# export INSTANCE_TYPE=r3.large
+# export QUICKRUN=True # For quickrun scipping 20- and 30- scripts
+#
 
 XDCONFIG=$1
 NODRY=$2
