@@ -9,6 +9,10 @@ fi
 
 OUTBASEDIR=/tmp/$NOW
 
+if [[ -z "$HOME" && $UID -eq '0' ]]; then
+    export SSHHOME=/root
+fi
+
 # start from a clean $OUTBASEDIR
 if [ -d ${OUTBASEDIR} ] ; then
     BACKUPDIR=products/`date +"%Y%m%d-%H%M%S.%N"`
