@@ -17,7 +17,8 @@ fi
 export LC_ALL="en_US.UTF-8"
 export LOGFILE=/tmp/`date +"%Y-%m-%d"`.log
 export SUMLOGFILE=/tmp/`date +"%Y-%m-%d"`summary.log
-
+# To run xdfile based scripts below
+export PYTHONPATH=.
 
 exec > >(tee -i ${LOGFILE}) 2>&1
 echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
