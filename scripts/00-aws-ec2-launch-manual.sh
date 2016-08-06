@@ -37,7 +37,7 @@ if [ -n "$XDCONFIG" ]; then
       --image-id ${AMI_ID} > $INSTANCE_JSON
 
     # Wait a litte before applying sec group
-    sleep 20
+    sleep 30
     instance_id=$(cat $INSTANCE_JSON | jq -r .Instances[0].InstanceId)
     $aws ec2 modify-instance-attribute --groups ${SSH_SECURITY_GID} --instance-id $instance_id
 
