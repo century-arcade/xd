@@ -15,10 +15,14 @@ mkdir -p ${OUTBASEDIR}
 
 echo 'Run 10'
 /bin/bash scripts/10-import.sh
-echo 'Run 20'
-/bin/bash scripts/20-analyze.sh
-echo 'Run 30'
-/bin/bash scripts/30-mkwww.sh
+
+# Define QUICKRUN to skip time consiming actions
+if [ ! -n "$QUICKRUN" ]; then
+    echo 'Run 20'
+    /bin/bash scripts/20-analyze.sh
+    echo 'Run 30'
+    /bin/bash scripts/30-mkwww.sh
+fi
 
 # commit new puzzles and saved analysis results
 /bin/bash scripts/41-git-commit.sh incoming_$TODAY

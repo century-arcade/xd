@@ -46,6 +46,9 @@ chmod 600 $SSHHOME/.ssh/gxd_rsa
 cat src/aws/ssh_config >> $SSHHOME/.ssh/config
 ssh-agent bash -c "ssh-add $SSHHOME/.ssh/gxd_rsa; git clone ${GXD_GIT}"
 
+# Import all .tsv to sql
+scripts/05-sql-import-receipts.sh
+
 echo "Run deploy script"
 /bin/bash -x scripts/05-full-pipeline.sh
 
@@ -56,7 +59,6 @@ echo 'SUMMARY: End time '`date +'%Y-%m-%d %H:%M'`
 egrep -i 'ERROR|WARNING|SUMMARY' ${LOGFILE} > ${SUMLOGFILE}
 echo -e '\n' >> ${SUMLOGFILE}
 
-scripts/05-sql-import-receipts.sh
 scripts/48-stats.sh >> ${SUMLOGFILE}
 echo -e '\n' >> ${SUMLOGFILE}
 

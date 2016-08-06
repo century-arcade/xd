@@ -23,27 +23,26 @@ sh="bash"
 XDCONFIG=$1
 if [ -n "$XDCONFIG" ]; then
     aws s3 cp $XDCONFIG s3://xd-private/etc/config
-
-    ami_id=ami-75fd3b15 #Ubuntu Server 16.04 LTS (HVM)
-    ssh_security_gid=sg-e00fbe87
+    source ${XDCONFIG}
     INSTANCE_JSON=/tmp/instance.json
 
     #  created via IAM console: role/xd-scraper
     $aws ec2 run-instances \
       --key-name $KEY \
       --region ${REGION} \
-      --instance-type r3.large \
+      --instance-type ${INSTANCE_TYPE} \
       --instance-initiated-shutdown-behavior terminate \
       --iam-instance-profile Arn="$XD_PROFILE" \
       --user-data file://scripts/00-aws-bootstrap.sh \
-      --image-id $ami_id > $INSTANCE_JSON
+      --image-id ${AMI_ID} > $INSTANCE_JSON
 
+    # Wait a litte before applying sec group
+    sleep 20
     instance_id=$(cat $INSTANCE_JSON | jq -r .Instances[0].InstanceId)
-    $aws ec2 modify-instance-attribute --groups $ssh_security_gid --instance-id $instance_id
+    $aws ec2 modify-instance-attribute --groups ${SSH_SECURITY_GID} --instance-id $instance_id
 
     public_ip=$(aws ec2 describe-instances --instance-ids ${instance_id} | jq -r '.Reservations[0].Instances[0].PublicIpAddress')
-    #  Wait till machine will be deployed
-    sleep 20 
+    echo "Connecting: ssh -i ~/*.pem ubuntu@$public_ip" 
     ssh -i ~/*.pem ubuntu@$public_ip
 
 else

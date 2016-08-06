@@ -21,12 +21,10 @@ XDCONFIG=$1
 NODRY=$2
 if [ -n "$XDCONFIG" ]; then
     source $XDCONFIG
-    ami_id=ami-5189a661 #Ubuntu Server 14.04 LTS (HVM)
 
     autoscale_group=xd-as-group
     launch_config=xd-launch-config
     zone=${REGION}a
-    #AUTH="--access-key-id ${AWS_ACCESS_KEY} --secret-key ${AWS_SECRET_KEY}"
 
     if [ -n "$NODRY" ]; then
         aws="aws"
@@ -44,11 +42,17 @@ if [ -n "$XDCONFIG" ]; then
 
     $aws autoscaling create-launch-configuration \
       --launch-configuration-name ${launch_config} \
+      --security-groups ${SSH_SECURITY_GID} \
       --iam-instance-profile xd-scraper \
       --key $KEY \
-      --instance-type r3.large \
+      --instance-type ${INSTANCE_TYPE} \
       --user-data file://scripts/00-aws-bootstrap.sh \
-      --image-id $ami_id
+      --image-id ${AMI_ID}
+
+    #instance_id=$($aws ec2 describe-instances --filters "Name=key-name,Values=${KEY}" | jq -r .Reservations[0].Instances[0].InstanceId)
+    #echo "Instance ID to modify: ${instance_id}"
+    #$aws ec2 modify-instance-attribute --groups ${SSH_SECURITY_GID} --instance-id $instance_id
+    #$aws ec2 modify-instance-attribute --instance-id $instance_id --instance-initiated-shutdown-behavior "Terminate"
 
     $aws autoscaling create-auto-scaling-group \
       --auto-scaling-group "$autoscale_group" \
@@ -67,6 +71,7 @@ if [ -n "$XDCONFIG" ]; then
       --auto-scaling-group "$autoscale_group" \
       --min-size 1 \
       --max-size 1 \
+      --desired-capacity 1 \
       --recurrence "0 01 * * *"
 
     $aws autoscaling put-scheduled-update-group-action \
@@ -74,6 +79,7 @@ if [ -n "$XDCONFIG" ]; then
       --auto-scaling-group "$autoscale_group" \
       --min-size 0 \
       --max-size 0 \
+      --desired-capacity 0 \
       --recurrence "55 01 * * *"
 
 else
