@@ -56,7 +56,6 @@ if [ -n "$XDCONFIG" ]; then
     #instance_id=$($aws ec2 describe-instances --filters "Name=key-name,Values=${KEY}" | jq -r .Reservations[0].Instances[0].InstanceId)
     #echo "Instance ID to modify: ${instance_id}"
     #$aws ec2 modify-instance-attribute --groups ${SSH_SECURITY_GID} --instance-id $instance_id
-    #$aws ec2 modify-instance-attribute --instance-id $instance_id --instance-initiated-shutdown-behavior "Terminate"
 
     $aws autoscaling create-auto-scaling-group \
       --auto-scaling-group "$autoscale_group" \

@@ -22,17 +22,8 @@ NODRY=$2
 
 if [ -n "$XDCONFIG" ]; then
     source $XDCONFIG
-    # source config
-    # ami_id=ami-5189a661 #Ubuntu Server 14.04 LTS (HVM)
-
     autoscale_group=xd-as-group
     launch_config=xd-launch-config
-    #zone=${REGION}a
-    #AUTH="--access-key-id ${AWS_ACCESS_KEY} --secret-key ${AWS_SECRET_KEY}"
-
-    # one-time setup of xd-scraper
-    #echo aws iam create-instance-profile --instance-profile-name xd-scraper
-    #echo aws iam add-role-to-instance-profile --instance-profile-name xd-scraper --role-name xd-scraper
 
     if [ -n "$NODRY" ]; then
         aws="aws"
@@ -40,7 +31,6 @@ if [ -n "$XDCONFIG" ]; then
         aws="echo -e \naws"
     fi
 
-    # from https://alestic.com/2011/11/ec2-schedule-instance/
     $aws autoscaling delete-scheduled-action \
         --scheduled-action-name "xd-schedule-start" \
         --auto-scaling-group-name "$autoscale_group"
