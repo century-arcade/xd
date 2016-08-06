@@ -1,27 +1,54 @@
 #!/bin/bash -x
-
+#
+# Usage: $0 <config file>
+# see format below
+#
+# export KEY=
+# export BRANCH=
+# export REGION=
+# export AWS_ACCESS_KEY=
+# export AWS_SECRET_KEY=
+# export BUCKET=
+# export EMAIL=
+# export XD_GIT=
+# export GXD_GIT=
+# export XD_PROFILE=
+# export AMI_ID=ami-75fd3b15 #Ubuntu Server 16.04 LTS (HVM)
+# export SSH_SECURITY_GID=sg-e00fbe87 # SSH access
+# export INSTANCE_TYPE=r3.large
+# export QUICKRUN=True # For quickrun scipping 20- and 30- scripts
+#
 #source src/aws/config
 
-XD_PROFILE="arn:aws:iam::165509303398:instance-profile/xd-scraper"
+aws="aws"
+sh="bash"
 
-echo aws s3 cp src/aws/config s3://xd-private/etc/config
+XDCONFIG=$1
+if [ -n "$XDCONFIG" ]; then
+    aws s3 cp $XDCONFIG s3://xd-private/etc/config
+    source ${XDCONFIG}
+    INSTANCE_JSON=/tmp/instance.json
 
-ami_id=ami-75fd3b15 #Ubuntu Server 16.04 LTS (HVM)
-ssh_security_gid=sg-e00fbe87
-INSTANCE_JSON=/tmp/instance.json
-
-#  created via IAM console: role/xd-scraper
-aws ec2 run-instances \
+    #  created via IAM console: role/xd-scraper
+    $aws ec2 run-instances \
       --key-name $KEY \
       --region ${REGION} \
-      --instance-type r3.large \
+      --instance-type ${INSTANCE_TYPE} \
       --instance-initiated-shutdown-behavior terminate \
       --iam-instance-profile Arn="$XD_PROFILE" \
       --user-data file://scripts/00-aws-bootstrap.sh \
-      --image-id $ami_id > $INSTANCE_JSON
+      --image-id ${AMI_ID} > $INSTANCE_JSON
 
-instance_id=$(cat $INSTANCE_JSON | grep instance_id)
-echo aws ec2 modify-instance-attribute --groups $ssh_security_gid --instance-id $instance_id
+    # Wait a litte before applying sec group
+    sleep 30
+    instance_id=$(cat $INSTANCE_JSON | jq -r .Instances[0].InstanceId)
+    $aws ec2 modify-instance-attribute --groups ${SSH_SECURITY_GID} --instance-id $instance_id
 
-public_ip=$(aws ec2 describe-instances | grep PublicIp)
-echo ssh -i ~/*.pem ubuntu@$public_ip
+    public_ip=$(aws ec2 describe-instances --instance-ids ${instance_id} | jq -r '.Reservations[0].Instances[0].PublicIpAddress')
+    echo "Connecting: ssh -i ~/*.pem ubuntu@$public_ip" 
+    ssh -i ~/*.pem ubuntu@$public_ip
+
+else
+    echo "Supply config file: $0 <config>"
+    exit 1
+fi

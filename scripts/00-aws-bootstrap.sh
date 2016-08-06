@@ -4,10 +4,10 @@ set -x
 
 if [ -z "$HOME" ] ; then
     HOME=/tmp
-    SSHHOME=$HOME
+    export SSHHOME=$HOME
     # Hack for AWS where HOME not set
     if [[ $UID -eq '0' ]]; then
-        SSHHOME=/root
+        export SSHHOME=/root
     fi
 fi
 
@@ -37,6 +37,8 @@ echo "Clone main project repo and switch to branch ${BRANCH}"
 git clone ${XD_GIT}
 cd xd/
 git checkout ${BRANCH}
+# Export all config vars
+source scripts/config-vars.sh
 
 mkdir -p $SSHHOME/.ssh
 echo "Clone GXD repo"
@@ -45,6 +47,9 @@ chmod 600 $SSHHOME/.ssh/gxd_rsa
 
 cat src/aws/ssh_config >> $SSHHOME/.ssh/config
 ssh-agent bash -c "ssh-add $SSHHOME/.ssh/gxd_rsa; git clone ${GXD_GIT}"
+
+# Import all .tsv to sql
+scripts/05-sql-import-receipts.sh
 
 echo "Run deploy script"
 /bin/bash -x scripts/05-full-pipeline.sh
@@ -56,7 +61,6 @@ echo 'SUMMARY: End time '`date +'%Y-%m-%d %H:%M'`
 egrep -i 'ERROR|WARNING|SUMMARY' ${LOGFILE} > ${SUMLOGFILE}
 echo -e '\n' >> ${SUMLOGFILE}
 
-scripts/05-sql-import-receipts.sh
 scripts/48-stats.sh >> ${SUMLOGFILE}
 echo -e '\n' >> ${SUMLOGFILE}
 
