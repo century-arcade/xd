@@ -1,6 +1,11 @@
 #!/bin/bash
+#
+#
 
-source scripts/config-vars.sh
+if [ ! -n "$NOW" ]; then
+    echo "Seems config-vars were not imported yet"
+    source scripts/config-vars.sh
+fi
 
 OUTBASEDIR=/tmp/$NOW
 
@@ -32,4 +37,3 @@ scripts/39-mkwww-logs.py -o $WWW/$NOW/log.html $TMP
 
 echo 'Run 40'
 /bin/bash scripts/40-deploy.sh
-

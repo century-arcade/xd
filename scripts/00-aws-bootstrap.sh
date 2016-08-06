@@ -4,10 +4,10 @@ set -x
 
 if [ -z "$HOME" ] ; then
     HOME=/tmp
-    SSHHOME=$HOME
+    export SSHHOME=$HOME
     # Hack for AWS where HOME not set
     if [[ $UID -eq '0' ]]; then
-        SSHHOME=/root
+        export SSHHOME=/root
     fi
 fi
 
@@ -37,6 +37,8 @@ echo "Clone main project repo and switch to branch ${BRANCH}"
 git clone ${XD_GIT}
 cd xd/
 git checkout ${BRANCH}
+# Export all config vars
+source scripts/config-vars.sh
 
 mkdir -p $SSHHOME/.ssh
 echo "Clone GXD repo"
