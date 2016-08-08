@@ -1,10 +1,14 @@
 #!/bin/bash
 
+set -x
 # commit all changes to gxd
 
 git config --global user.email $ADMIN_EMAIL
 git config --global user.name $ADMIN_NAME
 
+if [ -z "$SSHHOME" ]; then
+    SSHHOME=$HOME
+fi
 
 set -e
 
