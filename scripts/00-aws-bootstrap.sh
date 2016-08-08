@@ -54,7 +54,7 @@ scripts/05-sql-import-receipts.sh
 echo "Run deploy script"
 /bin/bash -x scripts/05-full-pipeline.sh
 
-aws s3 cp --region ${REGION} ${LOGFILE} s3://${BUCKET}/logs/
+aws s3 cp --region ${REGION} ${LOGFILE} s3://${BUCKET}/logs/ --acl public-read
 
 echo 'SUMMARY: End time '`date +'%Y-%m-%d %H:%M'`
 # Parse log to get summary to be mailed
