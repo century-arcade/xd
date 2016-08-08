@@ -43,7 +43,6 @@ xd_sources_header = [
 
 # Each row from every 'sources' table appends an expanded version to the global 'receipts' table.
 xd_receipts_header = [
-        "ReceiptId",        # simple numeric row id (empty if Rejected)
         "CaptureTime",     # '2016-04-11' [as above, copied from xd-downloads.tsv]
         "ReceivedTime",     # '2016-04-14' [date of entry into receipts]
         "ExternalSource",   # URL or email [as above]
@@ -53,7 +52,7 @@ xd_receipts_header = [
     ]
 
 
-xd_receipt = namedtuple('XDReceipt','ReceiptId, CaptureTime, ReceivedTime, ExternalSource, InternalSource, SourceFilename, xdid')
+xd_receipt = namedtuple('XDReceipt','CaptureTime, ReceivedTime, ExternalSource, InternalSource, SourceFilename, xdid')
 
 # Each delivery from an extractor should have a 'sources' table, to preserve the precise external sources.
 xd_recents_header = COLSEP.join([
@@ -72,7 +71,6 @@ xd_publications_header = COLSEP.join([
         "LastIssueDate",    # YYYY-MM-DD; empty if ongoing
         "NumberIssued",     # estimates allowed with leading '~'
     ]) + EOL
-    
 
 # xd-puzzles.tsv
 # if ReceiptId's are preserved, generating a sorted list from all .xd files should result in an identical .tsv file.
@@ -156,22 +154,10 @@ def get_last_receipt_id():
         return res.fetchone()[0]
    else:
         return 0
-   """
-   try:
-        all_receipts = list(xd_receipts().values())
-        if all_receipts:
-            return max(int(r.ReceiptId) for r in all_receipts)
-        else:
-            return 0
-    except IOError:
-        codecs.open(RECEIPTS_TSV, 'w', encoding='utf-8').write(xd_receipts_header)
-        return 0
-    """
 
-# for each row in fnDownloadZip:*.tsv, assigns ReceiptId, ReceivedTime, and appends to receipts.tsv.  
-def xd_receipts_row(ReceiptId="", CaptureTime="", ReceivedTime="", ExternalSource="", InternalSource="", SourceFilename="", xdid=""):
+# for each row in fnDownloadZip:*.tsv, assigns ReceivedTime, and appends to receipts.tsv.  
+def xd_receipts_row(CaptureTime="", ReceivedTime="", ExternalSource="", InternalSource="", SourceFilename="", xdid=""):
     return COLSEP.join([
-        str(ReceiptId),
         CaptureTime,
         ReceivedTime,
         ExternalSource,

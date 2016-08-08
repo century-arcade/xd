@@ -1,5 +1,4 @@
 CREATE TABLE "receipts" (
-    "ReceiptId" INTEGER PRIMARY KEY NOT NULL,
     "CaptureTime" TEXT,
     "ReceivedTime" TEXT,
     "ExternalSource" TEXT,
@@ -7,5 +6,6 @@ CREATE TABLE "receipts" (
     "SourceFilename" TEXT,
     "xdid" TEXT
 );
-CREATE UNIQUE INDEX "ReceiptID" on receipts (ReceiptId ASC);
+
+CREATE INDEX "XDID" on receipts (xdid ASC);
 

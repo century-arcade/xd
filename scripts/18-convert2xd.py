@@ -52,8 +52,8 @@ def main():
 
     outf = open_output()
 
-    #nextReceiptId = metadb.get_last_receipt_id() + 1
-    nextReceiptId = metasql.get_last_receipt_id() + 1
+    # nextReceiptId = metadb.get_last_receipt_id() + 1
+    # nextReceiptId = metasql.get_last_receipt_id() + 1
 
     for input_source in args.inputs:
         try:
@@ -94,8 +94,8 @@ def main():
                     ExternalSource = args.extsrc or parse_pathname(input_source).filename
                     SourceFilename = innerfn
 
-                ReceiptId = nextReceiptId
-                nextReceiptId += 1
+                #ReceiptId = nextReceiptId
+                # nextReceiptId += 1
 
                 ReceivedTime = iso8601(time.time())
                 InternalSource = args.intsrc or parse_pathname(input_source).filename
@@ -169,7 +169,6 @@ def main():
                         debug("already received %s:%s" % (ExternalSource, SourceFilename))
                     else:
                         receipts.append([
-                            ReceiptId,
                             CaptureTime,
                             ReceivedTime,
                             ExternalSource,
