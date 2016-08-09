@@ -67,7 +67,7 @@ def log(s, minverbose=0, severity='INFO'):
             s = bcolors.FAIL + s + bcolors.ENDC
 
     if g_logfp:
-        g_logfp.write(s + "\n")
+        g_logfp.write("%s: %s\n" % (severity.upper(), s))
     g_logs.append("%s: [%s] %s" % (g_currentProgress or g_scriptname, severity.upper(), s))
 
 #    if not g_args or g_args.verbose >= minverbose:

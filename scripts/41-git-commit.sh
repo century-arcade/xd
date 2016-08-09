@@ -25,7 +25,7 @@ if [ -n "$BRANCH" ] ; then
     ssh-agent bash -c "ssh-add ${SSHHOME}/.ssh/gxd_rsa; git push --set-upstream origin $BRANCH"
 
     # submit pull request
-    git request-pull master ${GITURL} $BRANCH
+    git request-pull master ${GXD_GIT} $BRANCH
     git checkout master
 
 #    git merge $BRANCH
