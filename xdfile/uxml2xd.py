@@ -5,7 +5,7 @@ from urllib.parse import unquote
 from lxml import etree
 
 import xdfile
-from xdfile.utils import escape, consecutive, xml_escape_table
+from xdfile.utils import escape, consecutive, xml_escape_table, rev_xml_escape_table
 
 
 def udecode(s):
@@ -48,6 +48,7 @@ def parse_uxml(content, filename):
         if elem:
             text = elem[0].attrib['v']
             if text:
+                text = escape(text, rev_xml_escape_table)
                 xd.set_header(item, unquote(text))
 
     # add puzzle
@@ -64,6 +65,7 @@ def parse_uxml(content, filename):
         for clue in root.xpath('//crossword/' + clue_type)[0].getchildren():
             number = int(clue.attrib['cn'])
             text = udecode(clue.attrib['c'].strip())
+            text = escape(text, rev_xml_escape_table)
             solution = clue.attrib['a'].strip()
             xd.clues.append(((clue_type[0].upper(), number), text, solution))
 

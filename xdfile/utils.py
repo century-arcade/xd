@@ -523,6 +523,13 @@ def memoize(obj):
         return cache[args]
     return memoizer
 
+# reversed xml escape table
+rev_xml_escape_table = {
+    '&apos;' : "'",
+    '&quot;' : '"',
+    '&amp;' : '&',
+}
+
 xml_escape_table = OrderedDict((
     ("’" , "'"),
     ("<b>", "{*"),
@@ -538,7 +545,7 @@ xml_escape_table = OrderedDict((
     ("<92>", "&apos;"),
     ('&#34;', '&quot;'),
     ('&#39;', "'"),
-    ('&#38;', "'"),
+    ('&#38;', "&amp;"),
     ('&', '&amp;'),
     ('"<"' , '"%3C"'),
     ('="" ', "=''"),
