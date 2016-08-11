@@ -26,16 +26,6 @@ def main():
 
         d = r._asdict()
 
-        # CHECK THIS PART
-        # if int(r.ReceiptId) in rids:
-        #     d["ReceiptId"] = max(rids) + 1
-
-        # try:
-        #    rids.add(int(d["ReceiptId"]))
-        # except:
-        #    # omit any lines without receiptId
-        #    continue
-
         if newpubid and newpubid != oldpubid:
             seqnum = utils.parse_seqnum(r.xdid or r.SourceFilename)
             if seqnum:

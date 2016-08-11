@@ -52,9 +52,6 @@ def main():
 
     outf = open_output()
 
-    # nextReceiptId = metadb.get_last_receipt_id() + 1
-    # nextReceiptId = metasql.get_last_receipt_id() + 1
-
     for input_source in args.inputs:
         try:
             # collect 'sources' metadata
@@ -64,7 +61,6 @@ def main():
 
             for fn, contents, dt in find_files_with_time(input_source, ext='.tsv'):
                 progress(fn)
-                # assert fn.endswith('sources.tsv'), fn
                 for row in parse_tsv_data(contents.decode('utf-8'), "Source"):
                     innerfn = strip_toplevel(row.SourceFilename)
                     if innerfn in source_files:
@@ -94,15 +90,9 @@ def main():
                     ExternalSource = args.extsrc or parse_pathname(input_source).filename
                     SourceFilename = innerfn
 
-                #ReceiptId = nextReceiptId
-                # nextReceiptId += 1
-
                 ReceivedTime = iso8601(time.time())
                 InternalSource = args.intsrc or parse_pathname(input_source).filename
 
-                #already_received = list(r for r in metadb.xd_receipts().values()
-                #               if r.ExternalSource == ExternalSource
-                #               and r.SourceFilename == SourceFilename)
                 already_received = metasql.check_already_recieved(ExternalSource, SourceFilename)
                 xdid = ""
                 prev_xdid = ""  # unshelved by default
@@ -148,7 +138,6 @@ def main():
                             xdid = prev_xdid or catalog.deduce_xdid(xd, mdtext)
                             path = catalog.get_shelf_path(xd, args.pubid, mdtext)
                             outf.write_file(path + ".xd", xdstr, dt)
-                            #progress("converted by %s (%s bytes)" % (parsefunc.__name__, len(xdstr)))
 
                             rejected = ""
                             break  # stop after first successful parsing
@@ -158,8 +147,6 @@ def main():
                         except Exception as e:
                             error("%s could not convert [%s]: %s" % (parsefunc.__name__, fn, str(e)))
                             rejected += "[%s] %s  " % (parsefunc.__name__, str(e))
-                            #if args.debug:
-                            #    raise
 
                     if rejected:
                         error("could not convert: %s" % rejected)

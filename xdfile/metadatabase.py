@@ -33,7 +33,6 @@ xd_sources_header = COLSEP.join([
 
 # Each row from every 'sources' table appends an expanded version to the global 'receipts' table.
 xd_receipts_header = COLSEP.join([
-        #"ReceiptId",        # simple numeric row id (empty if Rejected)
         "CaptureTime",     # '2016-04-11' [as above, copied from xd-downloads.tsv]
         "ReceivedTime",     # '2016-04-14' [date of entry into receipts]
         "ExternalSource",   # URL or email [as above]
