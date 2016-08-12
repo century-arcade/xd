@@ -15,7 +15,7 @@ GXD='gxd'
 DEBUG=''
 
 cd $GXD
-git checkout master . && git clean -df && cd ..
+git checkout master && git pull && git clean -df && git reset HEAD . && cd ..
 
 ./scripts/05-sql-import-receipts.sh ${METADB}
 

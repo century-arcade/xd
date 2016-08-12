@@ -109,6 +109,8 @@ def main():
                 ext = parse_pathname(fn).ext.lower()
                 possible_parsers = parsers.get(ext, parsers[".puz"])
 
+                progress(fn)
+
                 if ext == ".xd":
                     outf.write_file(fn, contents.decode('utf-8'), dt)
                 elif not possible_parsers:
