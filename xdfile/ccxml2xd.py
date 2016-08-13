@@ -5,7 +5,7 @@ import string
 import re
 from lxml import etree
 import xdfile
-from xdfile.utils import escape, consecutive, xml_escape_table
+from xdfile.utils import escape, consecutive, xml_escape_table, rev_xml_escape_table
 
 
 HEADER_RENAMES = {
@@ -45,7 +45,9 @@ def parse_ccxml(data, filename):
     for metadata in root.xpath('//puzzle:metadata', namespaces=ns)[0]:
         text = metadata.text and metadata.text.strip()
         title = re.sub('\{[^\}]*\}', '', metadata.tag.title())
+        title = escape(title, rev_xml_escape_table)
         if text:
+            text = escape(text, rev_xml_escape_table)
             xd.set_header(HEADER_RENAMES.get(title, title), text)
 
     # add puzzle
@@ -78,6 +80,7 @@ def parse_ccxml(data, filename):
             word_id = clue.attrib['word']
             number = int(clue.attrib['number'])
             text = "|".join(clue.itertext()).strip()
+            text = escape(text, rev_xml_escape_table)
             solution = get_solution(word_id, word_map, puzzle)
             xd.clues.append(((type, number), text, solution))
 

@@ -33,7 +33,6 @@ xd_sources_header = COLSEP.join([
 
 # Each row from every 'sources' table appends an expanded version to the global 'receipts' table.
 xd_receipts_header = COLSEP.join([
-        "ReceiptId",        # simple numeric row id (empty if Rejected)
         "CaptureTime",     # '2016-04-11' [as above, copied from xd-downloads.tsv]
         "ReceivedTime",     # '2016-04-14' [date of entry into receipts]
         "ExternalSource",   # URL or email [as above]
@@ -60,7 +59,6 @@ xd_publications_header = COLSEP.join([
         "LastIssueDate",    # YYYY-MM-DD; empty if ongoing
         "NumberIssued",     # estimates allowed with leading '~'
     ]) + EOL
-    
 
 # xd-puzzles.tsv
 # if ReceiptId's are preserved, generating a sorted list from all .xd files should result in an identical .tsv file.
@@ -127,10 +125,9 @@ def get_last_receipt_id():
         return 0
 
 
-# for each row in fnDownloadZip:*.tsv, assigns ReceiptId, ReceivedTime, and appends to receipts.tsv.  
-def xd_receipts_row(ReceiptId="", CaptureTime="", ReceivedTime="", ExternalSource="", InternalSource="", SourceFilename="", xdid=""):
+# for each row in fnDownloadZip:*.tsv, assigns ReceiptId, ReceivedTime, and appends to receipts.tsv.
+def xd_receipts_row(CaptureTime="", ReceivedTime="", ExternalSource="", InternalSource="", SourceFilename="", xdid=""):
     return COLSEP.join([
-        str(ReceiptId),
         CaptureTime,
         ReceivedTime,
         ExternalSource,

@@ -34,7 +34,7 @@ if [ ! -n "$QUICKRUN" ]; then
 fi
 
 # commit new puzzles and saved analysis results
-/bin/bash scripts/41-git-commit.sh incoming_$TODAY
+/bin/bash scripts/41-git-commit.sh incoming_$NOW
 
 # capture all logs even if other scripts fail
 scripts/39-mkwww-logs.py -o $WWW/$NOW/log.html $TMP

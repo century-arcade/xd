@@ -1,10 +1,14 @@
 #!/bin/bash
 
+set -x
 # commit all changes to gxd
 
 git config --global user.email $ADMIN_EMAIL
 git config --global user.name $ADMIN_NAME
 
+if [ -z "$SSHHOME" ]; then
+    SSHHOME=$HOME
+fi
 
 set -e
 
@@ -21,7 +25,7 @@ if [ -n "$BRANCH" ] ; then
     ssh-agent bash -c "ssh-add ${SSHHOME}/.ssh/gxd_rsa; git push --set-upstream origin $BRANCH"
 
     # submit pull request
-    git request-pull master ${GITURL} $BRANCH
+    git request-pull master ${GXD_GIT} $BRANCH
     git checkout master
 
 #    git merge $BRANCH

@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 import re
 import os
 import functools
@@ -67,7 +67,7 @@ def log(s, minverbose=0, severity='INFO'):
             s = bcolors.FAIL + s + bcolors.ENDC
 
     if g_logfp:
-        g_logfp.write(s + "\n")
+        g_logfp.write("%s: %s\n" % (severity.upper(), s))
     g_logs.append("%s: [%s] %s" % (g_currentProgress or g_scriptname, severity.upper(), s))
 
 #    if not g_args or g_args.verbose >= minverbose:
@@ -523,7 +523,43 @@ def memoize(obj):
         return cache[args]
     return memoizer
 
+# reversed xml escape table
+rev_xml_escape_table = {
+    '&apos;' : "'",
+    '&quot;' : '"',
+    '&amp;' : '&',
+}
 
+xml_escape_table = OrderedDict((
+    ("’" , "'"),
+    ("<b>", "{*"),
+    ("</b>", "*}"),
+    ("<i>", "{/"),
+    ("</i>", "/}"),
+    ("<em>", "{/"),
+    ("</em>", "/}"),
+    ("<u>", "{_"),
+    ("</u>", "_}"),
+    ("<strike>", "{-"),
+    ("</strike>", "-}"),
+    ("<92>", "&apos;"),
+    ('&#34;', '&quot;'),
+    ('&#39;', "'"),
+    ('&#38;', "&amp;"),
+    ('&', '&amp;'),
+    ('"<"' , '"%3C"'),
+    ('="" ', "=''"),
+    ('…', "..."),
+    ("\xC3\x82", ""), # Don't know what it this symbol for
+    ('=""' + EOL, "=''" + EOL),
+    ("\x05", "'"), # ^E seems to be junk
+    ("\x12", "'"),  # ^R seems to be '
+    ("\xC2\xA0", " "), # replace nbsp with space
+    ("%C2%A0", " "), # replace nbsp with space
+    ("%C3%82%27", "'"), # apostrophe
+    ("\xA0", " "), # replace what left from nbsp with space
+    ))
+"""
 xml_escape_table = {
     "’" : "'",
     "<b>": "{*",
@@ -536,8 +572,10 @@ xml_escape_table = {
     "</u>": "_}",
     "<strike>": "{-",
     "</strike>": "-}",
-    "&" : "&amp;",
     "<92>" : "&apos;",
+    '&#34;' : '"',
+    '&#39;' : "'",
+    '&': '&amp;',
     '"<"' : '"%3C"',
     '="" ' : "=''",
     '…' : "...",
@@ -549,8 +587,8 @@ xml_escape_table = {
     "%C2%A0" : " ", # replace nbsp with space
     "%C3%82%27" : "'", # apostrophe
     "\xA0" : " ", # replace what left from nbsp with space
-} 
-
+}
+"""
 
 def __dict_replace(s, d):
     """Replace substrings of a string using a dictionary."""
@@ -564,6 +602,10 @@ def escape(data, entities={}):
     """
     if entities:
         data = __dict_replace(data, entities)
+
+    # finally, replace any leftover & with &amp so they will be properly
+    # unescaped back to & later (otherwise xml parser drops them)
+    #data.replace('&', '&amp;')
     return data
 
 def consecutive(text):

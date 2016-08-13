@@ -4,8 +4,8 @@
 #   rewrites receipts.tsv and fills in any blanks based on regex
 #
 #   git mv all .xd with pubid of <src> to have a pubid of <dest> (simple file rename)
-# 
-#   
+#
+#
 import re
 from xdfile import utils, metadatabase as metadb, catalog
 
@@ -25,15 +25,6 @@ def main():
         newpubid = catalog.find_pubid("|".join((str(x) for x in r)))
 
         d = r._asdict()
-
-        if int(r.ReceiptId) in rids:
-            d["ReceiptId"] = max(rids) + 1
-
-        try:
-            rids.add(int(d["ReceiptId"]))
-        except:
-            # omit any lines without receiptId
-            continue
 
         if newpubid and newpubid != oldpubid:
             seqnum = utils.parse_seqnum(r.xdid or r.SourceFilename)

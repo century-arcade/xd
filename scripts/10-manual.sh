@@ -15,12 +15,12 @@ GXD='gxd'
 DEBUG=''
 
 cd $GXD
-git checkout master . && git clean -df && cd ..
+git checkout master && git pull && git clean -df && git reset HEAD . && cd ..
 
 ./scripts/05-sql-import-receipts.sh ${METADB}
 
-numtsv=$(cat ${GXD}'/receipts.tsv' | grep -vi receiptid | wc -l)
-numsql=$(sqlite3 ${METADB} 'select count(ReceiptId) from receipts')
+numtsv=$(cat ${GXD}'/receipts.tsv' | grep -vi CaptureTime | wc -l)
+numsql=$(sqlite3 ${METADB} 'select count(*) from receipts')
 echo "amount of receipts before run: $numtsv/$numsql tsv/sql" | tee > $SUMMARYLOG
 
 cd $GXD
@@ -30,8 +30,8 @@ cd ..
 
 ./scripts/18-convert2xd.py ${DEBUG} $INPUT -o $GXD/ --extsrc "$EXTSRC"
 
-#num=$(cat $GXD/receipts.tsv | grep -v receiptid | wc -l)
-num=$(sqlite3 ${METADB} 'select count(ReceiptId) from receipts')
+#num=$(cat $GXD/receipts.tsv | grep -v CaptureTime | wc -l)
+num=$(sqlite3 ${METADB} 'select count(*) from receipts')
 echo "amount of receipts after run: $num" | tee > $SUMMARYLOG
 
 ./scripts/19b-receipts-tsv.sh
