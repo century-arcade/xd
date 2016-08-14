@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
+from xdfile.utils import get_args, open_output, find_files, log, debug, info, error, get_log, COLUMN_SEPARATOR, EOL
+from xdfile.utils import parse_tsv, progress, parse_pathname
 from xdfile import corpus, xdfile, BLOCK_CHAR
 
 
 # for a given grid
-#  for all words, 
+#  for all words,
 #    show how many distinct clues there are per publication
 
 # for each pub that has clues for all words,
@@ -87,7 +88,7 @@ def mutate(xd, words, chance=1):
             if random.random() < chance:
                 nmutations += 1
                 xd.grid[r] = splice(xd.grid[r], c, best_replacement)
-                log("-> %s/%s (%s)" % (new_hwd, new_vwd, "".join(br for h, v, br in mutations_this_square)))
+                info("-> %s/%s (%s)" % (new_hwd, new_vwd, "".join(br for h, v, br in mutations_this_square)))
     return nmutations
 
 
@@ -179,7 +180,7 @@ def main():
                     while nmutated < 100:
                         nmutated += mutate(xd, pub_clues)
                     nmissing = reclue(xd, pub_clues)
-                    log("%s missing %d clues after %d mutations" % (outfn, nmissing, nmutated))
+                    info("%s missing %d clues after %d mutations" % (outfn, nmissing, nmutated))
 
                     remixed.add(pubid)
                     outf.write_file(outfn, xd.to_unicode())
@@ -189,14 +190,14 @@ def main():
                     missing_tsv += COLUMN_SEPARATOR.join([ xd.xdid(), pubid, str(nmissing) ]) + EOL
 
             except Exception as e:
-                log("remix error %s" % str(e))
+                error("remix error %s" % str(e))
 
         if remixed:
-            log("%d remixed: %s" % (len(remixed), " ".join(remixed))) 
+            info("%d remixed: %s" % (len(remixed), " ".join(remixed)))
             try:
                 outf.write_file(parse_pathname(fn).base + ".xd", contents.encode("utf-8"))
             except Exception as e:
-                log("couldn't write: " + str(e))
+                error("couldn't write: " + str(e))
 
     outf.write_file("remix.log", get_log().encode("utf-8"))
     outf.write_file("remix.tsv", missing_tsv)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from xdfile.utils import open_output, log, find_files, get_args, parse_pathname, generate_zip_files, iso8601, to_timet
+from xdfile.utils import open_output, info, log, find_files, get_args, parse_pathname, generate_zip_files, iso8601, to_timet
 from xdfile.metadatabase import xd_sources_header, xd_sources_row
 from xdfile.cloud import xd_send_email
 
@@ -53,7 +53,7 @@ def main():
         for puzfn, puzdata, puzdt in email_files:
             # a basic sanity check of filesize
             # accommodate small puzzles and .pdf
-            log("%s: %s from %s" % (puzfn, iso8601(puzdt), upload_src))
+            info("%s: %s from %s" % (puzfn, iso8601(puzdt), upload_src))
 
         summary("%s puzzles from %s" % (len(email_files), upload_src))
 

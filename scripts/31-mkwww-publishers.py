@@ -83,7 +83,7 @@ def main():
     puzzles = metadb.xd_puzzles()
     outf.write_html('pub/index.html', pubyear.pubyear_html(), title='The xd crossword puzzle corpus')
 
-    utils.log("collating puzzles")
+    utils.info("collating puzzles")
     for puzrow in puzzles.values():
             pubid = utils.parse_pubid(puzrow.xdid)
             year = xdfile.year_from_date(puzrow.Date)
@@ -94,11 +94,9 @@ def main():
             all_pubs[k].add(puzrow)
 
     pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', 'Grid_1A_1D', 'ReusedCluePct', 'SimilarGrids' ]
-    utils.log('generating index pages')
-    
+    utils.info('generating index pages')
     # dict to generate pub page with calendars
     pub_grids = defaultdict(dict)
-    
     for pair, pub in sorted(list(all_pubs.items())):
         c_grids = {}
         pubid, year = pair

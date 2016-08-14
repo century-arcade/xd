@@ -51,7 +51,7 @@ def find_pubid(rowstr):
     try:
         regexes = utils.parse_tsv_data(open(PUBREGEX_TSV, 'r').read())
     except FileNotFoundError:
-        utils.log("File not exists: %s" % PUBREGEX_TSV, severity='WARNING')
+        utils.error("File not exists: %s" % PUBREGEX_TSV, severity='WARNING')
         return None
 
     matching = set()
@@ -61,10 +61,10 @@ def find_pubid(rowstr):
             matching.add(r['pubid'])
 
     if not matching:
-        utils.log("%s: no regex matches" % rowstr)
+        utils.warn("%s: no regex matches" % rowstr)
     else:
         if len(matching) > 1:
-            utils.log("%s: too many regex matches (%s)" % (rowstr, " ".join(matching)))
+            utils.warn("%s: too many regex matches (%s)" % (rowstr, " ".join(matching)))
             return None
         else:
             return matching.pop()
@@ -124,7 +124,7 @@ def get_shelf_path(xd, pubid, mdtext):
             return None
 
     if not pubid:
-        utils.log("unknown pubid for '%s'" % xd.filename)
+        utils.warn("unknown pubid for '%s'" % xd.filename)
         return None
 
     publisher = publ.PublisherAbbr
@@ -135,7 +135,7 @@ def get_shelf_path(xd, pubid, mdtext):
 
     dt = xd.get_header("Date")
     if not dt:
-        utils.log("neither Number nor Date for '%s'" % xd.filename)
+        utils.warn("neither Number nor Date for '%s'" % xd.filename)
         return 'misc/' + xd.filename
 
     year = xdfile.year_from_date(dt)

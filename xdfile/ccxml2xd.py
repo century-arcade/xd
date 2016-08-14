@@ -5,7 +5,7 @@ import string
 import re
 from lxml import etree
 import xdfile
-from xdfile.utils import escape, consecutive, xml_escape_table, rev_xml_escape_table
+from xdfile.utils import escape, consecutive, xml_escape_table, rev_xml_escape_table, error
 
 
 HEADER_RENAMES = {
@@ -26,8 +26,8 @@ def parse_ccxml(data, filename):
     try:
         root = etree.fromstring(content_xml)
     except Exception as e:
-        print('Exception %s' % e)
-        print(content)
+        error('Exception %s' % e)
+        error(content)
         exit
 
     # init crossword

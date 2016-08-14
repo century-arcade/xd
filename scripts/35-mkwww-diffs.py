@@ -89,7 +89,7 @@ def main():
     similars = utils.parse_tsv('gxd/similar.tsv', 'Similar')
     xdids_todo = args.inputs or [ xdid for xdid, matches in metadb.get_similar_grids().items() if matches ]
     for mainxdid in xdids_todo:
-        # progress(mainxdid)
+        progress(mainxdid)
 
         mainxd = xdfile.get_xd(mainxdid)
         if not mainxd:

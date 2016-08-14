@@ -7,7 +7,7 @@
 
 import sqlite3
 import xdfile.utils
-from xdfile.utils import args_parser, get_args
+from xdfile.utils import args_parser, get_args, info
 from xdfile import metadatabase as metadb
 
 
@@ -19,7 +19,7 @@ def main():
     cur = sqlconn.cursor()
 
     rows = [list(r) for r in xdfile.utils.parse_tsv_rows(args.inputs[0], "Receipt")]
-    print("Rows to be inserted to sql: %s" % len(rows))
+    info("Rows to be inserted to sql: %s" % len(rows))
     cur.executemany('INSERT INTO receipts VALUES (?,?,?,?,?,?)', rows)
     sqlconn.commit()
 

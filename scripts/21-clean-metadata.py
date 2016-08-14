@@ -2,7 +2,7 @@
 
 # Usage: $0 [-o <puzzles.tsv>] <input>
 #
-#   Generates puzzles.tsv with cleaned metadata for each .xd in <input>.  
+#   Generates puzzles.tsv with cleaned metadata for each .xd in <input>.
 #
 
 from xdfile import utils, metadatabase as metadb
@@ -96,7 +96,7 @@ def clean_headers(xd):
             xd.set_header(hdr, None)
         else:
             if hdr.lower() not in xdfile.HEADER_ORDER:
-                utils.log("%s: '%s' header not known: '%s'" % (xd.filename, hdr, xd.headers[hdr]))
+                utils.warn("%s: '%s' header not known: '%s'" % (xd.filename, hdr, xd.headers[hdr]))
 
     # clean Author and Editor headers
     author = xd.get_header("Author") or ""
@@ -122,8 +122,7 @@ def clean_headers(xd):
 
     if newtitle != title:
         xd.set_header("Title" + CLEAN_SUFFIX, newtitle)
-    
-    # create Date header 
+    # create Date header
     dt = xd.get_header("Date")
 
     ## try getting Date from filename
@@ -133,7 +132,7 @@ def clean_headers(xd):
             if d:
                 dt = d.strftime("%Y-%m-%d")
         except Exception as e:
-            utils.log(str(e))
+            utils.error(str(e))
             if args.debug:
                 raise
 

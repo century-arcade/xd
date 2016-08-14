@@ -73,17 +73,17 @@ def log(s, minverbose=0, severity='INFO'):
 #    if not g_args or g_args.verbose >= minverbose:
 #        print(" " + s)
 
-def log_warning(_s, _m=0):
+def info(_s, _m=0):
+    log(_s, minverbose=_m, severity='info')
+
+def warn(_s, _m=0):
     log(_s, minverbose=_m, severity='warning')
 
-def log_error(_s, _m=0):
+def error(_s, _m=0):
     log(_s, minverbose=_m, severity='error')
 
 def summary(_s, _m=0):
     log(_s, minverbose=_m, severity='summary')
-
-error=log_error
-warn=log_warning
 
 # print without logging if -d
 def debug(s):
@@ -149,7 +149,7 @@ def generate_zip_files(data):
             yield zi.filename, zf.read(zi), zipdt
 
     except zipfile.BadZipfile as e:
-        log(str(e))
+        error(str(e))
 
 
 # walk all 'paths' recursively and yield (filename, contents) for non-hidden files
@@ -177,7 +177,7 @@ def find_files_with_time(*paths, **kwargs):
                         progress(fullfn)
 
                         if fn[0] == ".":
-                            log("ignoring dotfile")
+                            info("ignoring dotfile")
                             continue
 
                         yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
@@ -194,7 +194,7 @@ def find_files_with_time(*paths, **kwargs):
 
                 yield zipfn, zipdata, zipdt
 
-        else: 
+        else:
             if ext and not path.endswith(ext):
                 continue
 
@@ -203,7 +203,7 @@ def find_files_with_time(*paths, **kwargs):
             yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
 
       except FileNotFoundError as e:
-          log(str(e))
+          error(str(e))
 
     # reset progress indicator after processing all files
     progress()
@@ -228,7 +228,7 @@ def datestr_to_datetime(s):
     try:
         return datetime.date(*[int(x) for x in s.split("-")])
     except Exception as e:
-        log(str(e))
+        error(str(e))
         if g_args.debug:
             raise
         dt = None
@@ -343,7 +343,7 @@ def parse_tsv(fn, objname=None):
         fp = codecs.open(fn, encoding='utf-8')
         return dict((r[0], r) for r in parse_tsv_data(fp.read(), objname))
     except Exception as e:
-        log(str(e))
+        error(str(e))
         return {}
 
 
@@ -352,7 +352,7 @@ def parse_tsv_rows(fn, objname=None):
         fp = codecs.open(fn, encoding='utf-8')
         return [r for r in parse_tsv_data(fp.read(), objname)]
     except Exception as e:
-        log(str(e))
+        error(str(e))
         return []
 
 
@@ -371,9 +371,8 @@ class OutputZipFile(zipfile.ZipFile):
         zi.external_attr = 0o444 << 16
         zi.compress_type = zipfile.ZIP_DEFLATED
         self.writestr(zi, contents)
-        
         if g_args.debug:
-            log("wrote %s to %s" % (fullfn, self.filename))
+            debug("wrote %s to %s" % (fullfn, self.filename))
 
     def write(self, data):
         raise Exception("can't write directly to .zip")
@@ -414,11 +413,10 @@ def strip_toplevel(fn):
 
 def disambiguate_fn(fn, all_filenames):
     p = parse_pathname(fn)
-    
     # append a, b, c, etc until finding one that hasn't been taken already
     i = 0
     while fn in all_filenames:
-        log('%s already in use, disambiguating' % fn)
+        info('%s already in use, disambiguating' % fn)
         fn = os.path.join(p.path, p.base + string.ascii_lowercase[i] + p.ext)
         i += 1
 
