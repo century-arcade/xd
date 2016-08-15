@@ -149,7 +149,7 @@ def generate_zip_files(data):
             yield zi.filename, zf.read(zi), zipdt
 
     except zipfile.BadZipfile as e:
-        error(str(e))
+        error("generate_zip_files(): %s" % str(e))
 
 
 # walk all 'paths' recursively and yield (filename, contents) for non-hidden files
@@ -203,7 +203,7 @@ def find_files_with_time(*paths, **kwargs):
             yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
 
       except FileNotFoundError as e:
-          error(str(e))
+          error("find_files_with_time(): %s" % str(e))
 
     # reset progress indicator after processing all files
     progress()
@@ -228,7 +228,7 @@ def datestr_to_datetime(s):
     try:
         return datetime.date(*[int(x) for x in s.split("-")])
     except Exception as e:
-        error(str(e))
+        error("datestr_to_datetime(): %s" % str(e))
         if g_args.debug:
             raise
         dt = None
@@ -343,7 +343,7 @@ def parse_tsv(fn, objname=None):
         fp = codecs.open(fn, encoding='utf-8')
         return dict((r[0], r) for r in parse_tsv_data(fp.read(), objname))
     except Exception as e:
-        error(str(e))
+        error("parse_tsv() %s" % str(e))
         return {}
 
 
@@ -352,7 +352,7 @@ def parse_tsv_rows(fn, objname=None):
         fp = codecs.open(fn, encoding='utf-8')
         return [r for r in parse_tsv_data(fp.read(), objname)]
     except Exception as e:
-        error(str(e))
+        error("parse_tsv_rows(): %s" % str(e))
         return []
 
 

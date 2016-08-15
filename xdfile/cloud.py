@@ -13,7 +13,7 @@ def xd_send_email(destaddr, fromaddr='admin@xd.saul.pw', subject='', body=''):
                 'Body': { 'Text': { 'Data': body } } })
         return response
     except Exception as e:
-        error(str(e))
+        error("xd_send_email(): %s" % str(e))
         return None
 
 
