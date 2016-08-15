@@ -71,3 +71,6 @@ scripts/send-email.py $ADMIN_EMAIL "execution logs for $TODAY" ${SUMLOGFILE}
 echo "Copy logs to AWS"
 aws s3 cp --region ${REGION} ${LOGFILE} s3://${BUCKET}/logs/ --acl public-read
 aws s3 cp --region ${REGION} ${SUMLOGFILE} s3://${BUCKET}/logs/ --acl public-read
+
+echo "Make logs index page"
+scripts/49b-mkindex.sh
