@@ -136,9 +136,7 @@ def append_row(tsvpath, headerstr, row, to_sql=False):
         fp.close()
     else:
         cur = sqlconn.cursor()
-        #print(headerstr)
         INS_TMPL = ",".join('?' * len(COLSEP.split(headerstr)))
-        #print(INS_TMPL)
         cur.execute("INSERT INTO %s VALUES (%s)" % (METADB_RECEIPTS, INS_TMPL),([str(x) for x in row]))
         sqlconn.commit()
 

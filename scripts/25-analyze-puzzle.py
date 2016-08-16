@@ -7,7 +7,7 @@
 #
 
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, grid_similarity
-from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
+from xdfile.utils import get_args, open_output, find_files, log, info, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 import time
 from xdfile import utils, metadatabase
@@ -27,25 +27,24 @@ def main():
         if mainxd.xdid() in prev_similar:
             continue  # skip reprocessing .xd that are already in similar.tsv
 
-        """ find similar grids (pct, xd) for the mainxd in the corpus. 
+        """ find similar grids (pct, xd) for the mainxd in the corpus.
         Takes about 1 second per xd.  sorted by pct.
         """
-        similar_grids = sorted(find_similar_to(mainxd, corpus(), min_pct=0.20), 
+        similar_grids = sorted(find_similar_to(mainxd, corpus(), min_pct=0.20),
                                key=lambda x: x[0], reverse=True)
 
         if similar_grids:
-            log("similar: " + " ".join(("%s=%s" % (xd2.xdid(), pct)) 
+            info("similar: " + " ".join(("%s=%s" % (xd2.xdid(), pct))
                                        for pct, xd1, xd2 in similar_grids))
 
         mainpubid = mainxd.publication_id()
         maindate = mainxd.date()
 
-        # go over each clue/answer, find all other uses, other answers, other possibilities. 
+        # go over each clue/answer, find all other uses, other answers, other possibilities.
         # these are added directly to similar.tsv
         nstaleclues = 0
         nstaleanswers = 0
         ntotalclues = 0
-        
         for pos, mainclue, mainanswer in mainxd.iterclues():
             progress(mainanswer)
 
@@ -77,7 +76,7 @@ def main():
                 uses = []
                 for bc, nuses in bclues.items():
                     # then find all clues besides this one
-                    clue_usages = [ ca for ca in load_clues().get(bc, []) 
+                    clue_usages = [ ca for ca in load_clues().get(bc, [])
                                     if ca.answer == mainanswer and ca.date < maindate ]
 
                     if clue_usages:
@@ -89,7 +88,6 @@ def main():
                         else:
                             ca = sorted(clue_usages, key=lambda ca: ca.date or "z")[-1]
                         uses.append((ca, nuses))
-        
         # summary row to similar.tsv
         row_header = 'xdid similar_grid_pct reused_clues reused_answers total_clues matches'
         metadatabase.append_row('gxd/similar.tsv', row_header, [

@@ -7,7 +7,7 @@ import functools
 import re
 import datetime
 
-from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid, log
+from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid, log, error
 
 g_corpus = []  # list of xdfile
 g_all_clues = []  # list of ClueAnswer
@@ -416,7 +416,7 @@ def corpus():
 
             ret.append(xd)
         except Exception as e:
-            log(str(e))
+            error("corpus(): %s" % str(e))
             if args.debug:
                 raise
 
@@ -491,7 +491,7 @@ def get_xd(xdid):
     try:
         xd = xdfile(corpus_contents()[xdid].decode("utf-8"), xdid)
     except Exception as e:
-        log(str(e))
+        error("get_xd() %s" % str(e))
         return None
     return xd
 

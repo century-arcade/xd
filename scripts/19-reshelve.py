@@ -30,10 +30,10 @@ def main():
             seqnum = utils.parse_seqnum(r.xdid or r.SourceFilename)
             if seqnum:
                 newxdid = newpubid + seqnum
-                utils.log("changing xdid from '%s' to '%s'" % (r.xdid, newxdid))
+                utils.info("changing xdid from '%s' to '%s'" % (r.xdid, newxdid))
                 d["xdid"] = newxdid
             else:
-                utils.log("no date or number in xdid, not reshelving")
+                utils.info("no date or number in xdid, not reshelving")
 
         all_receipts += metadb.xd_receipts_row(**d)
 

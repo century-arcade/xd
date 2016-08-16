@@ -48,7 +48,7 @@ chmod 600 $SSHHOME/.ssh/gxd_rsa
 cat src/aws/ssh_config >> $SSHHOME/.ssh/config
 ssh-agent bash -c "ssh-add $SSHHOME/.ssh/gxd_rsa; git clone ${GXD_GIT}"
 
-# Import all .tsv to sql
+echo "Import all .tsv to sql"
 scripts/05-sql-import-receipts.sh
 
 echo "Run deploy script"
@@ -59,11 +59,15 @@ echo 'SUMMARY: End time '`date +'%Y-%m-%d %H:%M'`
 egrep -i 'ERROR|WARNING|SUMMARY' ${LOGFILE} > ${SUMLOGFILE}
 echo -e '\n' >> ${SUMLOGFILE}
 
+echo "Getting summary"
 scripts/48-stats.sh >> ${SUMLOGFILE}
 echo -e '\n' >> ${SUMLOGFILE}
 
-echo "SUMMARY: Full log file http://$BUCKET/logs/`basename ${LOGFILE}`"
+echo "SUMMARY: Full log file http://$BUCKET/logs/`basename ${LOGFILE}`" >> ${SUMLOGFILE}
 
+echo "Sending email"
 scripts/send-email.py $ADMIN_EMAIL "execution logs for $TODAY" ${SUMLOGFILE}
 
+echo "Copy logs to AWS"
 aws s3 cp --region ${REGION} ${LOGFILE} s3://${BUCKET}/logs/ --acl public-read
+aws s3 cp --region ${REGION} ${SUMLOGFILE} s3://${BUCKET}/logs/ --acl public-read
