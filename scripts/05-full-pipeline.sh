@@ -37,7 +37,7 @@ fi
 /bin/bash scripts/41-git-commit.sh incoming_$NOW
 
 # capture all logs even if other scripts fail
-scripts/39-mkwww-logs.py -o $WWW/$NOW/log.html $TMP
+scripts/39-mkwww-logs.py -o $WWW/$NOW/index.html $TMP
 
 echo 'Run 40'
 /bin/bash scripts/40-deploy.sh
