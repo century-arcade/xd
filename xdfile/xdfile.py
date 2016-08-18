@@ -491,7 +491,7 @@ def get_xd(xdid):
     try:
         xd = xdfile(corpus_contents()[xdid].decode("utf-8"), xdid)
     except Exception as e:
-        error("get_xd() %s" % str(e))
+        # error("get_xd() %s" % str(e))
         return None
     return xd
 
