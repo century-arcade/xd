@@ -23,7 +23,7 @@ CREATE TABLE similar_grids (
 CREATE TABLE similar_clues (
     xdid CHAR(16),
     reused_clues INTEGER,
-    Nujmreused_answers INTEGER,
+    reused_answers INTEGER,
     total_clues INTEGER
 );
 
@@ -70,6 +70,6 @@ CREATE TABLE stats (
     NumRedone INTEGER,   -- 30-75% grid match
     -- duplicate grids, different author
     NumSuspicious INTEGER, -- >50% similar grid
-    NumThemeCopies INTEGER -- >50% similar grid
+    NumThemeCopies INTEGER -- 30-50% similar grid
 );
 

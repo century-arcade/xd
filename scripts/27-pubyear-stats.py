@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
 import json
+import re
 from collections import defaultdict, Counter
 
-from xdfile import utils, metadatabase as metadb
+from xdfile.utils import error, debug, info
+from xdfile import utils, metasql, metadatabase as metadb
 from xdfile import year_from_date, dow_from_date
 import xdfile
+
 
 
 def main():
@@ -14,17 +17,18 @@ def main():
 
     weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
 
-    pubyears = set()
-    for r in metasql.execute("SELECT * FROM puzzles"):
-        pubyears.add(r.xdid.split("-")[0])
+    pubyears = {} # set()
+    for xd in xdfile.corpus():
+        puby = (xd.publication_id(), xd.year())
+        if puby not in pubyears:
+            pubyears[puby] = []
+        pubyears[puby].append(xd)
 
-
-    for puby in pubyears:
-        pubid, year = (puby)
-        nxd = 0
+    for puby, xdlist in sorted(pubyears.items()):
+        pubid, year = puby
         npublic = 0
 
-        # SELECT FROM publications
+        # TODO: SELECT FROM publications
         nexisting = 0
 
         # organize by day-of-week
@@ -34,12 +38,22 @@ def main():
             byweekday[w] = []
             byweekday_similar[w] = []
 
-        for r in metasql.execute("SELECT * FROM puzzles WHERE xdid LIKE '{}%'".format(puby)):
-            byweekday[dow_from_date(r.Date)].append(r)
+        for xd in xdlist:
+            dow = dow_from_date(xd.get_header('Date'))
+            if dow: # Might be empty date or only a year
+                byweekday[dow].append(xd)
 
-        for r in metasql.execute("SELECT * FROM similar_grids WHERE xdid LIKE '{}%' AND GridMatchPct > 25".format(puby)):
-
-            byweekday_similar[dow_from_date(r.Date)].append(r)
+        for r in metasql.select("SELECT * FROM similar_grids WHERE xdid LIKE '{}%' AND GridMatchPct > 25".format(pubid + year)):
+            xd = xdfile.get_xd(r['xdid'])
+            if xd:
+                dt = xd.get_header('Date')
+                if dt:
+                    assert dt
+                    dow = dow_from_date(dt)
+                    if dow: # Might be empty date or only a year
+                        byweekday_similar[dow].append(r)
+                else:
+                    debug("Date not set for: %s" % xd)
 
         # tally stats
         for weekday in weekdays:
@@ -49,17 +63,31 @@ def main():
             # todo
             nexisting = 0
 
-            for p in byweekday[weekday]:
-                nxd += 1
-                if p.xdid in public_xdids:
+            nxd = len(byweekday[weekday])
+            public_xdids = [] # Empty for now
+            for xd in byweekday[weekday]:
+                xdid = xd.xdid()
+                if xdid in public_xdids:
                     npublic += 1
-                editors[p.Editor.strip()] += 1
-                formats[p.Size.strip()] += 1
-                copyrights[p.Copyright.strip()] += 1
+                editors[xd.get_header('Editor').strip()] += 1
+                formats[xd.sizestr()] += 1
+                copyrights[xd.get_header('Copyright').strip()] += 1
 
-            maineditor = "%s (%s)" % editors.most_common(1)[0]
-            maincopyright = "%s (%s)" % copyrights.most_common(1)[0]
-            mainformat = "%s (%s)" % formats.most_common(1)[0]
+            # debug("ME: %s MCPR: %s MF: %s" % (list(editors), list(copyrights), list(formats)))
+            def process_counter(count, comp_value):
+                # Process counter comparing with comp_value
+                if count:
+                    item, num  = count.most_common(1)[0]
+                    if num != comp_value:
+                        item += " (%s)" % num
+                else:
+                    item = ''
+                return item
+
+            #
+            maineditor = process_counter(editors, nxd)
+            maincopyright = process_counter(copyrights, nxd)
+            mainformat = process_counter(formats, nxd)
 
             reprints = 0
             touchups = 0
@@ -67,13 +95,17 @@ def main():
             copies = 0
             themecopies = 0
             for r in byweekday_similar[weekday]:
-                xd1 = corpus[r.xdid]
-                xd2 = corpus[r.xdidMatch]
+                # debug("Xdid %s Xdidmatch %s" % (r['xdid'], r['xdidMatch']))
+                xd1 = xdfile.get_xd(r['xdid'])
+                xd2 = xdfile.get_xd(r['xdidMatch'])
+                if xd1 is None or xd2 is None:
+                    continue
+                # debug("XD1: %s XD2: %s" % (xd1, xd2))
                 dt1 = xd1.get_header('Date')
                 dt2 = xd2.get_header('Date')
                 aut1 = xd1.get_header('Author')
                 aut2 = xd2.get_header('Author')
-                pct = int(r.GridMatchPct)
+                pct = int(r['GridMatchPct'])
                 if dt2 < dt1:  # only capture the later one
                     if aut1 == aut2:
                         if pct == 100:
@@ -89,7 +121,7 @@ def main():
                             themecopies += 1
 
             metasql.execute("INSERT INTO stats VALUES (?,?,?, ?,?,?, ?, ?,?,?, ?,?, ?,?)",
-            (pubid, year, weekday,
+                (pubid, year, weekday,
                 mainformat, maineditor, maincopyright,
                 nexisting, nxd, npublic,
                 reprints, touchups, redones,

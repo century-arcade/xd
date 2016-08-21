@@ -1,5 +1,5 @@
 .year_widget rect {
-    fill:green;
+    fill:grey;
 }
 
 .year_widget rect.red {
@@ -16,6 +16,32 @@
 
 .year_widget rect.similar10 {
     fill:lightsalmon;
+}
+
+/* Prexd */
+.year_widget rect.prexd {
+    fill:black;
+}
+
+
+.year_widget rect.suspxd {
+    fill:darkred;
+}
+
+.year_widget rect.dupxd {
+    fill:yellow;
+}
+
+.year_widget rect.privxd {
+    fill:blue;
+}
+
+.year_widget rect.pubxd {
+    fill:green;
+}
+
+.year_widget rect.postxd {
+    fill:black;
 }
 
 .year_widget text {
