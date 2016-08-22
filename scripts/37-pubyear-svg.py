@@ -6,13 +6,15 @@ from datetime import date
 from xdfile import utils
 from xdfile import metasql as metadb
 import xdfile
+from collections import defaultdict
+import pprint
 
 
 pys = '''
 <svg class="year_widget" width="30" height="30">
   <title>%s</title>
   <g transform="translate(0,0)">
-    <rect class="%s" width="30" height="30"></eect>
+    <rect class="%s" width="30" height="30" onclick="/pub/"></rect>
   </g>
 %s
 </svg>
@@ -30,7 +32,7 @@ def weekdays_between(dta, dtb):
     return 0
 
 
-def pubyear_svg(row): #, nsusp, ndup, npub, npriv):
+def pubyear_svg(rows): #, nsusp, ndup, npub, npriv):
     bgclass = "notexists"
 #    if bgclass not in publications.tsv:
 #       bgclass = "exists"
@@ -54,12 +56,13 @@ def pubyear_svg(row): #, nsusp, ndup, npub, npriv):
     NumSuspicious INTEGER, -- >50% similar grid
     NumThemeCopies INTEGER -- >50% similar grid
     """
-
+    row = rows[0]
     svgtitle = '{} {}\n'.format(row['pubid'], row['year'])
     svgtitle += 'Copyright: {}\n'.format(row['Copyright']) if row['Copyright'] else ''
     svgtitle += 'Editor: {}'.format(row['Editor']) if row['Editor'] else ''
 
-    for i in range(0, 7):
+    for i, wd in enumerate(utils.WEEKDAYS): #range(0, 7):
+        row = rows[i]
         y = i*3
 
         num_existing = 52 # (eventually number of this weekday in that year)
@@ -141,13 +144,41 @@ def main():
     args = utils.get_args(parser=p)
     outf = utils.open_output()
 
-    pubyears = {}
+    pubyears = defaultdict(list)
+    pubyears_idx = defaultdict(list)
+    years_idx = []
     for r in metadb.select("SELECT * FROM stats"):
         pubyear = r['pubid'] + r['year']
-        pubyears[pubyear] = r
+        pubyears[pubyear].append(r)
+        if r['year'] not in pubyears_idx[r['pubid']]:
+            pubyears_idx[r['pubid']].append(r['year'])
+        if r['year'] not in years_idx:
+            years_idx.append(r['year'])
+
     html_out = []
-    for py in sorted(pubyears):
-        html_out.append(pubyear_svg(pubyears[py]))
+    html_out.append('<table cellspacing="0" cellpadding="0">')
+    # pprint.pprint(pubyears)
+    # pprint.pprint(pubyears_idx)
+
+    html_out.append('<tr><td style="border-right: 1px solid black;">&nbsp;</td>')
+    for year in sorted(years_idx):
+        html_out.append('<td style="border-right: 1px solid black;"><font size="2">{}<br>{}</font></td>'.format(year[:2], year[2:]))
+    html_out.append('</tr>')
+    
+    for pub in sorted(pubyears_idx):
+        # Process each pub in index
+        html_out.append('<tr><td>{}</td>'.format(pub))
+        for year in sorted(years_idx):
+            py = pub + year
+            html_out.append('<td style="border-right: 1px solid black;">')
+            if py in pubyears:
+                html_out.append(pubyear_svg(pubyears[py]))
+            else:
+                html_out.append(pys % ('', 'notexists', ''))
+            html_out.append('</td>')
+        html_out.append('</tr>')
+
+    html_out.append('</table>')
     outf.write_html('svg.html', "".join(html_out), "Total svg")
 
 

@@ -19,8 +19,12 @@
 }
 
 /* Prexd */
+.year_widget rect.notexist {
+    fill: white;
+}
+
 .year_widget rect.prexd {
-    fill:black;
+    fill:grey;
 }
 
 
@@ -41,7 +45,7 @@
 }
 
 .year_widget rect.postxd {
-    fill:black;
+    fill:grey;
 }
 
 .year_widget text {
