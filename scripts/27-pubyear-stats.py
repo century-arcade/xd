@@ -24,6 +24,9 @@ def main():
             pubyears[puby] = []
         pubyears[puby].append(xd)
 
+    if pubyears:
+        metasql.execute("DELETE FROM stats;")
+
     for puby, xdlist in sorted(pubyears.items()):
         pubid, year = puby
         npublic = 0
@@ -43,7 +46,7 @@ def main():
             if dow: # Might be empty date or only a year
                 byweekday[dow].append(xd)
 
-        for r in metasql.select("SELECT * FROM similar_grids WHERE xdid LIKE '{}%' AND GridMatchPct > 25".format(pubid + year)):
+        for r in metasql.select("SELECT * FROM similar_grids WHERE xdid LIKE '{}%' AND GridMatchPct > 25".format(pubid + str(year))):
             xd = xdfile.get_xd(r['xdid'])
             if xd:
                 dt = xd.get_header('Date')
@@ -67,11 +70,20 @@ def main():
             public_xdids = [] # Empty for now
             for xd in byweekday[weekday]:
                 xdid = xd.xdid()
-                if xdid in public_xdids:
+                if  (year.isdigit() and int(year) <= 1965) or xdid in public_xdids:
                     npublic += 1
-                editors[xd.get_header('Editor').strip()] += 1
-                formats[xd.sizestr()] += 1
-                copyrights[xd.get_header('Copyright').strip()] += 1
+
+                editor = xd.get_header('Editor').strip()
+                if editor:
+                    editors[editor] += 1
+
+                sizestr = xd.sizestr()
+                if sizestr:
+                    formats[sizestr] += 1
+
+                copyright = xd.get_header('Copyright').strip()
+                if copyright:
+                    copyrights[copyright] += 1
 
             # debug("ME: %s MCPR: %s MF: %s" % (list(editors), list(copyrights), list(formats)))
             def process_counter(count, comp_value):
@@ -110,12 +122,12 @@ def main():
                     if aut1 == aut2:
                         if pct == 100:
                             reprints += 1
-                        elif pct >= 95:
+                        elif pct >= 50:
                             touchups += 1
                         elif pct >= 30:
-                            redones += 1
+                            themecopies += 1
                     else: # suspicious
-                        if pct > 50:
+                        if pct >= 50:
                             copies += 1
                         elif pct >= 30:
                             themecopies += 1

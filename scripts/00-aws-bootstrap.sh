@@ -52,7 +52,7 @@ echo "Import all .tsv to sql"
 scripts/05-sql-import-receipts.sh
 
 echo "Run deploy script"
-/bin/bash -x scripts/05-full-pipeline.sh
+/bin/bash scripts/05-full-pipeline.sh
 
 echo 'SUMMARY: End time '`date +'%Y-%m-%d %H:%M'`
 # Parse log to get summary to be mailed

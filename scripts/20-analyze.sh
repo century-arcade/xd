@@ -14,4 +14,4 @@ scripts/21-clean-metadata.py -o $PUB/puzzles.tsv $GXD
 # regenerate pub/pubyears.tsv
 scripts/25-analyze-puzzle.py -o $WWW/ -c $GXD $GXD
 scripts/26-clues-tsv.py -c $GXD -o $PUB/
-scripts/27-pubyear-stats.py
+scripts/27-pubyear-stats.py -c ${GXD}
