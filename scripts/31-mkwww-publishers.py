@@ -189,8 +189,9 @@ def main():
             else:
                 pubidtext = r.xdid
                 row_dict['class'] = 'puzzle'
-           
-            row = [ 
+                continue  # don't display unique puzzles in table; refer to download/google sheet
+
+            row = [
                 pubidtext,
                 r.Date,
                 r.Size,
@@ -206,14 +207,14 @@ def main():
             outf.write_row('pub/%s%s.tsv' % (pubid, year), " ".join(pubyear_header), row)
             row_dict['row'] = row
             rows.append(row_dict)
-       
+
         pub_grids[pubid][year] = c_grids
 
         # Generate calendar 
         onepubyear_html = GridCalendar(c_grids).formatyear(year, 6) + "<br>"
         
         # Generate html table sorted by 2nd element of row (date)
-        onepubyear_html += html.html_table(sorted(rows , key=lambda x: x['row'][1]), pubyear_header, "puzzle", "puzzles")
+        onepubyear_html += html.html_table(sorted([rows, key=lambda x: x['row'][1]), pubyear_header, "puzzle", "puzzles")
         outf.write_html("pub/%s%s/index.html" % (pubid, year), onepubyear_html, title="%s %s" % (pubid, year))
       
         

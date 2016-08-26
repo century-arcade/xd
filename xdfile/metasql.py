@@ -13,6 +13,7 @@ import sqlite3
 
 METADB = "meta.db" # SQLLite database
 METADB_RECEIPTS = "receipts" # Receipts table
+METADB_PUZZLES = 'puzzles' # Puzzles table
 
 RECEIPTS_TSV = "gxd/receipts.tsv"
 SIMILAR_TSV = "gxd/similar.tsv"
@@ -101,7 +102,12 @@ def xd_publications():
 
 @utils.memoize
 def xd_puzzles():
-    return utils.parse_tsv(PUZZLES_TSV, "Puzzle")
+    cursor.execute('SELECT * FROM %s' % (METADB_PUZZLES))
+    for c in cursor.fetchall():
+        print("C: %s" % c)
+
+
+    #return utils.parse_tsv(PUZZLES_TSV, "Puzzle")
 
 @utils.memoize
 def xd_similar():
@@ -135,10 +141,23 @@ def append_row(tsvpath, headerstr, row, to_sql=False):
         fp.write(COLSEP.join([str(x) for x in row]) + EOL)
         fp.close()
     else:
+        # tsvpath = SQL table
         cur = sqlconn.cursor()
-        INS_TMPL = ",".join('?' * len(COLSEP.split(headerstr)))
-        cur.execute("INSERT INTO %s VALUES (%s)" % (METADB_RECEIPTS, INS_TMPL),([str(x) for x in row]))
+        INS_TMPL = ",".join('?' * len(row))
+        cur.execute("INSERT INTO %s VALUES (%s)" % (tsvpath, INS_TMPL),([str(x) for x in row]))
         sqlconn.commit()
+
+
+def select(query, *args):
+    # Execute SQL statement w/o commit 
+    cursor.execute(query, *args)
+    return cursor.fetchall()
+
+def execute(query, *args):
+    # Execute SQL statement with commit
+    cursor.execute(query, *args)
+    sqlconn.commit()
+    # return cursor.fetchall()
 
 
 def check_already_recieved(extsrc, srcfn):
@@ -177,12 +196,32 @@ def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
 def xd_recent_download(pubid, dt):
     return COLSEP.join([ pubid, dt ]) + EOL
 
+def append_puzzles(puzzles):
+    tmplist = []
+    for xd in puzzles:
+        fields = [
+            xd.xdid(), # xdid
+            xd.get_header("Date"),
+            "%dx%d%s%s" % (xd.width(), xd.height(), xd.get_header("Rebus") and "R" or "", xd.get_header("Special") and "S" or ""),
+            xd.get_header("Title"),
+            xd.get_header("Author") or xd.get_header("Creator"),
+            xd.get_header("Editor"),
+            xd.get_header("Copyright"),
+            "%s_%s" % (xd.get_answer("A1"), xd.get_answer("D1"))
+        ]
+        tmplist.append(fields)
+
+    INS_TMPL = ",".join('?' * len(tmplist[0]))
+    utils.debug('Going to insert %s rows' % len(tmplist))
+    cursor.executemany("INSERT INTO %s VALUES (%s)" % (METADB_PUZZLES, INS_TMPL), tmplist) 
+    sqlconn.commit()
 
 def update_puzzles_row(xd):
     # INSERT only for now
     if xd.xdid() in xd_puzzles():
         raise Error('record already exists; UPDATE not implemented')
 
+    #print("XD: %s" % xd)
     fields = [
         xd.xdid(),                   # xdid
         xd.get_header("Date"),
@@ -195,9 +234,10 @@ def update_puzzles_row(xd):
         "%s_%s" % (xd.get_answer("A1"), xd.get_answer("D1"))
     ]
 
-    assert COLSEP not in "".join(fields), fields
+    # print(fields)
+    # assert COLSEP not in "".join(fields), fields
 
-    append_row(PUZZLES_TSV, xd_puzzles_header, fields)
+    append_row(METADB_PUZZLES, xd_puzzles_header, fields, to_sql=True)
 
 
 class Publication:

@@ -1,5 +1,57 @@
-.year_widget rect {
-    fill:green;
+#pubyearmap td {
+    border-right: 1px solid grey;
+    border-bottom: 1px solid grey;
+    text-align: center;
+}
+
+#pubyearmap td.header {
+    font-weight: bold;
+    font-size: 12px;
+    width: 60px;
+}
+
+#pubyearmap td.year_widget {
+    background: #a8a8a8;
+}
+
+#pubyearmap td.decade {
+    background: lightgrey;
+    color: black;
+/*    border-color: white; */
+    font-weight: bold;
+    font-size: 12px;
+}
+
+#pubyearmap td.zero-year {
+    background: lightgrey;
+    color: black;
+/*    border-color: white; */
+    font-weight: bold;
+    font-size: 12px;
+}
+
+#pubyearmap td.ord-year {
+    background: #ccf;
+    color: black;
+/*    border-color: white; */
+    font-size: 12px;
+}
+
+td:hover {
+    background:darkgray;
+}
+
+th {
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.year_widget {
+    fill:#a8a8a8;
+}
+
+.year_widget {
+    overflow:visible;
 }
 
 .year_widget rect.red {
@@ -14,8 +66,38 @@
     fill:white;
 }
 
-.year_widget rect.similar10 {
+.similar10 {
     fill:lightsalmon;
+}
+
+/* Prexd */
+.notexist {
+    fill: white;
+}
+
+.suspxd {
+    fill:darkred;
+    background-color: darkred;
+}
+
+.dupxd {
+    fill:yellow;
+    background-color: yellow;
+}
+
+.themexd {
+    fill:orange;
+    background-color: orange;
+}
+
+.privxd {
+    fill:blue;
+    background-color: blue;
+}
+
+.pubxd {
+    fill:green;
+    background-color: green;
 }
 
 .year_widget text {

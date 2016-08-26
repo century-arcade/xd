@@ -77,6 +77,9 @@ class xdfile:
     def size(self):
         return (self.width(), self.height())
 
+    def sizestr(self):
+        return "%dx%d%s%s" % (self.width(), self.height(), self.get_header("Rebus") and "R" or "", self.get_header("Special") and "S" or "")
+
     def xdid(self):
         num = self.get_header("Number")
         if num:
