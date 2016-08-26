@@ -6,7 +6,7 @@ import re
 from xdfile.utils import progress, open_output, get_args, args_parser, COLUMN_SEPARATOR
 from xdfile.utils import br_with_n
 from xdfile import html, utils, catalog, pubyear
-from xdfile import metadatabase as metadb
+from xdfile import metadatabase as metadb, metasql
 from xdfile.html import GridCalendar, mktag, year_widget
 from xdfile.xdfile import num_cells
 import xdfile
@@ -25,10 +25,10 @@ class PublicationStats:
         self.puzzles_meta = []
 
     def add(self, puzrow):
-        self.copyrights[puzrow.Copyright.strip()] += 1
-        self.editors[puzrow.Editor.strip()] += 1
-        self.formats[puzrow.Size] += 1
-        datestr = puzrow.Date
+        self.copyrights[puzrow['Copyright'].strip()] += 1
+        self.editors[puzrow['Editor'].strip()] += 1
+        self.formats[puzrow['Size']] += 1
+        datestr = puzrow['Date']
         if datestr:
             if not self.mindate:
                 self.mindate = datestr
@@ -80,13 +80,13 @@ def main():
     all_pubs = {}  # [(pubid,year)] -> PublicationStats
     pubyear_rows = {}
     similar = metadb.xd_similar()
-    puzzles = metadb.xd_puzzles()
+    puzzles = metasql.select('SELECT * FROM puzzles;')
     outf.write_html('pub/index.html', pubyear.pubyear_html(), title='The xd crossword puzzle corpus')
 
     utils.info("collating puzzles")
-    for puzrow in puzzles.values():
-            pubid = utils.parse_pubid(puzrow.xdid)
-            year = xdfile.year_from_date(puzrow.Date)
+    for puzrow in puzzles:
+            pubid = utils.parse_pubid(puzrow['xdid'])
+            year = xdfile.year_from_date(puzrow['Date'])
             k = (pubid, year or 9999)
             if k not in all_pubs:
                 all_pubs[k] = PublicationStats(pubid)
@@ -101,20 +101,18 @@ def main():
         c_grids = {}
         pubid, year = pair
         progress(pubid)
-   
         reused_clues = 0
         reused_answers = 0
         total_clues = 0
         total_similar = []
 
         rows = []
-        
         # Assign class based on xdid and similars
         def get_cell_classes(r):
             """ Return cell classes based on parameters """
             # TODO: Implement check that authors same
             classes = []
-            rsim = similar.get(r.xdid)
+            rsim = similar.get(r['xdid'])
             if rsim and float(rsim.similar_grid_pct) > 0:
                 matches = [x.split('=') for x in rsim.matches.split()]
                 # Get max for matches for class definition
@@ -129,10 +127,10 @@ def main():
                 if max_pct >= 100:
                     classes.append('exact')
                 # Highlight only grids sized > 400 cells
-                if num_cells(r.Size) >= 400:
+                if num_cells(r['Size']) >= 400:
                     classes.append('biggrid')
                 # Check for pub similarity
-                pubid, y, m, d = utils.split_xdid(r.xdid)
+                pubid, y, m, d = utils.split_xdid(r['xdid'])
                 if pubid:
                     ymd = '%s%s%s' % (y, m, d)
                     if pubid not in [ x[0] for x in matches ]:
@@ -148,14 +146,15 @@ def main():
             similar_text = ""
             reused_clue_pct = "n/a"
 
-            rsim = similar.get(r.xdid)
+            rsim = similar.get(r['xdid'])
             if rsim:
                 similar_pct = float(rsim.similar_grid_pct)
                 if similar_pct > 0:
                     matches = [x.split('=') for x in rsim.matches.split()]
                     for xdid, pct in matches:
-                        if xdid in puzzles.keys():
-                            similar_text += '(%s%%) %s [%s]<br/>' % (pct, puzzles[xdid].Author, xdid)
+                        if any(d['xdid'] == xdid for d in puzzles):
+                            author = [ d['Author'] for d in puzzles if d['xdid'] ==  xdid]
+                            similar_text += '(%s%%) %s [%s]<br/>' % (pct, author[0], xdid)
                     total_similar.append(similar_pct)
                 else:
                     similar_text = "0"
@@ -174,32 +173,32 @@ def main():
             row_dict = {} # Map row and style
             if similar_text and similar_text != "0":
                 # http://stackoverflow.com/questions/1418838/html-making-a-link-lead-to-the-anchor-centered-in-the-middle-of-the-page
-                pubidtext = '<span class="anchor" id="%s">' % r.xdid 
+                pubidtext = '<span class="anchor" id="%s">' % r['xdid']
                 pubidtext += '</span>'
-                pubidtext += html.mkhref(r.xdid, '/pub/' + r.xdid)
-                c_grids[r.Date] = { 
-                        'link' : '/pub/%s%s/index.html#' % (pubid, year) + r.xdid,
-                        'class': get_cell_classes(r), 
+                pubidtext += html.mkhref(r['xdid'], '/pub/' + r['xdid'])
+                c_grids[r['Date']] = {
+                        'link' : '/pub/%s%s/index.html#' % (pubid, year) + r['xdid'],
+                        'class': get_cell_classes(r),
                         'title': br_with_n(similar_text),
                         }
                 row_dict['tag_params'] = {
-                    'onclick': 'location.href=\'/pub/%s\'' % r.xdid,
+                    'onclick': 'location.href=\'/pub/%s\'' % r['xdid'],
                     'class': 'puzzlehl'
                     }
             else:
-                pubidtext = r.xdid
+                pubidtext = r['xdid']
                 row_dict['class'] = 'puzzle'
                 continue  # don't display unique puzzles in table; refer to download/google sheet
 
             row = [
                 pubidtext,
-                r.Date,
-                r.Size,
-                r.Title,
-                r.Author,
-                r.Editor,
-                r.Copyright,
-                r.A1_D1,
+                r['Date'],
+                r['Size'],
+                r['Title'],
+                r['Author'],
+                r['Editor'],
+                r['Copyright'],
+                r['A1_D1'],
                 reused_clue_pct,
                 similar_text
               ]
