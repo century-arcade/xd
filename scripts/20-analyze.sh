@@ -9,8 +9,10 @@ rm -f $PUB/*
 
 # regenerate pub/puzzles.tsv
 # TODO: should populate puzzles table in sqlite instead
-scripts/21-clean-metadata.py -o $PUB/puzzles.tsv $GXD
+scripts/21b-clean-metadata.py $GXD
 
+# generate pubyears just for now TODO: to be replaced
+/scripts/22-pubyears.py
 # regenerate pub/pubyears.tsv
 scripts/25-analyze-puzzle.py -o $WWW/ -c $GXD $GXD
 scripts/26-clues-tsv.py -c $GXD -o $PUB/

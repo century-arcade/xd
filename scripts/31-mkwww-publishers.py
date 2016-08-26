@@ -210,14 +210,11 @@ def main():
 
         pub_grids[pubid][year] = c_grids
 
-        # Generate calendar 
+        # Generate calendar
         onepubyear_html = GridCalendar(c_grids).formatyear(year, 6) + "<br>"
-        
         # Generate html table sorted by 2nd element of row (date)
-        onepubyear_html += html.html_table(sorted([rows, key=lambda x: x['row'][1]), pubyear_header, "puzzle", "puzzles")
+        onepubyear_html += html.html_table(sorted(rows, key=lambda x: x['row'][1]), pubyear_header, "puzzle", "puzzles")
         outf.write_html("pub/%s%s/index.html" % (pubid, year), onepubyear_html, title="%s %s" % (pubid, year))
-      
-        
         cluepct = ""
         wordpct = ""
         if total_clues:
