@@ -278,7 +278,7 @@ def main():
 
     html_out.extend(year_header)
     html_out.append('</table>')
-    outf.write_html('index.html', "".join(html_out), "Published crosswords by year")
+    outf.write_html('pub/index.html', "".join(html_out), "Published crosswords by year")
 
 
 if __name__ == "__main__":
