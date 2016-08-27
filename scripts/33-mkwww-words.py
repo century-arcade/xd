@@ -3,7 +3,7 @@
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 from xdfile.html import th, td, mkhref, html_select_options
-from xdfile import corpus, clues, pubyear, metadatabase, utils
+from xdfile import corpus, clues, pubyear, metadatabase, utils, metasql
 
 from collections import Counter
 import random
@@ -13,8 +13,8 @@ g_puzzles_md = {}
 
 def xd_metadata_row(xdid):
     if not g_puzzles_md:
-        for r in metadatabase.xd_puzzles().values():
-            g_puzzles_md[r.xdid] = r
+        for r in metasql.select('SELECT * FROM puzzles;'):
+            g_puzzles_md[r['xdid']] = r
     return g_puzzles_md[xdid]
 
 
@@ -31,18 +31,17 @@ def mkwww_wordpage(answer):
     for ca in sorted(uses, reverse=True, key=lambda ca: ca.date):
         try:
             md = xd_metadata_row(ca.xdid())
-            h += td(md.xdid, ca.clue, md.Author, md.Copyright)
+            h += td(md['xdid'], ca.clue, md['Author'], md['Copyright'])
         except Exception as e:
-            h += td(ca.xdid(), ca.clue, str(e))
+            h += td(ca.xdid, ca.clue, str(e))
             if utils.get_args().debug:
                 raise
     h += '</table>'
 
 #    h += '<hr/>'
-#    h += '<div>Mutations: ' 
+#    h += '<div>Mutations: '
 #    h +='</div>'
-    
-    return h 
+    return h
 
 
 def main():
@@ -60,7 +59,6 @@ def main():
     h = '<li>%d different words</li>' % len(all_uses)
 
     h += '<h2>Most used words</h2>'
-    
     h += '<table class="clues most-used-words">'
     h += th("word", "# uses", "clues used with this answer")
 
@@ -78,5 +76,4 @@ def main():
         outf.write_html('pub/word/%s/index.html' % word.upper(), mkwww_wordpage(word), title=word)
 
     outf.write_html('pub/word/index.html', h, title="Words")
-        
 main()
