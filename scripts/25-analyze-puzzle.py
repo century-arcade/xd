@@ -36,7 +36,7 @@ def main():
                                key=lambda x: x[0], reverse=True)
 
         num_processed += 1
-        if num_processed >= args.limit:
+        if num_processed > int(args.limit):
             break
 
         if similar_grids:
