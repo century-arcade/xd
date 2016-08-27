@@ -1,6 +1,6 @@
 import boto3
 
-from xdfile.utils import log, info
+from xdfile.utils import log, info, debug, error
 
 def xd_send_email(destaddr, fromaddr='admin@xd.saul.pw', subject='', body=''):
     client = boto3.client('ses')
