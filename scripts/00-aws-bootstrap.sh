@@ -3,7 +3,8 @@
 set -x
 
 if [ -z "$HOME" ] ; then
-    HOME=/tmp
+    HOME=/home/src
+    mkdir -p $HOME
     export SSHHOME=$HOME
     # Hack for AWS where HOME not set
     if [[ $UID -eq '0' ]]; then
