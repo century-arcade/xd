@@ -5,7 +5,7 @@
 
 instance_id=$1
 aws ec2 start-instances --instance-ids ${instance_id}
-sleep 5
+sleep 10
 
 instance_status=$(aws ec2 describe-instances --instance-ids ${instance_id} | jq -r '.Reservations[0].Instances[0].State')
 
