@@ -234,7 +234,10 @@ def main():
     for pub in sorted_idx:
         # Process each pub in index
         pubobj = metadb.xd_publications().get(pub)
-        pubname = pubobj.PublicationName or pubobj.PublisherName or pub
+        if pubobj:
+            pubname = pubobj.PublicationName or pubobj.PublisherName
+        else:
+            pubname = pub
         html_out.append('<tr><td class="header">{}</td>'.format(html.mkhref(pubname, pub)))
         for year in sorted(allyears):
             py = pub + year
