@@ -27,6 +27,5 @@ ws ec2 delete-volume --volume-id {cur_root_volume_step2}
 cd /tmp
 Specify URL to correct GIT repo
 wget https://raw.githubusercontent.com/andjelx/xd/staging_ebs/scripts/00-aws-ebs-bootstrap.sh
-chmod +x 00-aws-ebs-bootstrap.sh
-sudo ./00-aws-ebs-bootstrap.sh
+chmod +x 00-aws-ebs-bootstrap.sh && sudo ./00-aws-ebs-bootstrap.sh
 

@@ -87,6 +87,9 @@ def pubyear_svg(rows, height=svg_h, width=svg_w, pubid='', year=''): #, nsusp, n
 
         num_xd = row["NumXd"]
 
+        if num_xd < 20:
+            continue
+
         #dup_length is length of dup/orange line
         num_dup = row['NumReprints'] + row['NumTouchups'] + row['NumRedone']
 
@@ -231,8 +234,8 @@ def main():
     for pub in sorted_idx:
         # Process each pub in index
         pubobj = metadb.xd_publications().get(pub)
-        pubname = pubobj.PublicationName if pubobj else ''
-        html_out.append('<tr><td class="header">{}</td>'.format(html.mkhref((pubname or pub), pub)))
+        pubname = pubobj.PublicationName or pubobj.PublisherName or pub
+        html_out.append('<tr><td class="header">{}</td>'.format(html.mkhref(pubname, pub)))
         for year in sorted(allyears):
             py = pub + year
             py_svg = None
@@ -273,7 +276,7 @@ def main():
 
             html_out.append('</td>')
         # Add publishers
-        html_out.append('<td class="header">{}</td>'.format(html.mkhref((pubname or pub), pub)))
+        html_out.append('<td class="header">{}</td>'.format(html.mkhref(pubname, pub)))
         html_out.append('</tr>')
 
     html_out.extend(year_header)
