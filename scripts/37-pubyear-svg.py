@@ -2,6 +2,7 @@
 
 import re
 import operator
+import datetime
 
 from datetime import date
 from xdfile import utils
@@ -349,10 +350,14 @@ def main():
                 """
 
         # Generate calendars
-        for year in range(int(decade+'0'), int(decade+'9')):
+        cur_year = datetime.datetime.now().year
+        from_year = int(decade + '0')
+        to_year = min(cur_year, from_year + 9)
+        for year in range(from_year, to_year+1):
             calendars_html += html.GridCalendar(c_grids).formatyear(year, 6) + "<br>"
 
-        outf.write_html('pub/{pub}{decade}x/index.html'.format(**locals()), legend + calendars_html + dups_table, "{pubname}, {decade}0-{decade}9".format(**locals()))
+        outf.write_html('pub/{pub}{decade}x/index.html'.format(**locals()), legend + calendars_html + dups_table, 
+                "{pubname}, {from_year}-{to_year}".format(**locals()))
         # Add publishers
         html_out.append('<td class="header">{}</td>'.format(html.mkhref(pubname, pub)))
         html_out.append('</tr>')
