@@ -172,6 +172,14 @@ def get_last_receipt_id():
    else:
         return 0
 
+def get_author(xdid):
+    cursor.execute('SELECT author FROM puzzles WHERE xdid=?', (xdid,))
+    res = cursor.fetchone()
+    if res:
+        return res[0]
+    else:
+        return None
+
 # for each row in fnDownloadZip:*.tsv, assigns ReceivedTime, and appends to receipts.tsv.  
 def xd_receipts_row(CaptureTime="", ReceivedTime="", ExternalSource="", InternalSource="", SourceFilename="", xdid=""):
     return COLSEP.join([

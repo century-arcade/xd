@@ -44,11 +44,11 @@ class GridCalendar(HTMLCalendar):
             cssclass = self.cssclasses[weekday]
             cdate = str(date(self.year, self.month, day))
             # If links in supplied link and not empty
-            if cdate in self.grids.keys():
+            if cdate in self.grids:
                 # Supply class or link via dict
-                if 'class' in self.grids[cdate].keys():
+                if 'class' in self.grids[cdate]:
                     cssclass += ' ' + self.grids[cdate]['class']
-                if 'link' in self.grids[cdate].keys():
+                if 'link' in self.grids[cdate]:
                     htitle = self.grids[cdate]['title'] if self.grids[cdate]['title'] else ''
                     body = mkhref(str(day), self.grids[cdate]['link'], htitle) 
                 else:

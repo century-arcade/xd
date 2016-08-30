@@ -183,6 +183,45 @@ def pubyear_svg(rows, height=svg_h, width=svg_w, pubid='', year=''): #, nsusp, n
     return ret
 
 
+def ret_classes(author1, author2, pct):
+    # Return classes depends on authors and similarity pct
+    ##deduce_similarity_type
+    classes = ''
+    if author1 and author2 and author1 != author2:# suspicious
+        if pct >= 50:
+            classes += ' suspxd'
+        elif pct >= 30:
+            classes += ' themexd'
+    else:
+        if pct == 100:
+            classes += ' white'
+        elif pct >= 50:
+            classes += ' dupxd'
+        elif pct >= 30:
+            classes += ' themexd'
+    return classes
+
+
+def gen_year_header(allyears):
+    # Generate HTML year header
+    # Table header with years \ decades
+    year_header = []
+    year_header.append('<tr><td>&nbsp;</td>')
+    for year in sorted(allyears):
+        if year[-1] == 's':
+            lead = ''
+            yclass = 'decade'
+        elif year[3] == '0':
+            lead = year[:2]
+            yclass = 'zero-year'
+        else:
+            lead = '&nbsp;'
+            yclass = 'ord-year'
+        year_header.append('<td class="{}">{}<br>{}</td>'.format(yclass, lead, year[2:]))
+    year_header.append('</tr>')
+    return year_header
+
+
 def main():
     p = utils.args_parser(desc="annotate puzzle clues with earliest date used in the corpus")
     p.add_argument('-a', '--all', default=False, help='analyze all puzzles, even those already in similar.tsv')
@@ -210,24 +249,11 @@ def main():
     allyears.extend([ str(y) for y in range(skip_decades['end'] + 10, date.today().year + 1) ])
 
     html_out = []
-    html_out.append(legend)
+    html_out.append(legend) # See definition above
     html_out.append('<table id="pubyearmap" cellspacing="0" cellpadding="0">')
 
     # Table header with years \ decades
-    year_header = []
-    year_header.append('<tr><td>&nbsp;</td>')
-    for year in sorted(allyears):
-        if year[-1] == 's':
-            lead = ''
-            yclass = 'decade'
-        elif year[3] == '0':
-            lead = year[:2]
-            yclass = 'zero-year'
-        else:
-            lead = '&nbsp;'
-            yclass = 'ord-year'
-        year_header.append('<td class="{}">{}<br>{}</td>'.format(yclass, lead, year[2:]))
-    year_header.append('</tr>')
+    year_header = gen_year_header(allyears)
     html_out.extend(year_header)
 
     sorted_idx = OrderedDict(sorted(pubyears_idx.items(), key=lambda r: min(r[1])))
@@ -278,6 +304,55 @@ def main():
                 html_out.append(pys.format(w=width,h=svg_h, title='', classes='notexists', body=''))
 
             html_out.append('</td>')
+
+        # write out /pub/nyt199x
+        calendars_html = ''
+        dups_table = ''
+        decade = year[:3]
+        c_grids = {}
+
+        utils.info('Meta for pub:{pub} decade:{decade}0'.format(**locals()))
+        for row in metadb.select("SELECT * FROM similar_grids WHERE xdid LIKE ? ORDER BY xdid", (pub+'%',)):
+            m = re.match(r'^\w+(\d{4}-\d{2}-\d{2})', row['xdid'])
+            if m:
+                dt = m.group(1)
+            else:
+                continue
+            # dt = row["date"] # without - as GridCalendar needs; or fix GC
+            if dt not in c_grids:
+                c_grids[dt] = {
+                    'link': '/pub/' + row['xdid'],
+                    'title': '',
+                    'class': ''
+                }
+
+            matchxdid = row['xdidMatch']
+            aut1 = metadb.get_author(row['xdid'])
+            aut2 = metadb.get_author(matchxdid)
+            if aut1 is None or aut2 is None:
+                continue
+
+            pct = row['GridMatchPct']
+            similargrids = '(%s%%) %s [%s]<br/>' % (pct, aut1, matchxdid)
+            c_grids[dt]["title"] += similargrids
+
+            ##deduce_similarity_type
+            c_grids[dt]["class"] = ret_classes(aut1, aut2, pct)
+            if c_grids[dt]["class"]:
+                pass
+                """
+                @andrey output row with SimilarGrids appended as final column
+                we need to only output one row for each xdid but there are multiple matches in similar for some xdids
+                so this should go outside the loop.
+                'SELECT * FROM puzzles WHERE xdid=%s' % xdid
+                dups_table += html.html_row()
+                """
+
+        # Generate calendars
+        for year in range(int(decade+'0'), int(decade+'9')):
+            calendars_html += html.GridCalendar(c_grids).formatyear(year, 6) + "<br>"
+
+        outf.write_html('pub/{pub}{decade}x/index.html'.format(**locals()), legend + calendars_html + dups_table, "{pubname}, {decade}0-{decade}9".format(**locals()))
         # Add publishers
         html_out.append('<td class="header">{}</td>'.format(html.mkhref(pubname, pub)))
         html_out.append('</tr>')
