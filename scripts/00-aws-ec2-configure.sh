@@ -83,7 +83,7 @@ if [ -n "$XDCONFIG" ]; then
       --min-size 0 \
       --max-size 0 \
       --desired-capacity 0 \
-      --recurrence "55 01 * * *"
+      --recurrence "55 02 * * *"
 
 else
     echo "Supply config file: $0 <config>"
