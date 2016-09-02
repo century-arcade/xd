@@ -34,6 +34,7 @@ else
     echo "SUMMARY: Commiting into master"
     git add .
     git commit -m "incoming for $TODAY"
+    ssh-agent bash -c "ssh-add ${SSHHOME}/.ssh/gxd_rsa; git push"
 fi
 
 

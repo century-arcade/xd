@@ -3,18 +3,19 @@
 import json
 from collections import defaultdict
 
-from xdfile import utils, metadatabase as metadb
+from xdfile import utils, metadatabase as metadb, metasql
 from xdfile import year_from_date, dow_from_date
 import xdfile
 
 
 def main():
     args = utils.get_args('generate pub-years data')
-
-    pubyears = [ (utils.parse_pubid(r.xdid), year_from_date(r.Date), dow_from_date(r.Date)) 
-					for r in metadb.xd_puzzles().values() ]
     
-    weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ] 
+    puzzles = metasql.select('SELECT * FROM puzzles;')
+
+    pubyears = [ (utils.parse_pubid(r['xdid']), year_from_date(r['Date']), dow_from_date(r['Date']))
+					for r in puzzles]
+    weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
     pubs = defaultdict(dict)
     for pubid, year, dow  in pubyears:
         if pubid not in pubs or int(year) not in pubs[pubid]:
@@ -33,7 +34,7 @@ def main():
             for d in weekdays:
                 dow_list.append(str(years_dow[y][d]))
 
-            metadb.append_row('pub/pubyears.tsv', "pubid year total " + " ".join(weekdays), 
+            metadb.append_row('pub/pubyears.tsv', "pubid year total " + " ".join(weekdays),
                     [ pubid, y, sum(years_dow[y].values()), "\t".join(dow_list) ])
 
 if __name__ == "__main__":

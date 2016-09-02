@@ -17,4 +17,3 @@ aws s3 sync --region $REGION $WWW ${S3WWW}/ --acl public-read
 ALLLOGS=$WWW/log/$TODAY-logs.txt
 scripts/49-cat-logs.py -o $ALLLOGS $PUB $TMP
 aws s3 cp --region $REGION $ALLLOGS ${S3WWW}/logs/ --acl public-read
-

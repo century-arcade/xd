@@ -16,9 +16,11 @@ from xdfile import utils, metadatabase
 def main():
     p = utils.args_parser(desc="annotate puzzle clues with earliest date used in the corpus")
     p.add_argument('-a', '--all', default=False, help='analyze all puzzles, even those already in similar.tsv')
+    p.add_argument('-l', '--limit', default=100, help='limit amount of puzzles to be analyzed [default=100]')
     args = get_args(parser=p)
     outf = open_output()
 
+    num_processed = 0
     prev_similar = parse_tsv('gxd/similar.tsv', "similar")
     for fn, contents in find_files(*args.inputs, ext=".xd"):
         progress(fn)
@@ -32,6 +34,10 @@ def main():
         """
         similar_grids = sorted(find_similar_to(mainxd, corpus(), min_pct=0.20),
                                key=lambda x: x[0], reverse=True)
+
+        num_processed += 1
+        if num_processed > int(args.limit):
+            break
 
         if similar_grids:
             info("similar: " + " ".join(("%s=%s" % (xd2.xdid(), pct))

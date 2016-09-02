@@ -2,9 +2,12 @@
 
 set -x
 
+WORKDIR=/tmp
+export SSHHOME=$HOME
+
 if [ -z "$HOME" ] ; then
-    HOME=/tmp
     export SSHHOME=$HOME
+    HOME=/tmp
     # Hack for AWS where HOME not set
     if [[ $UID -eq '0' ]]; then
         export SSHHOME=/root
@@ -23,15 +26,15 @@ export PYTHONPATH=.
 exec > >(tee -i ${LOGFILE}) 2>&1
 echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 
-export DEBIAN_FRONTEND=noninteractive
-sudo apt-get update && \
-    sudo apt-get install --yes language-pack-en-base zip awscli python3-lxml python3-pip git markdown python3-boto3 sqlite3 && \
-    sudo pip3 install cssselect botocore
+# export DEBIAN_FRONTEND=noninteractive
+# sudo apt-get update && \
+#    sudo apt-get install --yes language-pack-en-base zip awscli python3-lxml python3-pip git markdown python3-boto3 sqlite3 && \
+#    sudo pip3 install cssselect botocore
 
-cd $HOME
+cd $WORKDIR
 # Get config file from AWS
-aws s3 cp --region=us-west-2 s3://xd-private/etc/config $HOME/config
-source $HOME/config
+aws s3 cp --region=us-west-2 s3://xd-private/etc/config $WORKDIR/config
+source $WORKDIR/config
 
 echo "Clone main project repo and switch to branch ${BRANCH}"
 git clone ${XD_GIT}

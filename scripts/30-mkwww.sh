@@ -15,6 +15,9 @@ cp $PUB/*.tsv $WWW/pub/
 echo -en "${GREEN}Generate /pub/[<pub>][<year>]${NORMAL}\n"
 scripts/31-mkwww-publishers.py $CORPUS -o $WWW/
 
+echo -en "${GREEN}Generate /pub/ index${NORMAL}\n"
+scripts/37-pubyear-svg.py -o $WWW/
+
 echo -en "${GREEN}Generate /pub/word/<ANSWER>${NORMAL}\n"
 scripts/33-mkwww-words.py $CORPUS -o $WWW/
 
