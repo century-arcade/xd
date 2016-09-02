@@ -153,6 +153,14 @@ def select(query, *args):
     cursor.execute(query, *args)
     return cursor.fetchall()
 
+
+def select_one(query, *args):
+    # Execute SQL statement w/o commit and return one item 
+    cursor.execute(query, *args)
+    res = cursor.fetchone()
+    return res if res else None
+
+
 def execute(query, *args):
     # Execute SQL statement with commit
     cursor.execute(query, *args)
@@ -166,19 +174,12 @@ def check_already_recieved(extsrc, srcfn):
 
 
 def get_last_receipt_id():
-   res = cursor.execute('SELECT MAX(ReceiptID) FROM %s' % METADB_RECEIPTS) 
-   if res:
-        return res.fetchone()[0]
-   else:
-        return 0
+    res = select_one('SELECT MAX(ReceiptID) FROM %s' % METADB_RECEIPTS) 
+    return res[0] if res else 0
 
 def get_author(xdid):
-    cursor.execute('SELECT author FROM puzzles WHERE xdid=?', (xdid,))
-    res = cursor.fetchone()
-    if res:
-        return res[0]
-    else:
-        return None
+    res = select_one('SELECT author FROM puzzles WHERE xdid=?', (xdid,))
+    return res[0] if res else None
 
 # for each row in fnDownloadZip:*.tsv, assigns ReceivedTime, and appends to receipts.tsv.  
 def xd_receipts_row(CaptureTime="", ReceivedTime="", ExternalSource="", InternalSource="", SourceFilename="", xdid=""):

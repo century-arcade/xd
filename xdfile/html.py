@@ -98,8 +98,33 @@ class GridCalendar(HTMLCalendar):
         a('</table>')
         return ''.join(v)
 
-def html_header(**kwargs):
-    kwargs['date'] = time.strftime('%F')
+navbar_items = [
+      ('Home','/'),
+      ('Data', '/data'),
+      ('Most Popular', [
+              ('Words','/words'),
+              ('Clues','/clues'),
+      ]),
+      ('About', '/about'),
+]
+
+#todo: output navbar_items like in https://codepen.io/philhoyt/pen/ujHzd
+def navbar_helper(item, current_url):
+    r = '<ul>'
+    for name, dest in item:
+        if dest == current_url:
+            r += '<li class="current-menu-item">'
+        else:
+            r += '<li>'
+        if isinstance(dest, list):
+            r += navbar_helper(dest, current_url)
+        else:
+            r += '<a href="%s">%s</a>' % (dest, name)
+        r += '</li>'
+    r += '</ul>'
+    return r
+
+def html_header(current_url=None, **kwargs):
     npuzzles = len(xdfile.g_corpus)
     kwargs['npuzzles'] = npuzzles
 
@@ -119,20 +144,32 @@ def html_header(**kwargs):
 </head>
 
 <body>
-<i>Generated on {date}""".format(**kwargs)
+""".format(**kwargs)
+
+
+    h += '<nav id="primary_nav_wrap">'
+    h += navbar_helper(navbar_items, current_url)
+    h += '</nav>'
+
+    h += '<hr style="clear:both;"/>'
+    h += '<h2>{title}</h2>'.format(**kwargs)
     if npuzzles:
         h += ' from a corpus of {npuzzles} puzzles'.format(**kwargs)
-    h += '.</i><h1>{title}</h1>'.format(**kwargs)
+
     return h
 
-html_footer = """
-  <hr style="clear:both;"/>
-  <!--a href="http://saul.pw"><small>saul.pw</small></a-->
-  <a href="mailto:xd@saul.pw"><small>xd@saul.pw</small></a>
 
+
+def html_footer():
+    dt = time.strftime('%F')
+    return """
+  <hr style="clear:both;"/>
+<small><i>Generated {date}</i></small>
+<br>
+  <a href="mailto:xd@saul.pw"><small>xd@saul.pw</small></a>
 </body>
 </html>
-"""
+""".format(date=dt)
 
 
 def redirect_page(url):
@@ -267,10 +304,16 @@ def html_select_options(options, strmaker=str, force_top=""):
 
 
 def table_row(row, keys, rowclass="row", tag="td", tag_params=None):
+    # row - list or dict
+    # keys - assign as class for each itterable from row 
+    # rowclass - class(es) for tr (row)
+    # tag - tag to be used for cells in row - default: td
+    # tag_params - 
     if isinstance(row, dict):
         row = [row[k] for k in keys]
 
     out = mktag('tr', rowclass, tag_params=tag_params)
+
     for k, v in zip(keys, row):
         try:
             v = str(v or "")

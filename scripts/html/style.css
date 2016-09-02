@@ -1,3 +1,7 @@
+table.legend {
+    float: left;
+}
+
 #pubyearmap td {
     border-right: 1px solid grey;
     border-bottom: 1px solid grey;
@@ -41,6 +45,11 @@
     background:darkgray;
 }
 
+/* Highlight row with link */
+tr.hrefrow:hover {
+    cursor: pointer;
+}
+
 th {
     font-weight: bold;
     font-size: 12px;
@@ -48,22 +57,7 @@ th {
 
 .year_widget {
     fill:#a8a8a8;
-}
-
-.year_widget {
     overflow:visible;
-}
-
-.year_widget rect.red {
-    fill:red;
-}
-
-.year_widget rect.lightblue {
-    fill:lightblue;
-}
-
-.year_widget rect.white {
-    fill:white;
 }
 
 .similar10 {
@@ -76,34 +70,41 @@ th {
 }
 
 .suspxd {
-    fill:darkred;
-    background-color: darkred;
+    text-color: black;
+    fill:#ff4136;
+    background-color: #ff4136;
 }
 
 .dupxd {
-    fill:yellow;
-    background-color: yellow;
+    fill:#ffdc00;
+    background-color: #ffdc00;
 }
 
 .themexd {
-    fill:orange;
-    background-color: orange;
+    fill:#ff851b;
+    background-color: #ff851b;
 }
 
 .privxd {
-    fill:blue;
-    background-color: blue;
+    fill:#7fdbff;
+    background-color: #7fdbff;
+    text-color: black;
 }
 
 .pubxd {
-    fill:green;
-    background-color: green;
+    fill:#2ecc40;
+    background-color: #2ecc40;
 }
 
 .year_widget text {
     fill: black;
     font: 10px sans-serif;
     text-anchor: end;
+}
+
+/* actual year */
+table.year th {
+    font-size: 16px;
 }
 
 table.year td {
@@ -188,11 +189,7 @@ br.break {
         .diff_sub {background-color:#ffaaaa}
 
 span.match {
-    background-color: lightgreen;
-}
-
-span.diff {
-/*    background-color: orange; */
+    background-color: #2ecc40;
 }
 
 td.clue {
@@ -571,3 +568,83 @@ tr.puzzlehl:hover {
     font-size: 80px;
 }
 
+/* nav from https://codepen.io/philhoyt/pen/ujHzd */
+
+#primary_nav_wrap
+{
+	margin-top:15px
+}
+
+#primary_nav_wrap ul
+{
+	list-style:none;
+	position:relative;
+	float:left;
+	margin:0;
+	padding:0
+}
+
+#primary_nav_wrap ul a
+{
+	display:block;
+	color:#333;
+	text-decoration:none;
+	font-weight:700;
+	font-size:12px;
+	line-height:32px;
+	padding:0 15px;
+	font-family:"HelveticaNeue","Helvetica Neue",Helvetica,Arial,sans-serif
+}
+
+#primary_nav_wrap ul li
+{
+	position:relative;
+	float:left;
+	margin:0;
+	padding:0
+}
+
+#primary_nav_wrap ul li.current-menu-item
+{
+	background:#ddd
+}
+
+#primary_nav_wrap ul li:hover
+{
+	background:#f6f6f6
+}
+
+#primary_nav_wrap ul ul
+{
+	display:none;
+	position:absolute;
+	top:100%;
+	left:0;
+	background:#fff;
+	padding:0
+}
+
+#primary_nav_wrap ul ul li
+{
+	float:none;
+	width:200px
+}
+
+#primary_nav_wrap ul ul a
+{
+	line-height:120%;
+	padding:10px 15px
+}
+
+#primary_nav_wrap ul ul ul
+{
+	top:0;
+	left:100%
+}
+
+#primary_nav_wrap ul li:hover > ul
+{
+	display:block
+}
+
+/* env nav */
