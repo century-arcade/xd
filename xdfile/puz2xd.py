@@ -24,11 +24,12 @@ def decode(s):
     s = s.replace('\xc2\x92', "'")
     s = s.replace('\xc3\x82',"")
     s = s.replace('\xc3\xa8',"è") # +A5. Crème de la crème ~ ELITE
+    s = s.replace('\xe0','à') # -A49. Do the seemingly impossible, à la Jesus ~ WALKONWATER
     s = s.replace('\xc2', " ") # Change rest ot 0xC2 to 0x20
     s = s.replace('\xa0'," ")
-    s = s.replace('\xe0'," ")
     s = s.replace('\x93', '"')
     s = s.replace('\x94', '"')
+    s = s.replace('\x97', "—")
     s = s.replace('\x85', '...')
     s = s.replace('\x86', '†')
     s = s.replace('\xd3','"')

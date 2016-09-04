@@ -119,16 +119,17 @@ def main():
                 aut2 = xd2.get_header('Author')
                 pct = int(r['GridMatchPct'])
                 if dt2 < dt1:  # only capture the later one
-                    if aut1 == aut2:
+                    ##deduce_similarity_type
+                    if aut1 and aut2 and aut1 != aut2:# suspicious
+                        if pct >= 50:
+                            copies += 1
+                        elif pct >= 30:
+                            themecopies += 1
+                    else: 
                         if pct == 100:
                             reprints += 1
                         elif pct >= 50:
                             touchups += 1
-                        elif pct >= 30:
-                            themecopies += 1
-                    else: # suspicious
-                        if pct >= 50:
-                            copies += 1
                         elif pct >= 30:
                             themecopies += 1
 

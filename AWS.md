@@ -20,3 +20,12 @@ http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-expand-volume.html#recogn
 
 7) If all ok, delete old root volume
 ws ec2 delete-volume --volume-id {cur_root_volume_step2}
+
+
+## Start AWS ESB instance from bootstrap script
+
+cd /tmp
+Specify URL to correct GIT repo
+wget https://raw.githubusercontent.com/andjelx/xd/staging_ebs/scripts/00-aws-ebs-bootstrap.sh
+chmod +x 00-aws-ebs-bootstrap.sh && sudo ./00-aws-ebs-bootstrap.sh
+

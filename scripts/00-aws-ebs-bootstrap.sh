@@ -33,7 +33,7 @@ echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 
 cd $WORKDIR
 # Get config file from AWS
-aws s3 cp --region=us-west-2 s3://xd-private/etc/config $WORKDIR/config
+aws s3 cp --region=us-west-2 s3://xd-private/etc/ebs-config $WORKDIR/config
 source $WORKDIR/config
 
 echo "Clone main project repo and switch to branch ${BRANCH}"

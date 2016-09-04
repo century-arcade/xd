@@ -34,7 +34,7 @@ $aws s3 cp --region $REGION $WWWZIP ${S3PRIV}/sources/
 $python scripts/18-convert2xd.py -o $GXD/ $EMAILZIP $WWWZIP
 
 # updates receipts.tsv with xdid according to current rules
-$python scripts/19-reshelve.py
+# $python scripts/19-reshelve.py
 
 # regenerate receipts.tsv
 $sh scripts/19b-receipts-tsv.sh
