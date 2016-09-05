@@ -149,6 +149,7 @@ def main():
                         except Exception as e:
                             error("%s could not convert [%s]: %s" % (parsefunc.__name__, fn, str(e)))
                             rejected += "[%s] %s  " % (parsefunc.__name__, str(e))
+                            # raise
 
                     if rejected:
                         error("could not convert: %s" % rejected)
