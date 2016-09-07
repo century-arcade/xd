@@ -7,7 +7,8 @@ import functools
 import re
 import datetime
 
-from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid, log, error
+from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
+from .utils import log, error, warn
 
 g_corpus = []  # list of xdfile
 g_all_clues = []  # list of ClueAnswer
@@ -151,8 +152,8 @@ class xdfile:
 
         if not clues:
             return None
-
-        assert len(clues) == 1, Exception("multiple clues for %s: %s" % (target, " | ".join(clues)))
+        if clues and len(clues) > 1:
+            warn("multiple clues for %s: %s" % (target, " | ".join(clues)))
         return clues[0]
 
     def get_clue(self, clueid):

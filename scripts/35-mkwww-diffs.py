@@ -126,8 +126,10 @@ def main():
             for pos, clue, answer in xd.iterclues():
                 diff_h = mktag('div','fullgrid') + '%s.&nbsp;' %pos
                 # Sometimes can return clue == None
-                sm = difflib.SequenceMatcher(lambda x: x == ' ', mainxd.get_clue(pos) or '', clue)
-                if sm.ratio() < 0.50:
+                mainclue = mainxd.get_clue_for_answer(answer)
+                sm = difflib.SequenceMatcher(lambda x: x == ' ', mainclue or '', clue)
+                debug('MCLUE: %s [%s]' % (mainclue, sm.ratio()))
+                if mainclue is None or sm.ratio() < 0.40:
                     diff_h += clue
                 else:
                     # Compare based on op codes
@@ -137,7 +139,9 @@ def main():
                             diff_h += '<span class="match">%s</span>' % clue[b1:b2]
                         else:
                             diff_h += '<span class="diff">%s</span>' % clue[b1:b2]
-                diff_h += mktag('span', tagclass=(answer == mainxd.get_answer(pos)) and 'match' or 'diff', inner='&nbsp;~&nbsp;' + answer.upper())
+
+                tagclass = 'match' if mainclue or answer == mainxd.get_answer(pos) else 'diff'
+                diff_h += mktag('span', tagclass=tagclass, inner='&nbsp;~&nbsp;' + answer.upper())
                 diff_h += mktag('/div')
                 diff_l.append(diff_h)
             html_clues[xdid] = diff_l
