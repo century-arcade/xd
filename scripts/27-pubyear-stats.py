@@ -120,6 +120,7 @@ def main():
                 xd1 = xdfile.get_xd(r['xdid'])
                 xd2 = xdfile.get_xd(r['xdidMatch'])
                 if xd1 is None or xd2 is None:
+                    info("skipping %s %s" % (xd1, xd2))
                     continue
                 # debug("XD1: %s XD2: %s" % (xd1, xd2))
                 dt1 = xd1.get_header('Date')
@@ -130,7 +131,6 @@ def main():
                 if dt2 < dt1:  # only capture the later one
                     ##deduce_similarity_type
                     if diff_authors(aut1, aut2): # suspicious
-                        if aut
                         if pct >= 50:
                             copies += 1
                         elif pct >= 30:
