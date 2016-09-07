@@ -10,6 +10,15 @@ from xdfile import year_from_date, dow_from_date
 import xdfile
 
 
+def diff_authors(a1, a2):
+    if not a1 or not a2:
+        return False # inconclusive
+
+    a1 = a1.lower()
+    a2 = a2.lower()
+    if a1 in a2 or a2 in a1:
+        return False
+
 
 def main():
     args = utils.get_args('generate pub-years data')
@@ -46,7 +55,7 @@ def main():
             if dow: # Might be empty date or only a year
                 byweekday[dow].append(xd)
 
-        for r in metasql.select("SELECT * FROM similar_grids WHERE xdid LIKE '{}%' AND GridMatchPct > 25".format(pubid + str(year))):
+        for r in metasql.select("SELECT * FROM similar_grids WHERE xdid LIKE '{}%' AND GridMatchPct >= 25".format(pubid + str(year))):
             xd = xdfile.get_xd(r['xdid'])
             if xd:
                 dt = xd.get_header('Date')
@@ -111,6 +120,7 @@ def main():
                 xd1 = xdfile.get_xd(r['xdid'])
                 xd2 = xdfile.get_xd(r['xdidMatch'])
                 if xd1 is None or xd2 is None:
+                    info("skipping %s %s" % (xd1, xd2))
                     continue
                 # debug("XD1: %s XD2: %s" % (xd1, xd2))
                 dt1 = xd1.get_header('Date')
@@ -120,12 +130,12 @@ def main():
                 pct = int(r['GridMatchPct'])
                 if dt2 < dt1:  # only capture the later one
                     ##deduce_similarity_type
-                    if aut1 and aut2 and aut1 != aut2:# suspicious
+                    if diff_authors(aut1, aut2): # suspicious
                         if pct >= 50:
                             copies += 1
                         elif pct >= 30:
                             themecopies += 1
-                    else: 
+                    else:
                         if pct == 100:
                             reprints += 1
                         elif pct >= 50:

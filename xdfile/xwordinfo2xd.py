@@ -6,7 +6,7 @@
 import re
 
 from lxml import html
-
+from xdfile.utils import info, debug, error
 import xdfile
 
 SPLIT_REBUS_TITLES = "CRYPTOCROSSWORD TIC-TAC-TOE".split()
@@ -48,7 +48,7 @@ def parse_xwordinfo(content, filename):
                         # 'DASH': '-',
                         # 'DOT': '●'
                         }
-    rsh = '♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321'
+    rsh = 'zyxwvutsrqponmlkjihgfedcba♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠Фθиλπφя+&%$@?*0987654321'
     REBUS_SHORT_HANDS = list(rsh)
 
     content = content.replace("<b>", "{*")
@@ -61,6 +61,9 @@ def parse_xwordinfo(content, filename):
     content = content.replace("</u>", "_}")
     content = content.replace("<strike>", "{-")
     content = content.replace("</strike>", "-}")
+    content = content.replace("’", "'")
+    content = content.replace('“', '"')
+    # content = content.replace('–', '-')
 
     if "CPHContent_" in content:
         xwiprefix = '#CPHContent_'
@@ -68,6 +71,8 @@ def parse_xwordinfo(content, filename):
         xwiprefix = '#'
 
     root = html.fromstring(content)
+
+    ## debug("ROOT: %s" % root)
 
     special_type = ''
     rebus = {}
@@ -87,8 +92,9 @@ def parse_xwordinfo(content, filename):
     # editor = root.cssselect(xwiprefix + 'EditorLabel')[0].text.strip()
     try:
         xd.notes = stringify_children(root.cssselect(xwiprefix + 'NotepadDiv')[0])
-    except:
-        pass
+    except Exception as e:
+        xd.notes = ""
+        debug('Exception %s' % e)
 
     xd.set_header("Title", '%s%s' % (title, subtitle))
     xd.set_header("Author", root.cssselect(xwiprefix + 'AuthorLabel')[0].text.strip())

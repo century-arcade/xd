@@ -188,7 +188,7 @@ def ret_classes(author1, author2, pct):
     # Return classes depends on authors and similarity pct
     ##deduce_similarity_type
     classes = ''
-    if author1 and author2 and author1 != author2:# suspicious
+    if author1 and author2 and author1.lower() != author2.lower():# suspicious
         if pct >= 50:
             classes += ' suspxd'
         elif pct >= 20:
@@ -390,7 +390,7 @@ def main():
                         puzmd['Editor'],
                         puzmd['Copyright'],
                         puzmd['A1_D1'],
-                        d["title"].replace("<br/>", "\\n")
+                        d["title"].replace("<br/>", "\n") # is this actually valid in an attribute?
                       ]
                     dups_table.append(row_dict)
 
