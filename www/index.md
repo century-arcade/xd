@@ -41,14 +41,9 @@ Register your crosswords with the .xd project and let us add them to the corpus!
 * Barry Haldiman, for collecting so diligently;
 * David Steinberg and the PSPP, for inspiring me;
 * Jim Horne, Jeff Chen, and xwordinfo.com, for frustrating me;
-* Kevin McCann and cruciverb-l, for wonderful discussions on cruciverbalism;
+* Kevin McCann and cruciverb.com, for nuts and bolts discussions on crossword creation;
 * Timothy Parker and Ollie Roeder, for providing some drama;
-* and of course all the constructors, editors, and publishers, for producing such great puzzles in the first place!
-
-### Future Ideas
-
-* separate puzzles from periodicals vs books
-* organize litzing efforts for other crosswords
-* create web process for merging crossword fixes
-
+* Joseph Gratz, for his generous legal counsel;
+* all the constructors, editors, and publishers, who produced such great puzzles in the first place
+* and of course my friends and family, for supporting me in this crazy project.
 

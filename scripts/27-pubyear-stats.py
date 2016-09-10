@@ -5,7 +5,7 @@ import re
 from collections import defaultdict, Counter
 
 from xdfile.utils import error, debug, info
-from xdfile import utils, metasql, metadatabase as metadb
+from xdfile import utils, metadatabase as metadb
 from xdfile import year_from_date, dow_from_date
 import xdfile
 
@@ -34,7 +34,7 @@ def main():
         pubyears[puby].append(xd)
 
     if pubyears:
-        metasql.execute("DELETE FROM stats;")
+        metadb.delete_stats()
 
     for puby, xdlist in sorted(pubyears.items()):
         pubid, year = puby
@@ -52,17 +52,19 @@ def main():
 
         for xd in xdlist:
             dow = dow_from_date(xd.get_header('Date'))
-            if dow: # Might be empty date or only a year
+            if dow:  # Might be empty date or only a year
                 byweekday[dow].append(xd)
 
-        for r in metasql.select("SELECT * FROM similar_grids WHERE xdid LIKE '{}%' AND GridMatchPct >= 25".format(pubid + str(year))):
-            xd = xdfile.get_xd(r['xdid'])
+        for r in metadb.xd_similar(pubid + str(year)):
+            if r.match_pct < 25:
+                continue
+            xd = xdfile.get_xd(r.xdid)
+
             if xd:
                 dt = xd.get_header('Date')
                 if dt:
-                    assert dt
                     dow = dow_from_date(dt)
-                    if dow: # Might be empty date or only a year
+                    if dow:  # Might be empty date or only a year
                         byweekday_similar[dow].append(r)
                 else:
                     debug("Date not set for: %s" % xd)
@@ -76,10 +78,10 @@ def main():
             nexisting = 0
 
             nxd = len(byweekday[weekday])
-            public_xdids = [] # Empty for now
+            public_xdids = []  # Empty for now
             for xd in byweekday[weekday]:
                 xdid = xd.xdid()
-                if  (year.isdigit() and int(year) <= 1965) or xdid in public_xdids:
+                if (year.isdigit() and int(year) <= 1965) or xdid in public_xdids:
                     npublic += 1
 
                 editor = xd.get_header('Editor').strip()
@@ -98,7 +100,7 @@ def main():
             def process_counter(count, comp_value):
                 # Process counter comparing with comp_value
                 if count:
-                    item, num  = count.most_common(1)[0]
+                    item, num = count.most_common(1)[0]
                     if num != comp_value:
                         item += " (%s)" % num
                 else:
@@ -116,18 +118,17 @@ def main():
             copies = 0
             themecopies = 0
             for r in byweekday_similar[weekday]:
-                # debug("Xdid %s Xdidmatch %s" % (r['xdid'], r['xdidMatch']))
-                xd1 = xdfile.get_xd(r['xdid'])
-                xd2 = xdfile.get_xd(r['xdidMatch'])
+                xd1 = xdfile.get_xd(r.xdid)
+                xd2 = xdfile.get_xd(r.match_xdid)
                 if xd1 is None or xd2 is None:
                     info("skipping %s %s" % (xd1, xd2))
                     continue
-                # debug("XD1: %s XD2: %s" % (xd1, xd2))
+
                 dt1 = xd1.get_header('Date')
                 dt2 = xd2.get_header('Date')
-                aut1 = xd1.get_header('Author')
-                aut2 = xd2.get_header('Author')
-                pct = int(r['GridMatchPct'])
+                aut1 = xd1.get_header('Author').lower()
+                aut2 = xd2.get_header('Author').lower()
+                pct = int(r.match_pct)
                 if dt2 < dt1:  # only capture the later one
                     ##deduce_similarity_type
                     if diff_authors(aut1, aut2): # suspicious
@@ -143,12 +144,12 @@ def main():
                         elif pct >= 30:
                             themecopies += 1
 
-            metasql.execute("INSERT INTO stats VALUES (?,?,?, ?,?,?, ?, ?,?,?, ?,?, ?,?)",
-                (pubid, year, weekday,
-                mainformat, maineditor, maincopyright,
-                nexisting, nxd, npublic,
-                reprints, touchups, redones,
-                copies, themecopies))
+            metadb.append_row("pub/stats",
+                                  (pubid, year, weekday,
+                                      mainformat, maineditor, maincopyright,
+                                      nexisting, nxd, npublic,
+                                      reprints, touchups, redones,
+                                      copies, themecopies))
 
 
 if __name__ == "__main__":

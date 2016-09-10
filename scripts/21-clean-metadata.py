@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-# Usage: $0 [-o <puzzles.tsv>] <input>
+# Usage: $0 <inputs>
 #
-#   Generates puzzles.tsv with cleaned metadata for each .xd in <input>.
+#   Generates puzzles table with cleaned metadata for each .xd in <inputs>.
 #
 
 from xdfile import utils, metadatabase as metadb
@@ -143,7 +143,6 @@ def clean_headers(xd):
 
     if dt:
         xd.set_header("Date", dt)
-
 
 
 def main():

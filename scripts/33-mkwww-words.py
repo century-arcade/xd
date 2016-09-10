@@ -3,19 +3,10 @@
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 from xdfile.html import th, td, mkhref, html_select_options
-from xdfile import corpus, clues, pubyear, metadatabase, utils, metasql
+from xdfile import corpus, clues, pubyear, metadatabase as metadb, utils
 
 from collections import Counter
 import random
-
-
-g_puzzles_md = {}
-
-def xd_metadata_row(xdid):
-    if not g_puzzles_md:
-        for r in metasql.select('SELECT * FROM puzzles;'):
-            g_puzzles_md[r['xdid']] = r
-    return g_puzzles_md[xdid]
 
 
 def mkwww_wordpage(answer):
@@ -30,8 +21,8 @@ def mkwww_wordpage(answer):
     h += '<table>'
     for ca in sorted(uses, reverse=True, key=lambda ca: ca.date):
         try:
-            md = xd_metadata_row(ca.xdid())
-            h += td(md['xdid'], ca.clue, md['Author'], md['Copyright'])
+            md = metadb.xd_puzzle(ca.xdid())
+            h += td(md.xdid, ca.clue, md.Author, md.Copyright)
         except Exception as e:
             h += td(ca.xdid, ca.clue, str(e))
             if utils.get_args().debug:
@@ -73,7 +64,9 @@ def main():
     h += '</table>'
 
     for word in wordpages_to_make:
-        outf.write_html('pub/word/%s/index.html' % word.upper(), mkwww_wordpage(word), title=word)
+        outf.write_html('word/%s/index.html' % word.upper(), mkwww_wordpage(word), title=word)
 
-    outf.write_html('pub/word/index.html', h, title="Words")
-main()
+    outf.write_html('word/index.html', h, title="Words")
+
+if __name__ == '__main__':
+    main()

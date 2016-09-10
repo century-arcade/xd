@@ -18,7 +18,6 @@ from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, stri
 from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output, progress
 
 from xdfile import metadatabase as metadb
-from xdfile import metasql as metasql
 
 from xdfile.ccxml2xd import parse_ccxml
 from xdfile.uxml2xd import parse_uxml
@@ -93,7 +92,7 @@ def main():
                 ReceivedTime = iso8601(time.time())
                 InternalSource = args.intsrc or parse_pathname(input_source).filename
 
-                already_received = metasql.check_already_recieved(ExternalSource, SourceFilename)
+                already_received = metadb.check_already_received(ExternalSource, SourceFilename)
                 xdid = ""
                 prev_xdid = ""  # unshelved by default
 
@@ -165,10 +164,10 @@ def main():
                             InternalSource,
                             SourceFilename,
                             xdid
-                            ])
+                        ])
 
-            if receipts:
-                metasql.append_receipts(receipts)
+            for r in receipts:
+                metadb.append_row('gxd/receipts', r)
 
         except Exception as e:
             error(str(e))

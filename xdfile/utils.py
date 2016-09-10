@@ -319,6 +319,24 @@ def replace_ext(fn, newext):
     return base + newext
 
 
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+#class AttrDict(dict):
+#    __getattr__ = dict.__getitem__
+#    __setattr__ = dict.__setitem__
+
+def autoconvert(v):
+    if v is None:
+        return ''
+    elif v.isdigit():
+        return int(v)
+    else:
+        return v
+
+
 # should always include header row
 #   returns a sequence of mappings or tuples, depending on whether objname is specified
 def parse_tsv_data(contents, objname=None):
@@ -331,7 +349,7 @@ def parse_tsv_data(contents, objname=None):
 
     for row in csvreader:
         if objname:
-            r = nt(**row)
+            r = AttrDict((k, autoconvert(v)) for k, v in row.items())
         else:
             r = row
 
@@ -344,6 +362,8 @@ def parse_tsv(fn, objname=None):
         return dict((r[0], r) for r in parse_tsv_data(fp.read(), objname))
     except Exception as e:
         error("parse_tsv() %s" % str(e))
+        if g_args.debug:
+            raise
         return {}
 
 
@@ -353,6 +373,8 @@ def parse_tsv_rows(fn, objname=None):
         return [r for r in parse_tsv_data(fp.read(), objname)]
     except Exception as e:
         error("parse_tsv_rows(): %s" % str(e))
+        if g_args.debug:
+            raise
         return []
 
 

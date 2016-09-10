@@ -10,7 +10,7 @@ from queries.similarity import find_similar_to, find_clue_variants, load_clues, 
 from xdfile.utils import get_args, open_output, find_files, log, info, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 import time
-from xdfile import utils, metadatabase
+from xdfile import utils, metadatabase as metadb
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
     outf = open_output()
 
     num_processed = 0
-    prev_similar = parse_tsv('gxd/similar.tsv', "similar")
+    prev_similar = metadb.read_rows('gxd/similar')
     for fn, contents in find_files(*args.inputs, ext=".xd"):
         progress(fn)
         mainxd = xdfile(contents.decode('utf-8'), fn)
@@ -77,7 +77,6 @@ def main():
             bclues = load_answers().get(mainanswer, [])
             stale_answer = False
 
-            # What's this stands for???
             if bclues:
                 uses = []
                 for bc, nuses in bclues.items():
@@ -94,15 +93,15 @@ def main():
                         else:
                             ca = sorted(clue_usages, key=lambda ca: ca.date or "z")[-1]
                         uses.append((ca, nuses))
+
         # summary row to similar.tsv
-        row_header = 'xdid similar_grid_pct reused_clues reused_answers total_clues matches'
-        metadatabase.append_row('gxd/similar.tsv', row_header, [
-            mainxd.xdid(),
-            int(100*sum(pct/100.0 for pct, xd1, xd2 in similar_grids)),
-            nstaleclues,
-            nstaleanswers,
-            ntotalclues,
-            " ".join(("%s=%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in similar_grids)
+        metadb.append_row('gxd/similar', [
+            mainxd.xdid(),   # xdid
+            int(100*sum(pct/100.0 for pct, xd1, xd2 in similar_grids)),  # similar_grid_pct
+            nstaleclues,  # reused_clues
+            nstaleanswers,  # reused_answers
+            ntotalclues,  # total_clues
+            " ".join(("%s=%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in similar_grids)  # matches
             ])
 
 

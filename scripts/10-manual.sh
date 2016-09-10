@@ -17,7 +17,7 @@ DEBUG=''
 cd $GXD
 git checkout -f master && git pull && git clean -df && git reset HEAD . && cd ..
 
-./scripts/05-sql-import-receipts.sh ${METADB}
+./scripts/05-sql-import.sh ${METADB}
 
 numtsv=$(cat ${GXD}'/receipts.tsv' | grep -vi CaptureTime | wc -l)
 numsql=$(sqlite3 ${METADB} 'select count(*) from receipts')

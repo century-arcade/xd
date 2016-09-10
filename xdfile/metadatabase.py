@@ -13,9 +13,9 @@ from xdfile import utils
 RECEIPTS_TSV = "gxd/receipts.tsv"
 SIMILAR_TSV = "gxd/similar.tsv"
 PUBLICATIONS_TSV = "gxd/publications.tsv"
-PUZZLES_TSV = "pub/puzzles.tsv"
 PUZZLE_SOURCES_TSV = "gxd/sources.tsv"
 RECENT_DOWNLOADS_TSV = "gxd/recents.tsv"
+STATS_TSV = "pub/stats.tsv"
 
 
 class Error(Exception):
@@ -73,45 +73,110 @@ xd_puzzles_header = COLSEP.join([
         "A1_D1"             # a useful hash of the grid
     ]) + EOL
 
+xd_stats_header = COLSEP.join([
+    "pubid",
+    "year",
+    "weekday",
+    "Size",
+    "Editor",
+    "Copyright",
+    "NumExisting",
+    "NumXd",
+    "NumPublic",
+    "NumReprints",
+    "NumTouchups",
+    "NumRedone",
+    "NumSuspicious",
+    "NumThemeCopies",
+])
+
+
+xddb_headers = {
+    'pub/stats': xd_stats_header,
+    'pub/puzzles': xd_puzzles_header,
+    'gxd/similar': 'xdid similar_grid_pct reused_clues reused_answers total_clues matches',
+    'gxd/publications': xd_publications_header,
+    'gxd/recents': xd_recents_header,
+    'gxd/receipts': xd_receipts_header,
+    'gxd/sources': xd_sources_header,
+}
+
 
 # yields dict corresponding to each row of receipts.tsv, in sequential order
 @utils.memoize
 def xd_receipts():
     return utils.parse_tsv(RECEIPTS_TSV, "Receipt")
 
+
 @utils.memoize
 def xd_receipts_rows():
     return utils.parse_tsv_rows(RECEIPTS_TSV, "Receipt")
 
+
 @utils.memoize
 def xd_publications():
-    return utils.parse_tsv(PUBLICATIONS_TSV, "Publication")
+    return dict((r.PublicationAbbr, r) for r in read_rows('gxd/publications'))
+
+
+def xd_puzzle(xdid):
+    return xd_puzzles_dict().get(xdid)
+
 
 @utils.memoize
-def xd_puzzles():
-    return utils.parse_tsv(PUZZLES_TSV, "Puzzle")
+def xd_puzzles_dict():
+    return dict((p.xdid, p) for p in _puzzles())
+
+
+def xd_puzzles(xdid=''):
+    if not xdid:
+        return _puzzles()
+
+    return [p for p in _puzzles() if p.xdid.startswith(xdid)]
+
+
+def get_author(xdid=''):
+    r = xd_puzzles(xdid)
+    return r[0].Author if r else "???"
+
 
 @utils.memoize
-def xd_similar():
-    return utils.parse_tsv(SIMILAR_TSV, "Similar")
+def _puzzles():
+    return utils.parse_tsv_rows('pub/puzzles.tsv', "Puzzle")
+
 
 @utils.memoize
 def xd_puzzle_sources():
     return utils.parse_tsv(PUZZLE_SOURCES_TSV, "PuzzleSource")
 
-def append_receipts(receipts):
-    if receipts:
-        codecs.open(RECEIPTS_TSV, 'a', encoding='utf-8').write(receipts)
 
-def append_row(tsvpath, headerstr, row):
+def delete_stats():
+    try:
+        os.remove(STATS_TSV)
+    except:
+        pass
+
+
+def stats():
+    return utils.parse_tsv(STATS_TSV, "Stat")
+
+
+def read_rows(tablename):
+    tsvpath = tablename + ".tsv"
+    basename = tablename.split('/')[-1]
+    return utils.parse_tsv_rows(tsvpath, basename)
+
+
+def append_row(tablename, row):
+    tsvpath = tablename + ".tsv"
     addhdr = not os.path.exists(tsvpath)
 
     fp = codecs.open(tsvpath, 'a', encoding='utf-8')
     if addhdr:
-        fp.write(COLSEP.join(headerstr.split()) + EOL)
+        fp.write(COLSEP.join(xddb_headers[tablename].split()) + EOL)
 
     fp.write(COLSEP.join([str(x) for x in row]) + EOL)
     fp.close()
+
 
 def get_last_receipt_id():
     try:
@@ -135,6 +200,14 @@ def xd_receipts_row(CaptureTime="", ReceivedTime="", ExternalSource="", Internal
         SourceFilename,
         xdid
     ]) + EOL
+
+
+def check_already_received(ExternalSource, SourceFilename):
+    ret = []
+    for r in read_rows('gxd/receipts'):
+        if r.ExternalSource == ExternalSource and r.SourceFilename == SourceFilename:
+            ret.append(r)
+    return ret
 
 
 def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
@@ -169,33 +242,34 @@ def update_puzzles_row(xd):
 
     assert COLSEP not in "".join(fields), fields
 
-    append_row(PUZZLES_TSV, xd_puzzles_header, fields)
+    append_row("pub/puzzles", fields)
 
 
-class Publication:
-    def __init__(self, pubid, row):
-        self.pubid = pubid
-        self.row = row
+xd_similar_tuple = namedtuple("GridMatch", "xdid match_xdid match_pct")
 
 
 @utils.memoize
-def get_similar_grids():
-    '''returns dict of [xdid] -> set of matching xdid'''
+def xd_similar(xdid=''):
+    ret = []
 
-    ret = {}
-    for r in utils.parse_tsv('gxd/similar.tsv', 'Similar').values():
-        matches = [ x.split('=') for x in r.matches.split() ]
-        if matches:
-            if r.xdid not in ret:
-                ret[r.xdid.lower()] = set()
+    for r in xd_similar_all():
+        if r.xdid.startswith(xdid):
+            ret.append(r)
+        if r.match_xdid.startswith(xdid):
+            # swap xdid and xdidMatch
+            ret.append(xd_similar_tuple(r.match_xdid, r.xdid, r.match_pct))
 
-            ret[r.xdid.lower()] |= set(xdid.lower() for xdid, pct in matches)
-            
-            for xdid, pct in matches:
-                if xdid not in ret:
-                    ret[xdid.lower()] = set()
+    return ret
 
-                ret[xdid.lower()].add(r.xdid.lower())
 
-    return ret 
+@utils.memoize
+def xd_similar_all():
+    ''' returns a list of all similar grids '''
 
+    ret = []
+    for r in utils.parse_tsv_rows('gxd/similar.tsv', 'Similar'):
+        matches = [x.split('=') for x in r.matches.split()]
+        for match_xdid, pct in matches:
+            ret.append(xd_similar_tuple(r.xdid, match_xdid, int(pct)))
+
+    return ret
