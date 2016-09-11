@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 WORKDIR=/tmp
 export SSHHOME=$HOME
 
@@ -28,7 +26,7 @@ echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 
 # export DEBIAN_FRONTEND=noninteractive
 # sudo apt-get update && \
-#    sudo apt-get install --yes language-pack-en-base zip awscli python3-lxml python3-pip git markdown python3-boto3 sqlite3 && \
+#    sudo apt-get install --yes language-pack-en-base zip awscli python3-lxml python3-pip git markdown python3-boto3 && \
 #    sudo pip3 install cssselect botocore
 
 cd $WORKDIR
@@ -50,9 +48,6 @@ chmod 600 $SSHHOME/.ssh/gxd_rsa
 
 cat src/aws/ssh_config >> $SSHHOME/.ssh/config
 ssh-agent bash -c "ssh-add $SSHHOME/.ssh/gxd_rsa; git clone ${GXD_GIT}"
-
-echo "Import all .tsv to sql"
-scripts/05-sql-import.sh
 
 echo "Run deploy script"
 /bin/bash scripts/05-full-pipeline.sh

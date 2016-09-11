@@ -14,7 +14,7 @@ export GITURL=git@gitlab.com:rabidrat/gxd.git
 export UPLOAD_EMAIL=upload@${DOMAIN}
 
 # the address to send logs
-export ADMIN_EMAIL=andjel@gmail.com
+export ADMIN_EMAIL=xd@saul.pw
 export ADMIN_NAME="Saul Pwanson"
 
 # local directory structure
