@@ -1,18 +1,17 @@
 # About xd.saul.pw
 
-xd.saul.pw is a system I put together to practice my data pipeline and preparation skills.
+xd.saul.pw is a system I put together to practice my data pipeline and preservation skills.
 It collects daily crosswords from several sources and converts them into .xd, a plain-text format designed for maximum data flexibility.
 It then compares them against the rest of the crosswords in the corpus, and generates this static website.
 
-I call this a 'cloud capsule'. It's a long-form web service whose goal is to curate a clean longitudinal crossword dataset for historians and other academics, present and future.
+I call this a 'cloud capsule'. It's a long-form web service that curates a longitudinal dataset for future crossword scholars.
 
 I tried to design this crossword cloud capsule to be self-sustaining, which for me means a robust and low-maintenance system that can run in perpetuity at very little cost.
-To this end, I chose a kind of ‘long serverless’ architecture, which does daily batch processing, rather than run a continuous server or a newfangled collection of asynchronous cloud services.
+To this end, I chose a kind of ‘long serverless’ architecture, which does daily batch processing, rather than a continuous server or a newfangled collection of asynchronous cloud services.
 
-If this system can survive until all of the crossword data can be released publicly, that would be the ultimate success.
-But since it is likely to fall short of this goal, I took great care with the data formats and organization, so that the curated data could be easily salvaged by a capable and responsible steward. [Download the public dataset](/data#download).
+I'd like this system to survive until all of the crossword data can be released publicly, but it will likely fall short of this goal.  I took great care with the data formats and organization, so that the curated data could be easily salvaged by a capable and responsible steward. [Download the public dataset](/data#download).
 
-Please send all suggestions, praise, and complaints to [xd@saul.pw](mailto:xd@saul.pw).
+Please send all suggestions, offers, and complaints to [xd@saul.pw](mailto:xd@saul.pw).
 
 [Saul Pwanson](saul.pw)
 

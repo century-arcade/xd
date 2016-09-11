@@ -41,7 +41,7 @@ legend = '''
 </table>
 <table class="legend">
 <tr><td class="pubxd">&nbsp;&nbsp;</td><td>crossword grid data available for <a href="/download">public download</a></td></tr>
-<tr><td class="privxd">&nbsp;&nbsp;</td><td>crossword grid data in private storage</td></tr>
+<!--tr><td class="privxd">&nbsp;&nbsp;</td><td>crossword grid data in private storage</td></tr-->
 </table>
 <p style="clear:both">&nbsp;</p>
 '''
