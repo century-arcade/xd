@@ -50,7 +50,7 @@ if [ -n "$XDCONFIG" ]; then
       --iam-instance-profile xd-scraper \
       --key $KEY \
       --instance-type ${INSTANCE_TYPE} \
-      --user-data file://scripts/00-aws-bootstrap.sh \
+      --user-data file://scripts/01-ec2-thereafter.sh \
       --image-id ${AMI_ID}
 
     #instance_id=$($aws ec2 describe-instances --filters "Name=key-name,Values=${KEY}" | jq -r .Reservations[0].Instances[0].InstanceId)

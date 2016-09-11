@@ -34,9 +34,10 @@ if [ -n "$XDCONFIG" ]; then
       --key-name $KEY \
       --region ${REGION} \
       --instance-type ${INSTANCE_TYPE} \
-      --instance-initiated-shutdown-behavior terminate \
+      --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"DeleteOnTermination":false}}]' \
+      --instance-initiated-shutdown-behavior stop \
       --iam-instance-profile Arn="$XD_PROFILE" \
-      --user-data file://scripts/00-aws-bootstrap.sh \
+      --user-data file://scripts/01-ec2-thereafter.sh \
       --image-id ${AMI_ID} > $INSTANCE_JSON
 
     # Wait a litte before applying sec group

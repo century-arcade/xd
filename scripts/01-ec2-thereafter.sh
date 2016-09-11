@@ -1,8 +1,10 @@
 #!/bin/bash
 
+WORKDIR=/tmp
+export SSHHOME=$HOME
+
 if [ -z "$HOME" ] ; then
-    HOME=/tmp
-    export SSHHOME=$HOME
+    HOME=/root
     # Hack for AWS where HOME not set
     if [[ $UID -eq '0' ]]; then
         export SSHHOME=/root
@@ -21,30 +23,18 @@ export PYTHONPATH=.
 exec > >(tee -i ${LOGFILE}) 2>&1
 echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 
-export DEBIAN_FRONTEND=noninteractive
-sudo apt-get update && \
-    sudo apt-get install --yes language-pack-en-base zip awscli python3-lxml python3-pip git markdown python3-boto3 && \
-    sudo pip3 install cssselect botocore
+# Re-get config file from AWS
+aws s3 cp --region=us-west-2 s3://xd-private/etc/config $WORKDIR/config
+source $WORKDIR/config
 
-cd $HOME
-# Get config file from AWS
-aws s3 cp --region=us-west-2 s3://xd-private/etc/config $HOME/config
-source $HOME/config
-
-echo "Clone main project repo and switch to branch ${BRANCH}"
-git clone ${XD_GIT}
-cd xd/
+cd $HOME/xd
 git checkout ${BRANCH}
 # Export all config vars
 source scripts/config-vars.sh
 
 mkdir -p $SSHHOME/.ssh
-echo "Clone GXD repo"
 aws s3 cp --region=us-west-2 s3://xd-private/etc/gxd_rsa $SSHHOME/.ssh/
 chmod 600 $SSHHOME/.ssh/gxd_rsa
-
-cat src/aws/ssh_config >> $SSHHOME/.ssh/config
-ssh-agent bash -c "ssh-add $SSHHOME/.ssh/gxd_rsa; git clone ${GXD_GIT}"
 
 echo "Run deploy script"
 /bin/bash scripts/05-full-pipeline.sh
