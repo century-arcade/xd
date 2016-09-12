@@ -19,7 +19,7 @@ exec > >(tee -i ${LOGFILE}) 2>&1
 echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 
 # Re-get config file from AWS
-aws s3 cp --region=$REGION s3://xd-private/etc/config $WORKDIR/config
+aws s3 cp --region=us-west-2 s3://xd-private/etc/config $WORKDIR/config
 source $WORKDIR/config
 
 cd $HOME/xd

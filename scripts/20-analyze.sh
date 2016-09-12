@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/bash
 # analyzes all puzzles in gxd/
 
 source scripts/helpers.sh

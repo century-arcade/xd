@@ -24,8 +24,8 @@ sudo apt-get update && \
     sudo pip3 install cssselect botocore
 
 cd $HOME
-# Get config file from AWS.  'xd-private' inline; how could we get it from config before this?
-aws s3 cp --region=$REGION s3://xd-private/etc/config $HOME/config
+# Get config file from AWS.  region and xdpriv inline; how could we get it from config before this?
+aws s3 cp --region=us-west-2 s3://xd-private/etc/config $HOME/config
 source $HOME/config
 
 echo "Clone main project repo and switch to branch ${BRANCH}"
