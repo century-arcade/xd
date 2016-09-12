@@ -126,7 +126,6 @@ def navbar_helper(item, current_url):
 
 def html_header(current_url=None, title='xd page'):
     npuzzles = len(xdfile.g_corpus)
-    kwargs['npuzzles'] = npuzzles
 
     h = """
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
@@ -151,9 +150,9 @@ def html_header(current_url=None, title='xd page'):
     h += '</nav>'
 
     h += '<hr style="clear:both;"/>'
-    h += '<h2>{title}</h2>'.format(**kwargs)
+    h += '<h2>{title}</h2>'.format(title=title)
     if npuzzles:
-        h += ' from a corpus of {npuzzles} puzzles'.format(**kwargs)
+        h += ' from a corpus of {npuzzles} puzzles'.format(npuzzles=npuzzles)
 
     return h
 
