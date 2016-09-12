@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source scripts/helpers.sh
-
 WORKDIR=/tmp
 
 if [ -z "$HOME" ] ; then
@@ -21,14 +19,17 @@ exec > >(tee -i ${LOGFILE}) 2>&1
 echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 
 # Re-get config file from AWS
-aws s3 cp --region=$REGION s3://$XDPRIV/etc/config $WORKDIR/config
+aws s3 cp --region=$REGION s3://xd-private/etc/config $WORKDIR/config
 source $WORKDIR/config
 
 cd $HOME/xd
+git pull
 git checkout ${BRANCH}
 
+source scripts/helpers.sh
+
 mkdir -p $SSHHOME/.ssh
-aws s3 cp --region=$REGION s3://$XDPRIV/etc/gxd_rsa $SSHHOME/.ssh/
+aws s3 cp --region=$REGION s3://xd-private/etc/gxd_rsa $SSHHOME/.ssh/
 chmod 600 $SSHHOME/.ssh/gxd_rsa
 
 echo "Run deploy script"

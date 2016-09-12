@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source scripts/helpers.sh
-
 WORKDIR=/tmp
 
 if [ -z "$HOME" ] ; then
@@ -26,8 +24,8 @@ sudo apt-get update && \
     sudo pip3 install cssselect botocore
 
 cd $HOME
-# Get config file from AWS
-aws s3 cp --region=$REGION s3://$XDPRIV/etc/config $HOME/config
+# Get config file from AWS.  'xd-private' inline; how could we get it from config before this?
+aws s3 cp --region=$REGION s3://xd-private/etc/config $HOME/config
 source $HOME/config
 
 echo "Clone main project repo and switch to branch ${BRANCH}"
@@ -35,9 +33,11 @@ git clone ${XD_GIT}
 cd xd/
 git checkout ${BRANCH}
 
+source scripts/helpers.sh
+
 mkdir -p $SSHHOME/.ssh
 echo "Clone GXD repo"
-aws s3 cp --region=$REGION s3://$XDPRIV/etc/gxd_rsa $SSHHOME/.ssh/
+aws s3 cp --region=$REGION s3://xd-private/etc/gxd_rsa $SSHHOME/.ssh/
 chmod 600 $SSHHOME/.ssh/gxd_rsa
 
 cat scripts/ssh_config >> $SSHHOME/.ssh/config
