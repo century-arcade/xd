@@ -37,13 +37,18 @@ if [ -n "$XDCONFIG" ]; then
       --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"DeleteOnTermination":false}}]' \
       --instance-initiated-shutdown-behavior stop \
       --iam-instance-profile Arn="$XD_PROFILE" \
-      --user-data file://scripts/01-ec2-thereafter.sh \
+      --user-data file://scripts/01-ec2-shutdown.sh \
       --image-id ${AMI_ID} > $INSTANCE_JSON
 
     # Wait a litte before applying sec group
     sleep 30
     instance_id=$(cat $INSTANCE_JSON | jq -r .Instances[0].InstanceId)
     $aws ec2 modify-instance-attribute --groups ${SSH_SECURITY_GID} --instance-id $instance_id
+
+    # Manual root volume replacement should be done
+    # $aws ec2 dettach-volume --volume-id $current_volume_id
+    # $aws ec2 attach-volume --volume-id $VOLUME_ID --instance-id $instance_id --device /dev/sda1
+    # $aws ec2 delete-volume --volume-id $current_volume_id
 
     public_ip=$(aws ec2 describe-instances --instance-ids ${instance_id} | jq -r '.Reservations[0].Instances[0].PublicIpAddress')
     echo "Connecting: ssh -i ~/*.pem ubuntu@$public_ip" 
