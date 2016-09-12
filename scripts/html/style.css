@@ -344,7 +344,7 @@ table div {
     clear: both;
 }
 
-.options { width: 85%; }
+.options { width: 85%; float: left; }
 
 div.actuals { width: 85%; }
 
