@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Start ebs based instance
 # Usage: $0 <instance_id>
 #

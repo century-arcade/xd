@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/bash -x
 #
 # Usage: $0 <config file>
 
@@ -7,7 +7,7 @@ source scripts/helpers.sh
 XDCONFIG=$1
 
 if [ -n "$XDCONFIG" ]; then
-    aws s3 cp $XDCONFIG s3://$XDPRIV/etc/config
+    $aws s3 cp $XDCONFIG s3://$XDPRIV/etc/config
     INSTANCE_JSON=/tmp/instance.json
 
     #  created via IAM console: role/xd-scraper

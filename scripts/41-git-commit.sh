@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 source scripts/helpers.sh
 
