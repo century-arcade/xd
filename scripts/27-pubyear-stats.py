@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import string
 import re
 from collections import defaultdict, Counter
 
@@ -9,15 +10,19 @@ from xdfile import utils, metadatabase as metadb
 from xdfile import year_from_date, dow_from_date
 import xdfile
 
+def boil(x):
+    return ''.join(c for c in x.lower() if c in string.ascii_lowercase)
 
 def diff_authors(a1, a2):
     if not a1 or not a2:
         return False # inconclusive
 
-    a1 = a1.lower()
-    a2 = a2.lower()
+    a1 = boil(a1)
+    a2 = boil(a2)
     if a1 in a2 or a2 in a1:
         return False
+
+    return True
 
 
 def main():
@@ -120,8 +125,12 @@ def main():
             for r in byweekday_similar[weekday]:
                 xd1 = xdfile.get_xd(r.xdid)
                 xd2 = xdfile.get_xd(r.match_xdid)
-                if xd1 is None or xd2 is None:
-                    info("skipping %s %s" % (xd1, xd2))
+                if xd1 is None:
+                    info("%s: similar puzzle %s not in corpus" % (r.match_xdid, r.xdid))
+                    continue
+
+                if xd2 is None:
+                    info("%s: similar puzzle %s not in corpus" % (r.xdid, r.match_xdid))
                     continue
 
                 dt1 = xd1.get_header('Date')

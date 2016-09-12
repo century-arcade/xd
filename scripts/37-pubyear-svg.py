@@ -3,6 +3,7 @@
 import re
 import operator
 import datetime
+import string
 
 from datetime import date
 from xdfile.utils import info, debug, error
@@ -192,7 +193,9 @@ def ret_classes(author1, author2, pct):
     # Return classes depends on authors and similarity pct
     ##deduce_similarity_type
     classes = ''
-    if author1 and author2 and author1.lower() != author2.lower():# suspicious
+    author1 = boil(author1)
+    author2 = boil(author2)
+    if author1 and author2 and author1 not in author2 and author2 not in author1:# suspicious
         if pct >= 50:
             classes += ' suspxd'
         elif pct >= 20:
@@ -260,6 +263,8 @@ def td_for_pubyear(pubyears, pub, year):
 
     return ''
 
+def boil(x):
+    return ''.join(c for c in x.lower() if c in string.ascii_lowercase)
 
 def pubdecade_html(pub, year):
     calendars_html = ''
