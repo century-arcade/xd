@@ -136,7 +136,7 @@ def xd_puzzles(xdid=''):
 
 def get_author(xdid=''):
     r = xd_puzzles(xdid)
-    return r[0].Author if r else "???"
+    return str(r[0].Author) if r else "???"
 
 
 @utils.memoize

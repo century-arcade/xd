@@ -13,7 +13,7 @@ def mkwww_wordpage(answer):
     uses = all_uses[answer]
 
     h = ''
-    h += pubyear.pubyear_html([ (ca.pubyear()[0], ca.pubyear()[1], 1) for ca in uses ])
+#    h += pubyear.pubyear_html([ (ca.pubyear()[0], ca.pubyear()[1], 1) for ca in uses ])
     h += '<hr/>'
     h += '<div>Clued as: ' + html_select_options([ ca.clue for ca in uses ]) + '</div>'
     h += '<h2>%d uses</h2>' % len(uses)

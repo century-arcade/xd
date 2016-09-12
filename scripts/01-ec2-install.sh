@@ -30,8 +30,8 @@ sudo apt-get update && \
 
 cd $HOME
 # Get config file from AWS
-aws s3 cp --region=us-west-2 s3://xd-private/etc/config $TMP/config
-source $TMP/config
+aws s3 cp --region=us-west-2 s3://xd-private/etc/config $HOME/config
+source $HOME/config
 
 echo "Clone main project repo and switch to branch ${BRANCH}"
 git clone ${XD_GIT}

@@ -138,8 +138,7 @@ def html_header(current_url=None, **kwargs):
     <meta http-equiv="Content-Type"
           content="text/html; charset=ISO-8859-1" />
     <title>{title}</title>
-    <!-- <LINK href="style.css" rel="stylesheet" type="text/css"> -->
-    <LINK href="/pub/style.css" rel="stylesheet" type="text/css">
+    <LINK href="/style.css" rel="stylesheet" type="text/css">
   </HEAD>
 </head>
 
