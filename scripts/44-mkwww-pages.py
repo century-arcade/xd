@@ -12,7 +12,8 @@ def main():
     for htmlfn, contents in utils.find_files(*args.inputs):
         basepagename = utils.parse_pathname(htmlfn).base
 
-        outf.write_html('%s/index.html' % basepagename, contents)
+        outf.write_html('%s/index.html' % basepagename, contents.decode('utf-8'))
+
 
 if __name__ == "__main__":
     main()

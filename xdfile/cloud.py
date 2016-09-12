@@ -1,9 +1,13 @@
+import os
 import boto3
 
 from xdfile.utils import log, info, debug, error
 
+
+boto3.set_stream_logger('botocore')
+
 def xd_send_email(destaddr, fromaddr='admin@xd.saul.pw', subject='', body=''):
-    client = boto3.client('ses')
+    client = boto3.client('ses', region_name=os.environ['REGION'])
     info("sending email to %s (subject '%s')" % (destaddr, subject))
     try:
         response = client.send_email(
