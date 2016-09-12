@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 # analyzes all puzzles in gxd/
+
+source scripts/helpers.sh
+
 set -e
 
 mkdir -p $WWW
@@ -8,8 +11,8 @@ mkdir -p $PUB
 rm -f $PUB/*
 
 # regenerate pub/puzzles.tsv
-scripts/21-clean-metadata.py $GXD
+$python scripts/21-clean-metadata.py $GXD
 
-scripts/25-analyze-puzzle.py -o $WWW/ -c $GXD $GXD
-scripts/26-clues-tsv.py -c $GXD -o $PUB/
-scripts/27-pubyear-stats.py -c ${GXD}
+$python scripts/25-analyze-puzzle.py -o $WWW/ -c $GXD $GXD
+$python scripts/26-clues-tsv.py -c $GXD -o $PUB/
+$python scripts/27-pubyear-stats.py -c ${GXD}

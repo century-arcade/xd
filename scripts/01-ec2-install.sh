@@ -1,14 +1,11 @@
-#!/bin/bash
+#!/bin/sh
+
+source scripts/helpers.sh
 
 WORKDIR=/tmp
-export SSHHOME=$HOME
 
 if [ -z "$HOME" ] ; then
     HOME=/tmp
-    # Hack for AWS where HOME not set
-    if [[ $UID -eq '0' ]]; then
-        export SSHHOME=/root
-    fi
 fi
 
 # This script is passed as userdata to the launch-config, which the base AMI
@@ -30,22 +27,20 @@ sudo apt-get update && \
 
 cd $HOME
 # Get config file from AWS
-aws s3 cp --region=us-west-2 s3://xd-private/etc/config $HOME/config
+aws s3 cp --region=$REGION s3://$XDPRIV/etc/config $HOME/config
 source $HOME/config
 
 echo "Clone main project repo and switch to branch ${BRANCH}"
 git clone ${XD_GIT}
 cd xd/
 git checkout ${BRANCH}
-# Export all config vars
-source scripts/config-vars.sh
 
 mkdir -p $SSHHOME/.ssh
 echo "Clone GXD repo"
-aws s3 cp --region=us-west-2 s3://xd-private/etc/gxd_rsa $SSHHOME/.ssh/
+aws s3 cp --region=$REGION s3://$XDPRIV/etc/gxd_rsa $SSHHOME/.ssh/
 chmod 600 $SSHHOME/.ssh/gxd_rsa
 
-cat src/aws/ssh_config >> $SSHHOME/.ssh/config
+cat scripts/ssh_config >> $SSHHOME/.ssh/config
 ssh-agent bash -c "ssh-add $SSHHOME/.ssh/gxd_rsa; git clone ${GXD_GIT}"
 
 echo "Run deploy script"
@@ -60,14 +55,14 @@ echo "Getting summary"
 scripts/48-stats.sh >> ${SUMLOGFILE}
 echo -e '\n' >> ${SUMLOGFILE}
 
-echo "SUMMARY: Full log file http://$BUCKET/logs/`basename ${LOGFILE}`" >> ${SUMLOGFILE}
+echo "SUMMARY: Full log file http://$DOMAIN/logs/`basename ${LOGFILE}`" >> ${SUMLOGFILE}
 
 echo "Sending email"
 scripts/send-email.py $ADMIN_EMAIL "execution logs for $TODAY" ${SUMLOGFILE}
 
 echo "Copy logs to AWS"
-aws s3 cp --region ${REGION} --content-type='text/plain' ${LOGFILE} s3://${BUCKET}/logs/ --acl public-read
-aws s3 cp --region ${REGION} --content-type='text/plain' ${SUMLOGFILE} s3://${BUCKET}/logs/ --acl public-read
+aws s3 cp --region ${REGION} --content-type='text/plain' ${LOGFILE} s3://${DOMAIN}/logs/ --acl public-read
+aws s3 cp --region ${REGION} --content-type='text/plain' ${SUMLOGFILE} s3://${DOMAIN}/logs/ --acl public-read
 
 echo "Make logs index page"
 scripts/49b-mkindex.sh

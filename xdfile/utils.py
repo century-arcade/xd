@@ -422,7 +422,8 @@ class OutputFile:
     def write_html(self, fn, innerhtml, title=""):
         from .html import html_header, html_footer
 
-        htmlstr = html_header(current_url=fn, title=title) + innerhtml + html_footer()
+        basepagename = utils.parse_pathname(fn).path
+        htmlstr = html_header(current_url=basepagename, title=title) + innerhtml + html_footer()
         self.write(htmlstr.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
 
 

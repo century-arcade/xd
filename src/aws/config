@@ -1,7 +1,0 @@
-# Place it on AWS bucket
-export REGION=
-export BRANCH=
-export BUCKET=
-export EMAIL=
-export XD_GIT=
-export GXD_GIT=

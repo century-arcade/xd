@@ -1,16 +1,13 @@
-#!/bin/bash
+#!/bin/sh
 
-set -x
+source scripts/helpers.sh
+
+set -e
+
 # commit all changes to gxd
 
 git config --global user.email $ADMIN_EMAIL
 git config --global user.name $ADMIN_NAME
-
-if [ -z "$SSHHOME" ]; then
-    SSHHOME=$HOME
-fi
-
-set -e
 
 BRANCH=$1
 

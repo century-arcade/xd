@@ -1,43 +1,22 @@
-#!/bin/bash
+#!/bin/sh
 #
 #
 
-if [ ! -n "$NOW" ]; then
-    echo "Seems config-vars were not imported yet"
-    source scripts/config-vars.sh
-fi
+source scripts/helpers.sh
 
-OUTBASEDIR=/tmp/$NOW
+echo '10-import'
+scripts/10-import.sh
 
-if [[ -z "$HOME" && $UID -eq '0' ]]; then
-    export SSHHOME=/root
-fi
-
-# start from a clean $OUTBASEDIR
-if [ -d ${OUTBASEDIR} ] ; then
-    BACKUPDIR=products/`date +"%Y%m%d-%H%M%S.%N"`
-    echo ${OUTBASEDIR} already exists!  moving to $BACKUPDIR
-    mv ${OUTBASEDIR} ${BACKUPDIR}
-fi
-
-mkdir -p ${OUTBASEDIR}
-
-echo 'Run 10'
-/bin/bash scripts/10-import.sh
-
-# Define QUICKRUN to skip time consiming actions
+# Define QUICKRUN to skip time consuming actions
 if [ ! -n "$QUICKRUN" ]; then
-    echo 'Run 20'
-    /bin/bash scripts/20-analyze.sh
-    echo 'Run 30'
-    /bin/bash scripts/30-mkwww.sh
+    echo '20-analyze'
+    scripts/20-analyze.sh
+    echo '30-mkwww'
+    scripts/30-mkwww.sh
 fi
 
 # commit new puzzles and saved analysis results
-/bin/bash scripts/41-git-commit.sh
+scripts/41-git-commit.sh
 
-# capture all logs even if other scripts fail
-scripts/39-mkwww-logs.py -o $WWW/$NOW/index.html $TMP
-
-echo 'Run 40'
-/bin/bash scripts/40-deploy.sh
+echo '40-deploy'
+scripts/40-deploy.sh

@@ -124,7 +124,7 @@ def navbar_helper(item, current_url):
     r += '</ul>'
     return r
 
-def html_header(current_url=None, **kwargs):
+def html_header(current_url=None, title='xd page'):
     npuzzles = len(xdfile.g_corpus)
     kwargs['npuzzles'] = npuzzles
 
@@ -143,7 +143,7 @@ def html_header(current_url=None, **kwargs):
 </head>
 
 <body>
-""".format(**kwargs)
+""".format(title=title)
 
 
     h += '<nav id="primary_nav_wrap">'

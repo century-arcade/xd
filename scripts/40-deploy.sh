@@ -1,19 +1,22 @@
-#!/bin/bash
-# source scripts/config-vars.sh
+#!/bin/sh
 
-mkdir -p $WWW/tech
+source scripts/helpers.sh
 
-markdown www/index.md > $WWW/index.html
-markdown www/tech.md > $WWW/tech/index.html
+# $aws s3 rm -recursive ${S3WWW}/pub
 
-# aws s3 rm -recursive ${S3WWW}/pub
-
-cp scripts/html/style.css $WWW/pub/
+cp scripts/html/style.css $WWW/
 cp scripts/html/*.html $WWW/
 
-aws s3 sync --region $REGION $WWW ${S3WWW}/ --acl public-read
+for page in about data ; do 
+    pagedir=$WWW/${page}
+    markdown www/${page}.md > $pagedir.html
+    scripts/44-mkwww-pages.py -o $WWW/ $pagedir.html
+done
+
+
+$aws s3 sync --region $REGION $WWW ${S3WWW}/ --acl public-read
 
 # concatenate all logfiles from working dirs and copy to cloud
 ALLLOGS=$WWW/log/$TODAY-logs.txt
-scripts/49-cat-logs.py -o $ALLLOGS $PUB $TMP
-aws s3 cp --region $REGION $ALLLOGS ${S3WWW}/logs/ --acl public-read
+$python scripts/49-cat-logs.py -o $ALLLOGS $PUB $TMP
+$aws s3 cp --region $REGION $ALLLOGS ${S3WWW}/logs/ --acl public-read

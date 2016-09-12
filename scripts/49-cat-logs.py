@@ -18,7 +18,7 @@ def main():
     s3 = boto3.resource('s3')
     s3path = "logs/"
     # bucket = conn.get_bucket(s3path)
-    bucket = s3.Bucket(os.environ['BUCKET'])
+    bucket = s3.Bucket(os.environ['DOMAIN'])
 
     for obj in sorted(bucket.objects.all(), key=lambda x: x.last_modified):
         # last_modified

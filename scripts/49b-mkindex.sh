@@ -1,6 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 #
 #
+
+source scripts/helpers.sh
 
 LOGS_INDEX='index.html'
 
@@ -9,10 +11,10 @@ HTML_END="</body></html>"
 
 echo $HTML_HEAD > ${LOGS_INDEX}
 
-for l in $(aws s3 ls --region ${REGION} s3://${BUCKET}/logs/ | egrep '\.log$' | sort -r | awk '{print $4}'); do
-    echo "<div><a href='http://${BUCKET}/logs/${l}' type='text/html'>$l</a></div>" >> ${LOGS_INDEX}
+for l in $(aws s3 ls --region ${REGION} s3://${DOMAIN}/logs/ | egrep '\.log$' | sort -r | awk '{print $4}'); do
+    echo "<div><a href='http://${DOMAIN}/logs/${l}' type='text/html'>$l</a></div>" >> ${LOGS_INDEX}
 done
 
 echo $HTML_END >> ${LOGS_INDEX}
 
-aws s3 cp --region ${REGION} ${LOGS_INDEX} s3://${BUCKET}/logs/ --acl public-read
+$aws s3 cp --region ${REGION} ${LOGS_INDEX} s3://${DOMAIN}/logs/ --acl public-read

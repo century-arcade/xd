@@ -3,17 +3,15 @@
 # Run without parameters from the xd directory.
 # 
 
-#source scripts/config-vars.sh
+source scripts/helpers.sh
+
+export TMP=`mktemp -d`
 
 RECENTS=$GXD/recent-downloads.tsv
 EMAILZIP=$TMP/$NOW-email.zip
 WWWZIP=$TMP/$NOW-www.zip
-sh="sh"
-aws="aws"
-python="/usr/bin/env python3"
 
 set -e
-set -x
 
 # 1x: download more recent puzzles
 
@@ -21,7 +19,7 @@ set -x
 mkdir -p $TMP/incoming
 $aws s3 sync --region $REGION ${S3PRIV}/incoming $TMP/incoming/
 if find $TMP/incoming -mindepth 1 -print -quit | grep -q .; then
-    $sh scripts/12-parse-email.py -o $EMAILZIP $TMP/incoming
+    $python scripts/12-parse-email.py -o $EMAILZIP $TMP/incoming
     $aws s3 cp $EMAILZIP ${S3PRIV}/sources/
     $aws s3 rm --recursive ${S3PRIV}/incoming
 fi

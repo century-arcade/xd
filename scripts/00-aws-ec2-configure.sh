@@ -1,28 +1,11 @@
 #!/bin/bash
 #
-# Usage: $0 <config file> [NODRY]
-# specify NODRY for actual execution
-#
-# see format below
-#
-# export KEY=
-# export BRANCH=
-# export REGION=
-# export AWS_ACCESS_KEY=
-# export AWS_SECRET_KEY=
-# export BUCKET=
-# export EMAIL=
-# export XD_GIT=
-# export GXD_GIT=
-# export XD_PROFILE=
-# export AMI_ID=ami-75fd3b15 #Ubuntu Server 16.04 LTS (HVM)
-# export SSH_SECURITY_GID=sg-e00fbe87 # SSH access
-# export INSTANCE_TYPE=r3.large
-# export QUICKRUN=True # For quickrun scipping 20- and 30- scripts
-#
+# Usage: $0 <config>
+
+source scripts/helpers.sh
 
 XDCONFIG=$1
-NODRY=$2
+
 if [ -n "$XDCONFIG" ]; then
     source $XDCONFIG
 
@@ -30,14 +13,8 @@ if [ -n "$XDCONFIG" ]; then
     launch_config=xd-launch-config
     zone=${REGION}a
 
-    if [ -n "$NODRY" ]; then
-        aws="aws"
-    else
-        aws="echo -e \naws"
-    fi
-
-    # copy config on shared s3 storage
-    $aws s3 cp $XDCONFIG s3://xd-private/etc/config
+    # copy config to shared s3 storage
+    $aws s3 cp $XDCONFIG s3://${XDPRIV}/etc/config
 
     $aws iam create-instance-profile --instance-profile-name xd-scraper
     $aws iam add-role-to-instance-profile --instance-profile-name xd-scraper --role-name xd-scraper

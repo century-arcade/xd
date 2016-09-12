@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 #   Checks .xd files for errors
 #   Usage: $0 <DIR>

@@ -1,17 +1,16 @@
 #!/bin/sh
 
-source scripts/config-vars.sh
+source scripts/helpers.sh
 
 # Run this script without parameters.  It creates config/ directory and
 # populates it with config files.  Modify the configs in this script, and
 # commit this script with the production configuration.  usable uppercase
-# defaults, like BUCKET.
+# defaults.
 
 # In theory, setting aws=aws and running this entire script on a fresh aws
 # account should replicate the entire aws functionality, regardless of how many times 
 # the configuration has changed.  In practice, some elements may be already set up,
 # so cut and paste as needed to complete the configuration.
-aws="echo aws"
 
 # configuration directory
 config=config
@@ -87,11 +86,9 @@ cat <<EOF > $config/s3-email-policy.json
 }
 EOF
 
-# these before creating the rule
+# do these before creating the rule
 $aws s3api put-bucket-policy --bucket $XDPRIV --policy file://$config/s3-email-policy.json
 $aws sns create-topic --name $TOPICNAME
-
-
 
 $aws ses create-receipt-rule-set --rule-set-name $RULESETNAME
 $aws ses create-receipt-rule --rule-set-name $RULESETNAME --cli-input-json file://$config/create-receipt-rule.json
