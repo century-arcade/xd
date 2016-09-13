@@ -13,10 +13,6 @@ mkdir -p $WWW/pub/gxd
 #cp $GXD/*.tsv $WWW/pub/gxd/
 #cp $PUB/*.tsv $WWW/pub/
 
-echo -en "${GREEN}Generate /pub/[<pub>][<year>]${NORMAL}\n"
-$python scripts/31-mkwww-publishers.py $CORPUS -o $WWW/
-$aws s3 mv --recursive --region $REGION $WWW ${S3WWW}/ --acl public-read
-
 echo -en "${GREEN}Generate /pub/ index${NORMAL}\n"
 $python scripts/37-pubyear-svg.py -o $WWW/
 $aws s3 mv --recursive --region $REGION $WWW ${S3WWW}/ --acl public-read
