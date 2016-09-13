@@ -14,6 +14,8 @@ I'd like this system to survive until all of the crossword data can be released 
 
 Please send all suggestions, offers, and complaints to [xd@saul.pw](mailto:xd@saul.pw).
 
+Share and enjoy!
+
 [Saul Pwanson](saul.pw)
 
 ### Many Thanks To
