@@ -1,13 +1,21 @@
 
 CORPUS=gxd
-S3CFG= -c src/aws/s3cfg.century-arcade 
-S3CMD= s3cmd ${S3CFG}
+XDCONFIG ?= config
+
+include ${XDCONFIG}
+
+aws=aws
+
+deploy-style:
+	${aws} s3 cp --acl public-read scripts/html/style.css ${S3WWW}/ 
+
+#S3CFG= -c src/aws/s3cfg.century-arcade 
+#S3CMD= s3cmd ${S3CFG}
 
 SRCDIR=$(shell pwd)/src
 
-S3CFG= -c src/aws/s3cfg.century-arcade 
-BUCKET= xd.saul.pw
-WWWDIR= www/xdiffs
+BUCKET= xd-beta.saul.pw
+WWWDIR= wwwroot/
 
 SCRIPTDIR=$(shell pwd)/scripts
 QUERYDIR=$(shell pwd)/queries
@@ -120,9 +128,6 @@ ${COLLECTION}-source.zip: bwh/
 
 sync-diffs:
 	${S3CMD} sync -P www/xdiffs s3://$(BUCKET)/
-
-sync-corpus: xd-corpus.tar.xz xd-corpus.zip
-	${S3CMD} put -P $^ s3://${BUCKET}/
 
 ${COLLECTION}-converted.zip: ${COLLECTION}-source.zip
 	PYTHONPATH=. ${SCRIPTDIR}/20-convert2xd.py -o $@ $<

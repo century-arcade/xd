@@ -1,3 +1,10 @@
+
+body {
+    max-width: 640px;
+    padding: 12px;
+    margin: auto;
+}
+
 table.legend {
     float: left;
 }

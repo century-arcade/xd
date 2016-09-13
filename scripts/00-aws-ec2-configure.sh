@@ -45,14 +45,14 @@ if [ -n "$XDCONFIG" ]; then
       --auto-scaling-group "$autoscale_group" \
       --scaling-processes ReplaceUnhealthy
 
-    # UTC at 1am (5pm PST)
+    # 6am UTC (11pm PST)
    $aws autoscaling put-scheduled-update-group-action \
       --scheduled-action-name "xd-schedule-start" \
       --auto-scaling-group "$autoscale_group" \
       --min-size 1 \
       --max-size 1 \
       --desired-capacity 1 \
-      --recurrence "0 01 * * *"
+      --recurrence "0 06 * * *"
 
     $aws autoscaling put-scheduled-update-group-action \
       --scheduled-action-name "xd-schedule-stop" \
@@ -60,7 +60,7 @@ if [ -n "$XDCONFIG" ]; then
       --min-size 0 \
       --max-size 0 \
       --desired-capacity 0 \
-      --recurrence "55 02 * * *"
+      --recurrence "55 07 * * *"
 
 else
     echo "Supply config file: $0 <config>"
