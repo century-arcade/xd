@@ -12,6 +12,7 @@ fi
 
 if [ -n "$NODRY" ]; then
     aws="aws"
+    set -x
 else
     aws="echo -e \naws"
 fi
