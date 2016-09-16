@@ -19,18 +19,26 @@ exec > >(tee -i ${LOGFILE}) 2>&1
 echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 
 # Re-get config file from AWS
-aws s3 cp --region=us-west-2 s3://xd-private/etc/config $WORKDIR/config
+curl http://169.254.169.254/latest/user-data > $WORKDIR/config
 source $WORKDIR/config
 
 cd $HOME/xd
 git pull
 git checkout ${BRANCH}
 
+cd $HOME/xd/gxd
+git pull
+git checkout master
+
+cd $HOME/xd
+
 source scripts/helpers.sh
 
-mkdir -p $SSHHOME/.ssh
-aws s3 cp --region=$REGION s3://xd-private/etc/gxd_rsa $SSHHOME/.ssh/
-chmod 600 $SSHHOME/.ssh/gxd_rsa
+if [ ! -f $HOME/.ssh/gxd_rsa ] ; then
+    mkdir -p $HOME/.ssh
+    aws s3 cp --region=$REGION s3://xd-private/etc/gxd_rsa $HOME/.ssh/
+    chmod 600 $HOME/.ssh/gxd_rsa
+fi
 
 echo "Run deploy script"
 /bin/bash scripts/05-full-pipeline.sh

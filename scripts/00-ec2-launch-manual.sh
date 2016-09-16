@@ -20,16 +20,18 @@ if [ -n "$XDCONFIG" ]; then
       --key-name $KEY \
       --region ${REGION} \
       --instance-type ${INSTANCE_TYPE} \
-      --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"DeleteOnTermination":false}}]' \
-      --instance-initiated-shutdown-behavior stop \
+      --no-ebs-optimized \
       --iam-instance-profile Arn="$XD_PROFILE" \
-      --user-data file://scripts/01-sudo-poweroff.sh \
-      --image-id ${AMI_ID} > $INSTANCE_JSON
+      --user-data file://scripts/01-ec2-install.sh \
+      --image-id ${BASE_AMI_ID} > $INSTANCE_JSON
 
     instance_id=$(cat $INSTANCE_JSON | jq -r .Instances[0].InstanceId)
     echo ${instance_id} started
 
-    echo After it has powered off, run 00-ec2-launch-manual-2.sh ${instance_id}
+    sleep 10
+    public_ip=$(aws ec2 describe-instances --instance-ids ${instance_id} | jq -r '.Reservations[0].Instances[0].PublicIpAddress')
+    echo "Connect to ${instance_id} :  ssh -i ~/*.pem ubuntu@$public_ip"
+
 else
     echo "Supply config file: $0 <config>"
     exit 1
