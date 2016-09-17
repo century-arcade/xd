@@ -9,9 +9,6 @@ apt-get -y autoremove
 
 mkdir -p /mnt/out
 
-S3AMIDEST=xd.saul.pw/ami
-
-
 /opt/aws/ec2-ami-tools/bin/ec2-bundle-vol \
  --user ${ACCOUNTID} \
  --privatekey /mnt/xd-pk.pem \
@@ -19,21 +16,21 @@ S3AMIDEST=xd.saul.pw/ami
  --arch x86_64 \
  --destination /mnt/out \
  --partition mbr \
- --block-device-mapping ami=sda,root=/dev/sda1 mbr \
  --include `find / -name "*.pem" | grep -v "^/mnt" | grep -v "^/home" | tr '\n' ','`
 
-
-echo ec2-upload-bundle \
+ec2-upload-bundle \
 --manifest /mnt/out/image.manifest.xml \
 --region ${REGION} \
 --bucket ${S3AMIDEST} \
 --access-key ${AWS_ACCESS_KEY} \
 --secret-key ${AWS_SECRET_KEY}
 
+aws ec2 deregister-image --image-id ${AMI_NAME}
+
 echo aws ec2 register-image \
  --image-location ${S3AMIDEST}/image.manifest.xml \
  --region ${REGION} \
- --name xd-nonserver \
+ --name ${AMI_NAME} \
  --description '"xd collection and analysis"' \
  --virtualization-type hvm \
  --architecture x86_64

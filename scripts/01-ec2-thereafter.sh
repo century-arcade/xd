@@ -18,17 +18,14 @@ echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 curl http://169.254.169.254/latest/user-data > $WORKDIR/config
 source $WORKDIR/config
 
-if [ -z "$HOME" ] ; then
-    HOME=/home/ubuntu
-fi
+HOME=/home/ubuntu
 
 cd $HOME/xd
 git pull
 git checkout ${BRANCH}
 
 cd $HOME/xd/gxd
-git pull
-git checkout master
+ssh-agent bash -c "ssh-add ${HOME}/.ssh/gxd_rsa ; git pull ; git checkout master"
 
 cd $HOME/xd
 

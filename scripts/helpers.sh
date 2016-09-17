@@ -4,11 +4,7 @@ if [ ! -n "$NOW" ]; then
     exit 1
 fi
 
-if [[ -z "$HOME" && $UID -eq '0' ]]; then
-    export SSHHOME=/root
-else
-    export SSHHOME=$HOME
-fi
+export SSHHOME=$HOME
 
 if [ -n "$NODRY" ]; then
     aws="aws"
