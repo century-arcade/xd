@@ -22,8 +22,7 @@ S3AMIDEST=xd.saul.pw/ami
  --block-device-mapping ami=sda,root=/dev/sda1 mbr \
  --include `find / -name "*.pem" | grep -v "^/mnt" | grep -v "^/home" | tr '\n' ','`
 
-
-echo ec2-upload-bundle \
+ec2-upload-bundle \
 --manifest /mnt/out/image.manifest.xml \
 --region ${REGION} \
 --bucket ${S3AMIDEST} \
