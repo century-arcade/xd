@@ -1,6 +1,10 @@
 export AWS_ACCESS_KEY=
 export AWS_SECRET_KEY=
 
+# 7=midnight
+HOUR_START=3 # x:00
+HOUR_END=3   # x:55
+
 export ACCOUNTID=
 export DOMAIN=xd.saul.pw
 

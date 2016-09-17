@@ -14,25 +14,20 @@ if [ -n "$XDCONFIG" ]; then
     launch_config=xd-launch-config
     zone=${REGION}a
 
-
     $aws iam create-instance-profile --instance-profile-name xd-scraper
     $aws iam add-role-to-instance-profile --instance-profile-name xd-scraper --role-name xd-scraper
-
-    # copy config to shared s3 storage
-    $aws s3 cp $XDCONFIG s3://${XDPRIV}/etc/config
 
     # from https://alestic.com/2011/11/ec2-schedule-instance/
 
     if [ -z "${INSTANCE_ID}" ] ; then
         $aws autoscaling create-launch-configuration \
+          --associate-public-ip-address \
           --launch-configuration-name ${launch_config} \
           --security-groups ${SECURITY_GROUP_ID} \
-          --associate-public-ip-address \
-          --block-device-mappings "[{\"DeviceName\":\"/dev/sda1\",\"Ebs\":{\"DeleteOnTermination\":false,\"SnapshotId\":\"${SNAPSHOT_ID}\"}}]" \
-          --iam-instance-profile xd-scraper \
           --key $KEY \
           --instance-type ${INSTANCE_TYPE} \
-          --user-data file://scripts/01-ec2-thereafter.sh \
+          --iam-instance-profile xd-scraper \
+          --user-data file://${XDCONFIG} \
           --image-id ${AMI_ID}
 
         INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=key-name,Values=${KEY}" | jq -r .Reservations[0].Instances[0].InstanceId)
@@ -64,7 +59,7 @@ if [ -n "$XDCONFIG" ]; then
       --min-size 1 \
       --max-size 1 \
       --desired-capacity 1 \
-      --recurrence "00 06 * * *"
+      --recurrence "0 ${HOUR_START} * * *"
 
     $aws autoscaling put-scheduled-update-group-action \
       --scheduled-action-name "xd-schedule-stop" \
@@ -72,7 +67,7 @@ if [ -n "$XDCONFIG" ]; then
       --min-size 0 \
       --max-size 0 \
       --desired-capacity 0 \
-      --recurrence "55 06 * * *"
+      --recurrence "55 ${HOUR_END} * * *"
 
 else
     echo "Supply config file: $0 <config>"

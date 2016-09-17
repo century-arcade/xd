@@ -22,8 +22,8 @@ if [ -n "$XDCONFIG" ]; then
       --instance-type ${INSTANCE_TYPE} \
       --no-ebs-optimized \
       --iam-instance-profile Arn="$XD_PROFILE" \
-      --user-data file://scripts/01-ec2-install.sh \
-      --image-id ${BASE_AMI_ID} > $INSTANCE_JSON
+      --user-data file://${XDCONFIG} \
+      --image-id ${AMI_ID} > $INSTANCE_JSON
 
     instance_id=$(cat $INSTANCE_JSON | jq -r .Instances[0].InstanceId)
     echo ${instance_id} started

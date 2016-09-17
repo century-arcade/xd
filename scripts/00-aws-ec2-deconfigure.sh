@@ -5,7 +5,7 @@
 source scripts/helpers.sh
 
 autoscale_group=xd-as-group
-launch_config=xd-as-group
+launch_config=xd-launch-config
 
 $aws autoscaling delete-scheduled-action \
     --scheduled-action-name "xd-schedule-start" \

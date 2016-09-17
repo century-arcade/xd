@@ -162,9 +162,9 @@ def html_footer():
     dt = time.strftime('%F')
     return """
   <hr style="clear:both;"/>
-<small><i>Generated {date}</i></small>
+a <a href="mailto:xd@saul.pw">saul.pw project</a>
 <br>
-  <a href="mailto:xd@saul.pw"><small>xd@saul.pw</small></a>
+<small><i>Generated on {date}</i></small>
 </body>
 </html>
 """.format(date=dt)
