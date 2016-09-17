@@ -2,10 +2,6 @@
 
 WORKDIR=/tmp
 
-if [ -z "$HOME" ] ; then
-    HOME=/root
-fi
-
 # This script is passed as userdata to the launch-config, which the base AMI
 # executes at the end of initialization.
 
@@ -21,6 +17,10 @@ echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 # Re-get config file from AWS
 curl http://169.254.169.254/latest/user-data > $WORKDIR/config
 source $WORKDIR/config
+
+if [ -z "$HOME" ] ; then
+    HOME=/home/ubuntu
+fi
 
 cd $HOME/xd
 git pull
