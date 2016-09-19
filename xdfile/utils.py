@@ -12,6 +12,7 @@ import codecs
 import datetime
 import time
 import argparse
+import fnmatch
 
 EOL = '\n'
 COLSEP = '\t'
@@ -379,9 +380,10 @@ def parse_tsv_rows(fn, objname=None):
 
 
 class OutputZipFile(zipfile.ZipFile):
-    def __init__(self, fnzip, toplevel=""):
+    def __init__(self, fnzip, toplevel="", log=True):
         zipfile.ZipFile.__init__(self, fnzip, 'w', allowZip64=True)
         self.toplevel = toplevel
+        self.log = log
 
     def write_file(self, fn, contents, timet=None):
         if not timet:
@@ -400,7 +402,8 @@ class OutputZipFile(zipfile.ZipFile):
         raise Exception("can't write directly to .zip")
 
     def __del__(self):
-        self.write_file(g_scriptname + ".log", get_log().encode('utf-8'))
+        if self.log:
+            self.write_file(g_scriptname + ".log", get_log().encode('utf-8'))
         zipfile.ZipFile.__del__(self)
 
 
@@ -638,4 +641,5 @@ def consecutive(text):
         elif l != ret[-1]:
             ret.append(l)
     return EOL.join(ret)
+
 

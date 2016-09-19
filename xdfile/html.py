@@ -100,12 +100,12 @@ class GridCalendar(HTMLCalendar):
 
 navbar_items = [
       ('Home','/'),
+      ('About', '/about'),
       ('Data', '/data'),
       ('Most Popular', [
               ('Words','/words'),
               ('Clues','/clues'),
       ]),
-      ('About', '/about'),
 ]
 
 #todo: output navbar_items like in https://codepen.io/philhoyt/pen/ujHzd
@@ -162,9 +162,10 @@ def html_footer():
     dt = time.strftime('%F')
     return """
   <hr style="clear:both;"/>
-a <a href="mailto:xd@saul.pw">saul.pw project</a>
+<small><i>Generated on {date}</i>
 <br>
-<small><i>Generated on {date}</i></small>
+a <a href="mailto:xd@saul.pw">saul.pw</a> project
+</small>
 </body>
 </html>
 """.format(date=dt)

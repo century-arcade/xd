@@ -1,19 +1,25 @@
 
-## Download bulk crossword data
+## Download crossword data
 
-All public data from xd is available in one .zip archive:
+All public data from xd is available in three .zip archives:
 
-- Download [xd-2016-08-metadata.zip](/download/xd-2016-08-metadata.zip)  (10MB) including puzzles.tsv and similar.tsv
-- Download [xd-2016-08-clues.zip](/download/xd-2016-08-clues.zip)  (100MB) with a .tsv of clues and answers from all puzzles
-- Download [xd-2016-08-all.zip](/download/xd-2016-08-all.zip)  (200MB) with all public puzzles and data
+- [xd-metadata.zip](/xd-metadata.zip)  (2MB), metadata and similarity for all puzzles in the corpus, public and private
 
-## Add to the analysis
+- [xd-puzzles.zip](/xd-puzzles.zip)  (12MB), all public puzzles (over 6,000) in [.xd format](http://github.com/century-arcade/xd).
+) (text)
 
-- Browse the source code at [github.com/century-arcade/xd](github.com/century-arcade/xd).
+- [xd-clues.zip](/xd-clues.zip)  (67MB), over 6,000,000 answer/clue usages, grouped by publication-year
+
+## Source code
+
+- Browse the entire source code at [github.com/century-arcade/xd](http://github.com/century-arcade/xd).
 
 ## Submit puzzles
 
-Email crosswords for comparison or inclusion to submit@xd.saul.pw (as attachments: .puz, .ipuz, .xd, .pdf, or .zip of any of these).  The filename should be the publication abbreviation (like 'nyt' or 'lat'; all full list is below), followed by the date, as nyt20161029.puz, for example, or pub-###.puz if they are numbered sequentially.   Incoming puzzles are processed once a day.
+Email crosswords for comparison or inclusion to submit@xd.saul.pw (as attachments: .puz, .ipuz, .xd, .pdf, or .zip of any of these).  The filename should be the publication abbreviation (like 'nyt' or 'lat'; see the [/publications](full list)), followed by the date in YYYYMMDD format (for example, `nyt20161029.puz`) or by a three digit number if they are numbered sequentially (e.g. `eltana-093.puz`).  Uploaded puzzles are processed once a day.
 
 If you have more than 50 puzzles, please email me at [xd@saul.pw](mailto:xd@saul.pw) to discuss the best way to import and organize them.
 
+## Feedback
+
+The .xd format and If you use this dataset, 

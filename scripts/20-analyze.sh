@@ -14,5 +14,5 @@ rm -f $PUB/*
 $python scripts/21-clean-metadata.py $GXD
 
 $python scripts/25-analyze-puzzle.py -o $WWW/ -c $GXD $GXD
-$python scripts/26-clues-tsv.py -c $GXD -o $PUB/
+
 $python scripts/27-pubyear-stats.py -c ${GXD}

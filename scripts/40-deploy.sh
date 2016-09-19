@@ -3,11 +3,16 @@
 source scripts/helpers.sh
 
 # $aws s3 rm -recursive ${S3WWW}/pub
+YEAR=`date +"%Y"`
+
+scripts/26-mkzip-clues.py -c $GXD -o $WWW/xd-${YEAR}-clues.zip
+scripts/42-mkzip-public.py -o $WWW/xd-${YEAR}-public.zip $GXD/
+scripts/43-mkzip-metadata.py -c $GXD -o $WWW/xd-${YEAR}-metadata.zip
 
 cp scripts/html/style.css $WWW/
 cp scripts/html/*.html $WWW/
 
-for page in about data ; do 
+for page in about data ; do
     pagedir=$WWW/${page}
     markdown www/${page}.md > $pagedir.html
     scripts/44-mkwww-pages.py -o $WWW/ $pagedir.html

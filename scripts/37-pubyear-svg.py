@@ -36,13 +36,13 @@ pys = '''
 
 legend = '''
 <table class="legend">
-<tr><td class="themexd">&nbsp;&nbsp;</td><td>25-50% grid match of an earlier puzzle (likely theme copy)</td></tr>
-<tr><td class="suspxd">&nbsp;&nbsp;</td><td>50%+ grid match of an earlier puzzle, different author</td></tr>
-<tr><td class="dupxd">&nbsp;&nbsp;</td><td>50%+ grid match of an earlier puzzle, same author (reprint/resubmission)</td></tr>
+<tr><td class="dupxd">&nbsp;&nbsp;</td><td>&gt;50% grid match of an earlier puzzle, same author (reprint/resubmission)</td></tr>
+<tr><td class="suspxd">&nbsp;&nbsp;</td><td>&gt;50% grid match of an earlier puzzle, different author</td></tr>
+<tr><td class="themexd">&nbsp;&nbsp;</td><td>25-50% grid match of an earlier puzzle (possible theme copy)</td></tr>
 </table>
 <table class="legend">
-<tr><td class="pubxd">&nbsp;&nbsp;</td><td>crossword grid data available for <a href="/download">public download</a></td></tr>
-<!--tr><td class="privxd">&nbsp;&nbsp;</td><td>crossword grid data in private storage</td></tr-->
+<tr><td class="pubxd">&nbsp;&nbsp;</td><td>crossword grid data available for <a href="/data#download">public download</a></td></tr>
+<tr><td class="privxd">&nbsp;&nbsp;</td><td>crossword grid data in private storage</td></tr>
 </table>
 <p style="clear:both">&nbsp;</p>
 '''
