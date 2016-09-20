@@ -28,12 +28,13 @@ ec2-upload-bundle \
 --access-key ${AWS_ACCESS_KEY} \
 --secret-key ${AWS_SECRET_KEY}
 
-aws ec2 deregister-image --image-id ${AMI_NAME}
+echo aws ec2 deregister-image --region ${REGION} --image-id ${AMI_ID}
 
+DT=`date +"%Y%m%d-%H%M%S"`
 echo aws ec2 register-image \
  --image-location ${S3AMIDEST}/image.manifest.xml \
  --region ${REGION} \
- --name ${AMI_NAME} \
+ --name ${AMI_NAME}-${DT} \
  --description '"xd collection and analysis"' \
  --virtualization-type hvm \
  --architecture x86_64
