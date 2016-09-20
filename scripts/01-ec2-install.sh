@@ -38,13 +38,13 @@ git checkout ${BRANCH}
 
 source scripts/helpers.sh
 
-mkdir -p $SSHHOME/.ssh
+mkdir -p $HOME/.ssh
 echo "Clone GXD repo"
-aws s3 cp --region=$REGION s3://xd-private/etc/gxd_rsa $SSHHOME/.ssh/
-chmod 600 $SSHHOME/.ssh/gxd_rsa
+aws s3 cp --region=$REGION s3://xd-private/etc/gxd_rsa $HOME/.ssh/
+chmod 600 $HOME/.ssh/gxd_rsa
 
-cat scripts/ssh_config >> $SSHHOME/.ssh/config
-ssh-agent bash -c "ssh-add $SSHHOME/.ssh/gxd_rsa; git clone ${GXD_GIT}"
+cat scripts/ssh_config >> $HOME/.ssh/config
+ssh-agent bash -c "ssh-add $HOME/.ssh/gxd_rsa; git clone ${GXD_GIT}"
 
 echo "Run deploy script"
 /bin/bash scripts/05-full-pipeline.sh

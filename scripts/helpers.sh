@@ -4,8 +4,6 @@ if [ ! -n "$NOW" ]; then
     exit 1
 fi
 
-export SSHHOME=$HOME
-
 if [ -n "$NODRY" ]; then
     aws="aws"
     set -x
