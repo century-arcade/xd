@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+
+from xdfile.utils import get_args, get_parser, open_output, log, info, error, warn
+
+import xdfile
+import os
+
+
+def collapse_whitespace(s):
+    return u"".join(x.strip() for x in s.splitlines()).strip()
+
+if __name__ == "__main__":
+    p = get_parser("rewrite corpus")
+    p.add_argument('--noclues', nargs='?', help='omit clues')
+    p.add_argument('--verify', nargs='?', help='log differences between each input xd and xd.T.T')
+    args = get_args(p)
+
+    outf = open_output()
+
+    for xd in xdfile.corpus():
+        if not xd.grid:
+            continue
+
+        try:
+            outxd = xd.to_unicode(emit_clues=not args.noclues)
+            if args.verify:
+                outxdtt = xd.transpose().transpose()
+                if collapse_whitespace(outxd) != collapse_whitespace(outxdtt):
+                    for a, b in xd.diffs(outxdtt):
+                        info("diff: %s | %s" % (a, b))
+                    raise Exception("differs when double-transposed")
+        except Exception, e:
+            error(unicode(e))
+            if args.debug:
+                raise
+
+        outf.write_file(outxd.filename, outxd.to_unicode().encode("utf-8"))
+

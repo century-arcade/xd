@@ -1,1 +1,13 @@
 *.pyc
+*.DS_Store
+.tox/*
+.eggs/*
+.cache/
+xd*egg*
+*.zip*
+wwwroot/
+gxd/
+pub/
+tags
+Session.vim
+*.swp
