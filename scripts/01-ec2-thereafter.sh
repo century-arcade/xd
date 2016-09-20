@@ -18,7 +18,7 @@ echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 curl http://169.254.169.254/latest/user-data > $WORKDIR/config
 source $WORKDIR/config
 
-HOME=/home/ubuntu
+export HOME=/home/ubuntu
 
 cd $HOME/xd
 git pull
