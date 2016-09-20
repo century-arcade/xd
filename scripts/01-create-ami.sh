@@ -1,7 +1,10 @@
 #!/bin/bash
 
+# run like this:
+#
 # source /tmp/config
-# sudo -E su
+# sudo -E su   # keeps env vars
+# 01-create-ami.sh
 
 apt-get -y autoremove
 /bin/rm -f /var/cache/apt/archives/*deb
