@@ -1,28 +1,6 @@
 #!/bin/bash
 
-WORKDIR=/tmp
-
-# This script is passed as userdata to the launch-config, which the base AMI
-# executes at the end of initialization.
-
-export LC_ALL="en_US.UTF-8"
-export LOGFILE=/tmp/`date +"%Y-%m-%d"`.log
-export SUMLOGFILE=/tmp/`date +"%Y-%m-%d"`summary.log
-# To run xdfile based scripts below
-export PYTHONPATH=.
-
-exec > >(tee -i ${LOGFILE}) 2>&1
-echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
-
-# Re-get config file from AWS
-curl http://169.254.169.254/latest/user-data > $WORKDIR/config
-source $WORKDIR/config
-
-export HOME=/home/ubuntu
-
-cd $HOME/xd
-git pull
-git checkout ${BRANCH}
+export SUMLOGFILE=/tmp/`date +"%Y-%m-%d"`-summary.log
 
 cd $HOME/xd/gxd
 ssh-agent bash -c "ssh-add ${HOME}/.ssh/gxd_rsa ; git pull ; git checkout master"
@@ -36,6 +14,10 @@ if [ ! -f $HOME/.ssh/gxd_rsa ] ; then
     aws s3 cp --region=$REGION s3://xd-private/etc/gxd_rsa $HOME/.ssh/
     chmod 600 $HOME/.ssh/gxd_rsa
 fi
+
+
+# TODO: track stdout/stderr separately
+/bin/bash scripts/05-beta-pipeline.sh &
 
 echo "Run deploy script"
 /bin/bash scripts/05-full-pipeline.sh

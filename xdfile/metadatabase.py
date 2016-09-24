@@ -15,7 +15,7 @@ RECEIPTS_TSV = "gxd/receipts.tsv"
 SIMILAR_TSV = "gxd/similar.tsv"
 PUBLICATIONS_TSV = "gxd/publications.tsv"
 PUZZLE_SOURCES_TSV = "gxd/sources.tsv"
-RECENT_DOWNLOADS_TSV = "gxd/recents.tsv"
+RECENT_DOWNLOADS_TSV = "gxd/recent-downloads.tsv"
 STATS_TSV = "pub/stats.tsv"
 
 
@@ -147,7 +147,12 @@ def _puzzles():
 
 @utils.memoize
 def xd_puzzle_sources():
-    return utils.parse_tsv(PUZZLE_SOURCES_TSV, "PuzzleSource")
+    return dict((r.pubid, r) for r in utils.parse_tsv_rows(PUZZLE_SOURCES_TSV))
+
+
+@utils.memoize
+def xd_recent_downloads():
+    return dict((r.pubid, r) for r in utils.parse_tsv_rows(RECENT_DOWNLOADS_TSV))
 
 
 def delete_stats():

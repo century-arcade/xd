@@ -11,5 +11,5 @@ else
     aws="echo -e \naws"
 fi
 
-sh="sh"
+sh="bash"
 python="/usr/bin/env python3"

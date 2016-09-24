@@ -25,7 +25,7 @@ if find $TMP/incoming -mindepth 1 -print -quit | grep -q .; then
 fi
 
 # download from www
-$python scripts/11-download-puzzles.py -o $WWWZIP --recents $RECENTS
+$python scripts/11-download-puzzles.py -o $WWWZIP
 $aws s3 cp --region $REGION $WWWZIP ${S3PRIV}/sources/
 
 # convert everything to .xd, shelve in the proper location, and commit

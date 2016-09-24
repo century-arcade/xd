@@ -1,10 +1,18 @@
 #!/bin/bash
 
-# run like this:
+# 1. modify /etc/rc.local to include:
+#   export NODRY=1
+#   /home/ubuntu/xd/scripts/02-bootstrap.sh
+
+# run $0 like this:
 #
 # source /tmp/config
 # sudo -E su   # keeps env vars
-# 01-create-ami.sh
+# $0
+
+
+
+source scripts/helpers.sh
 
 apt-get -y autoremove
 /bin/rm -f /var/cache/apt/archives/*deb
@@ -28,10 +36,11 @@ ec2-upload-bundle \
 --access-key ${AWS_ACCESS_KEY} \
 --secret-key ${AWS_SECRET_KEY}
 
-echo aws ec2 deregister-image --region ${REGION} --image-id ${AMI_ID}
+$aws ec2 deregister-image --region ${REGION} --image-id ${AMI_ID}
+$aws s3 rb s3://${S3AMIDEST}
 
 DT=`date +"%Y%m%d-%H%M%S"`
-echo aws ec2 register-image \
+$aws ec2 register-image \
  --image-location ${S3AMIDEST}/image.manifest.xml \
  --region ${REGION} \
  --name ${AMI_NAME}-${DT} \

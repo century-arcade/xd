@@ -10,7 +10,8 @@ import urllib.request, urllib.error, urllib.parse
 import datetime
 import re
 
-from xdfile.utils import get_args, log, error, warn, summary, debug, find_files, parse_pathname, open_output, parse_tsv, datestr_to_datetime, args_parser
+from xdfile import utils, metadatabase as metadb
+from xdfile.utils import get_args, log, error, warn, summary, debug, open_output, datestr_to_datetime, args_parser
 from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sources, xd_recent_download, xd_recents_header
 
 
@@ -28,13 +29,12 @@ def get_dates_between(before_date, after_date, days_to_advance=1):
 
 def main():
     p = args_parser('download recent puzzles')
-    p.add_argument('-r', '--recents', dest='recents', help='recent-downloads.tsv to read and update')
     args = get_args(parser=p)
 
     outf = open_output()
 
     today = datetime.date.today()
-    todaystr=today.strftime("%Y-%m-%d")
+    todaystr = today.strftime("%Y-%m-%d")
 
     sources_tsv = ''
 
@@ -46,11 +46,11 @@ def main():
     most_recent = {}
 
     # download new puzzles since most recent download
-    for row in parse_tsv(args.recents, "Recent").values():
+    for row in metadb.xd_recent_downloads().values():
         pubid = row.pubid
         latest_date = datestr_to_datetime(row.date)
 
-        # by default, keep the previous one 
+        # by default, keep the previous one
         most_recent[pubid] = row.date
 
         if pubid not in puzzle_sources:
@@ -62,7 +62,6 @@ def main():
         if not puzsrc.urlfmt or puzsrc.urlfmt.startswith("#"):
             warn("no source url for '%s', skipping" % pubid)
             continue
-
 
         from_date = latest_date
         to_date = today
@@ -97,8 +96,12 @@ def main():
     for k, v in most_recent.items():
         new_recents_tsv.append(xd_recent_download(k, v))
 
-    outf.write_file("sources.tsv", xd_sources_header + sources_tsv)
-    open(args.recents, "w").write(xd_recents_header + "".join(sorted(new_recents_tsv)))
+    if sources_tsv:
+        outf.write_file("sources.tsv", xd_sources_header + sources_tsv)
+
+    if new_recents_tsv:
+        # on filesystem
+        open(metadb.RECENT_DOWNLOADS_TSV, "w").write(xd_recents_header + "".join(sorted(new_recents_tsv)))
 
 if __name__ == "__main__":
     main()

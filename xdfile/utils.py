@@ -352,17 +352,17 @@ def parse_tsv_data(contents, objname=None):
         if objname:
             r = AttrDict((k, autoconvert(v)) for k, v in row.items())
         else:
-            r = row
-
+            r = AttrDict(row)
         yield r
 
 
 def parse_tsv(fn, objname=None):
     try:
         fp = codecs.open(fn, encoding='utf-8')
-        return dict((r[0], r) for r in parse_tsv_data(fp.read(), objname))
+        rows = parse_tsv_data(fp.read(), objname)
+        return dict((r[0], r) for r in rows)
     except Exception as e:
-        error("parse_tsv() %s" % str(e))
+        error("parse_tsv('%s') %s" % (fn, str(e)))
         if g_args.debug:
             raise
         return {}
@@ -373,7 +373,7 @@ def parse_tsv_rows(fn, objname=None):
         fp = codecs.open(fn, encoding='utf-8')
         return [r for r in parse_tsv_data(fp.read(), objname)]
     except Exception as e:
-        error("parse_tsv_rows(): %s" % str(e))
+        error("parse_tsv_rows('%s'): %s" % (fn, str(e)))
         if g_args.debug:
             raise
         return []
