@@ -1,11 +1,15 @@
 
-body {
+.text {
     max-width: 640px;
     padding: 12px;
 }
 
 table.legend {
     float: left;
+}
+
+table.legend td.box {
+    border:1px darkgray solid;
 }
 
 #pubyearmap td {
@@ -32,23 +36,28 @@ table.legend {
     font-size: 12px;
 }
 
-#pubyearmap td.zero-year {
-    background: lightgrey;
+#pubyearmap td.header {
     color: black;
-/*    border-color: white; */
-    font-weight: bold;
+}
+
+#pubyearmap td.zero-year {
+    background: #aaaaff;
+    color: black;
     font-size: 12px;
 }
 
 #pubyearmap td.ord-year {
     background: #ccf;
     color: black;
-/*    border-color: white; */
     font-size: 12px;
 }
 
-#pubyearmap td:hover {
-    background:darkgray;
+#pubyearmap td.year_widget {
+    background-color: #a8a8a8;
+}
+#pubyearmap td a:hover {
+    background:white;
+    cursor: pointer
 }
 
 /* Highlight row with link */
@@ -62,7 +71,7 @@ th {
 }
 
 .year_widget {
-    fill:#a8a8a8;
+    background-color: #a8a8a8;
     overflow:visible;
 }
 
@@ -71,8 +80,26 @@ th {
 }
 
 /* Prexd */
-.notexist {
-    fill: white;
+.privxd {
+    fill:#7fdbff;
+    color: #2f8baf;
+    background-color: #7fdbff;
+}
+
+.pubxd {
+    fill:#2ecc40;
+    color: #2ecc40;
+    background-color: #2ecc40;
+}
+
+.themexd {
+    fill:#ff95b0;
+    background-color: #ff95b0;
+}
+
+.dupxd {
+    fill:#ffdc00;
+    background-color: #ffdc00;
 }
 
 .suspxd {
@@ -81,25 +108,12 @@ th {
     background-color: #ff4136;
 }
 
-.dupxd {
-    fill:#ffdc00;
-    background-color: #ffdc00;
+.puzzles .calendar td.privxd {
+    color: black;
 }
 
-.themexd {
-    fill:#ff95b0;
-    background-color: #ff95b0;
-}
-
-.privxd {
-    fill:#7fdbff;
-/*    background-color: #7fdbff; */
-    text-color: black;
-}
-
-.pubxd {
-    fill:#2ecc40;
-    background-color: #2ecc40;
+.puzzles .calendar td.pubxd {
+    color: black;
 }
 
 .year_widget text {
@@ -154,7 +168,18 @@ th.mon, th.tue, th.wed, th.thu, th.fri, th.sat, th.sun {
 td.mon, td.tue, td.wed, td.thu, td.fri, td.sat, td.sun {
     padding: 1px;
     text-align: center;
-    color: lightgrey;
+}
+
+.exists {
+    fill: #a8a8a8;
+}
+
+.notexists {
+    fill: #a8a8a8;
+}
+
+td:hover .exists {
+    fill: #666666;
 }
 
 td.biggrid {
@@ -257,6 +282,44 @@ tbody tr:hover td {
 	background: #ccf;
 }
 */
+
+tbody {
+    vertical-align: top;
+}
+
+td.header {
+    vertical-align: middle;
+}
+
+
+.theme {
+    color: #333;
+}
+
+/* --- analyze-puzzle --- */
+.fullgrid {
+    margin-left: 20px;
+    margin-top: 2px;
+}
+
+.xdgrid {
+    margin: auto;
+    margin-bottom: 2em;
+    display: table;
+    border-bottom: 1px solid black;
+    border-right: 1px solid black;
+    border-spacing: 0px;
+
+}
+
+.xdrow {
+    display: table-row;
+}
+
+.match {
+    background: lightgreen;
+}
+
 
 .theme {
     color: #333;
@@ -375,16 +438,15 @@ select {width: 100%; }
     text-align: center;
 }
 
-.pubyears th.zero-year {
-    background: #aaaaff;
+.pubyears td.ord-year {
+    background: #ccf;
     color: black;
     border-color: white;
 }
 
-.pubyears th.ord-year {
-    background: #ccf;
-    color: black;
-    border-color: white;
+.pure {
+    fill: #ffffcc;
+    background: #ffffcc;
 }
 
 .pubyears .block {
@@ -417,7 +479,7 @@ select {width: 100%; }
 }
 
 .pubyears tr:hover td.block {
-    background: #555555; 
+    background: #555555;
 }
 
 .pubyears a {
@@ -457,9 +519,32 @@ select {width: 100%; }
     background: #333333;
 }
 
+.puzrow {
+    height: 1em;
+}
+
+tr.calendar {
+    height: 8px;
+}
+
+.puzzles .calendar th, .puzzles .calendar tr {
+    font-size: 10px;
+    margin: 0;
+    padding: 2px;
+    border-width:0;
+}
+
+.puzzles .calendar td {
+/*    width: 20px;*/
+    height: 1em;
+    border: 0;
+    padding: 2px;
+    color: #dddddd;
+}
+
 .puzzles tr, .puzzles th  {
     border-style:solid;
-    border-width:1px
+    border-width:1px;
 }
 
 .puzzles td {
@@ -470,8 +555,8 @@ select {width: 100%; }
     border-top: 1px solid #333333;
 }
 
-.puzzles tr:hover td {
-    background: pink;
+.puzzles tr.hrefrow:hover td {
+    background: darkgray;
 }
 
 .puzzles tr:hover td.block {

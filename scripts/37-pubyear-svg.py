@@ -18,7 +18,7 @@ DECADE_SKIP_START = 1910
 DECADE_SKIP_END = 1980
 
 
-pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', '1Across_1Down', 'Similar Grids' ]
+pubyear_header = [ 'xdid', 'Date', 'Size', 'Title', 'Author', 'Editor', 'Copyright', '1Across_1Down', 'Similar Previous Grids' ]
 
 
 svg_w = 32
@@ -36,13 +36,14 @@ pys = '''
 
 legend = '''
 <table class="legend">
-<tr><td class="dupxd">&nbsp;&nbsp;</td><td>&gt;50% grid match of an earlier puzzle, same author (reprint/resubmission)</td></tr>
-<tr><td class="suspxd">&nbsp;&nbsp;</td><td>&gt;50% grid match of an earlier puzzle, different author</td></tr>
-<tr><td class="themexd">&nbsp;&nbsp;</td><td>25-50% grid match of an earlier puzzle (possible theme copy)</td></tr>
+<tr><td class="box pure">&nbsp;&nbsp;</td><td>100% grid match of an earlier puzzle, same author (reprint)</td></tr>
+<tr><td class="box dupxd">&nbsp;&nbsp;</td><td>&gt;50% grid match of an earlier puzzle, same author</td></tr>
+<tr><td class="box suspxd">&nbsp;&nbsp;</td><td>&gt;50% grid match of an earlier puzzle, different author</td></tr>
+<tr><td class="box themexd">&nbsp;&nbsp;</td><td>25-50% grid match of an earlier puzzle (possible theme duplication)</td></tr>
 </table>
 <table class="legend">
-<tr><td class="pubxd">&nbsp;&nbsp;</td><td>crossword grid data available for <a href="/data#download">public download</a></td></tr>
-<tr><td class="privxd">&nbsp;&nbsp;</td><td>crossword grid data in private storage</td></tr>
+<tr><td class="box pubxd">&nbsp;&nbsp;</td><td>crossword grid data available for <a href="/data#download">public download</a></td></tr>
+<tr><td class="box privxd">&nbsp;&nbsp;</td><td>crossword grid data in private storage</td></tr>
 </table>
 <p style="clear:both">&nbsp;</p>
 '''
@@ -61,9 +62,7 @@ def weekdays_between(dta, dtb):
 
 
 def pubyear_svg(rows, height=svg_h, width=svg_w, pubid='', year=''):
-    bgclass = "notexists"
-#    if bgclass not in publications.tsv:
-#       bgclass = "exists"
+    bgclass = 'notexists'
 
     rects = ''
     """
@@ -95,6 +94,8 @@ def pubyear_svg(rows, height=svg_h, width=svg_w, pubid='', year=''):
         num_existing = 52 if 's' not in year else 520 # (eventually number of this weekday in that year, *10 for decades)
 
         num_xd = int(row.NumXd)
+        if num_xd > 0:
+            bgclass = 'exists'
 
         #dup_length is length of dup/orange line
         num_dup = int(row.NumReprints) + int(row.NumTouchups) + int(row.NumRedone)
@@ -184,7 +185,7 @@ def pubyear_svg(rows, height=svg_h, width=svg_w, pubid='', year=''):
 #        w = pixel_postxd
 #        rects += rect(x, y, w, h, 'postxd')
         rects += '</g>'
-    href = "/pub/%s%sx/index.html#%s" % (pubid, year[:3], year)
+    href = "/pub/%s%s/index.html" % (pubid, year)
     ret = html.mkhref(pys.format(w=width,h=height,classes=bgclass,body=rects), href, svgtitle)
     return ret
 
@@ -202,7 +203,7 @@ def ret_classes(author1, author2, pct):
             classes += ' themexd'
     else:
         if pct == 100:
-            classes += ' white'
+            classes += ' pure'
         elif pct >= 50:
             classes += ' dupxd'
         elif pct >= 20:
@@ -217,7 +218,7 @@ def gen_year_header(allyears):
     year_header.append('<tr><td>&nbsp;</td>')
     for year in sorted(allyears):
         if year[-1] == 's':
-            lead = ''
+            lead = '19'
             yclass = 'decade'
         elif year[3] == '0':
             lead = year[:2]
@@ -266,20 +267,22 @@ def td_for_pubyear(pubyears, pub, year):
 def boil(x):
     return ''.join(c for c in x.lower() if c in string.ascii_lowercase)
 
-def pubdecade_html(pub, year):
-    calendars_html = ''
-    dups_table = []
+def pubyear_html(pub, year):
+    calendars_html = '<table class="puzzles">'
+    colnames = [ year ] + pubyear_header
+    calendars_html += html.table_row(colnames, colnames, tag='th')
 
     # write out /pub/nyt199x
-    decade = year[:3]
     c_grids = {}
 
-    # utils.info('Generating meta for pub:{pub} decade:{decade}0'.format(**locals()))
-    for row in sorted(metadb.xd_similar(pub+decade)):
-        m = re.match(r'^\w+(\d{4}-\d{2}-\d{2})', row.xdid)
-        if m:
-            dt = m.group(1)
-        else:
+    # utils.info('Generating meta for {pub}{year}'.format(**locals()))
+    for row in sorted(metadb.xd_similar(pub+year)):
+        dt = utils.parse_iso8601(row.xdid)
+        dt2 = utils.parse_iso8601(row.match_xdid)
+
+        if not dt or not dt2:
+            continue
+        if dt < dt2:
             continue
 
         # dt = row["date"] # without - as GridCalendar needs; or fix GC
@@ -295,76 +298,84 @@ def pubdecade_html(pub, year):
         c_grids[dt]['link'] = '/pub/' + row.xdid
 
         matchxdid = row.match_xdid
-        aut1 = metadb.get_author(row.xdid)
-        aut2 = metadb.get_author(matchxdid)
-        if aut1 is None or aut2 is None:
-            continue
+        aut1 = metadb.get_author(row.xdid) or ''
+        aut2 = metadb.get_author(matchxdid) or ''
+#        if aut1 is None or aut2 is None:
+#            continue
 
         pct = row.match_pct
         similargrids = '(%s%%) %s [%s]\n' % (pct, aut2, matchxdid)
         c_grids[dt]["title"] += similargrids
 
         ##deduce_similarity_type
-        c_grids[dt]["class"] = ret_classes(aut1, aut2, pct)
+        c_grids[dt]["class"] += ret_classes(aut1, aut2, pct)
 
     c_grids_b = {}  #  For those are not in c_grids
 
-    cur_year = datetime.datetime.now().year
-    from_year = int(decade + '0')
-    to_year = min(cur_year, from_year + 9)
-    puzzles_by_year = dict((y, 0) for y in range(from_year, to_year+1))
-
     # Generate grids for available puzzles
-    for row in metadb.xd_puzzles(pub+decade):
+    for row in metadb.xd_puzzles(pub+year):
         if row.Date and row.Date not in c_grids_b and row.Date not in c_grids:
             # add styles only for those are not similar etc.
             c_grids_b[row.Date] = {
                 'title': '',
                 'class': 'privxd' if int(row.Date[:4]) > 1965 else 'pubxd',
             }
-        puzzles_by_year[int(row.Date.split('-')[0])] += 1
 
     # Generate calendars
     z = c_grids.copy()
     z.update(c_grids_b)
-    for year in range(from_year, to_year+1):
-        if puzzles_by_year[year] == 0:
-            continue
 
-        calendars_html += html.GridCalendar(z).formatyear(year, 6) + "<br>"
+    if year[-1] == 's':  # decade
+        from_year = int(year[:4])
+        to_year = int(year[:4]) + 10
+    else:
+        from_year = int(year)
+        to_year = int(year) + 1
 
-    for dt, d in c_grids.items():
-        row_dict = {} # Map row and style
-        xdid = pub + dt
-        puzmd = metadb.xd_puzzle(xdid)
-        if not puzmd:
-            continue
-        row_dict['class'] = d['class']
-        row_dict['tag_params'] = {
-            'onclick': 'location.href=\'/pub/%s\'' % xdid,
-            'class' : d['class'] + ' hrefrow',
-        }
-        row_dict['row'] = [
-            xdid,
-            puzmd.Date,
-            puzmd.Size,
-            puzmd.Title,
-            puzmd.Author,
-            puzmd.Editor,
-            puzmd.Copyright,
-            puzmd.A1_D1,
-            d["title"].replace("\n", "<br/>")
-          ]
-        dups_table.append(row_dict)
+    for year in range(from_year, to_year):
+      for month in range(1, 13):
+        dups_table = []
+        for dt, d in c_grids.items():
+            if not dt.startswith("%s-%02d" % (year, month)):
+                continue
+
+            row_dict = {}  # Map row and style
+            xdid = pub + dt
+            puzmd = metadb.xd_puzzle(xdid)
+            if not puzmd:
+                continue
+            row_dict['class'] = d['class']
+            row_dict['tag_params'] = {
+                'onclick': 'location.href=\'/pub/%s\'' % xdid,
+                'class': d['class'] + ' hrefrow puzrow',
+            }
+            row_dict['row'] = [
+                xdid,
+                puzmd.Date,
+                puzmd.Size,
+                puzmd.Title,
+                puzmd.Author,
+                puzmd.Editor,
+                puzmd.Copyright,
+                puzmd.A1_D1,
+                d["title"].replace("\n", "<br/>")
+            ]
+            dups_table.append(row_dict)
+
+        calendars_html += '<tr class="calendar"><td class="calendar" rowspan="%s">' % (len(dups_table) + 1)
+        calendars_html += html.GridCalendar(z).formatmonth(int(year), month) + '</td></tr>'
+
+        for r in sorted(dups_table, key=lambda x: x['row'][1]):
+            calendars_html += html.table_row(r["row"], pubyear_header, tag_params=r['tag_params'])
+
+    calendars_html += '</table>'
 
     ret = '''%s <div class="calendars">%s</div> <hr/>''' % (legend, calendars_html)
-    ret += html.html_table(sorted(dups_table, key=lambda x: x['row'][1]), pubyear_header, "puzzle", "puzzles")
     return ret
 
 
 def main():
-    p = utils.args_parser(desc="annotate puzzle clues with earliest date used in the corpus")
-    p.add_argument('-a', '--all', action="store_true", default=False, help='analyze all puzzles, even those already in similar.tsv')
+    p = utils.args_parser(desc="generate pubyear svg and pubyear pages")
     p.add_argument('-p', '--pubonly', action="store_true", default=False, help='only output root map')
     args = utils.get_args(parser=p)
     outf = utils.open_output()
@@ -402,7 +413,7 @@ def main():
 
     # sort rows by most recent puzzle in collection, then by pubid
     sorted_idx = OrderedDict(sorted(pubyears_idx.items(), key=lambda r: (-int(max(r[1])), r[0])))
-    for pub in sorted_idx:
+    for pub in args.inputs or sorted_idx:
         if pubs_total[pub] < 20:
             continue
 
@@ -419,17 +430,13 @@ def main():
             py_td = td_for_pubyear(pubyears, pub, year)
             if py_td:
                 html_out.append(py_td)
-                if not args.pubonly and year[3:4]=='0':
-                    decade = year[0:3]
-                    cur_year = datetime.datetime.now().year
-                    from_year = int(decade + '0')
-                    to_year = min(cur_year, from_year + 9)
-                    outf.write_html('pub/{pub}{decade}x/index.html'.format(**locals()), pubdecade_html(pub, year),
-                            "{pubname}, {from_year}-{to_year}".format(**locals()))
+                if not args.pubonly:
+                    outf.write_html('pub/{pub}{year}/index.html'.format(**locals()), pubyear_html(pub, year),
+                                    "{pubname}, {year}".format(**locals()))
             else:
                 # otherwise
                 width = svg_w if 's' not in year else svg_w*decade_scale
-                html_out.append(pys.format(w=width,h=svg_h, title='', classes='notexists', body=''))
+                html_out.append(pys.format(w=width, h=svg_h, title='', classes='notexists', body=''))
 
             html_out.append('</td>')
 
@@ -437,6 +444,7 @@ def main():
         html_out.append('<td class="header">{}</td>'.format(pubs_total[pub]))
         html_out.append('<td class="header">{}</td>'.format(html.mkhref(pubname, pub)))
         html_out.append('</tr>')
+
 
     html_out.extend(year_header)
     html_out.append('</table>')

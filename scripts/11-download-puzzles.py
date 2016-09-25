@@ -23,7 +23,7 @@ def get_dates_between(before_date, after_date, days_to_advance=1):
     if before_date > after_date:
         before_date, after_date = after_date, before_date
 
-    days_diff = (after_date - before_date).days + 1
+    days_diff = (after_date - before_date).days
     return [before_date + datetime.timedelta(days=x) for x in range(days_to_advance, days_diff, days_to_advance)]
 
 

@@ -302,7 +302,7 @@ def html_select_options(options, strmaker=str, force_top=""):
     return r
 
 
-def table_row(row, keys, rowclass="row", tag="td", tag_params=None):
+def table_row(row, keys, rowclass="row", tag="td", tag_params=None, inner_only=False):
     # row - list or dict
     # keys - assign as class for each itterable from row 
     # rowclass - class(es) for tr (row)
@@ -311,7 +311,9 @@ def table_row(row, keys, rowclass="row", tag="td", tag_params=None):
     if isinstance(row, dict):
         row = [row[k] for k in keys]
 
-    out = mktag('tr', rowclass, tag_params=tag_params)
+    out = ''
+    if not inner_only:
+        out += mktag('tr', rowclass, tag_params=tag_params)
 
     for k, v in zip(keys, row):
         try:
@@ -319,21 +321,28 @@ def table_row(row, keys, rowclass="row", tag="td", tag_params=None):
         except UnicodeDecodeError:
             v = "???"
 
-        out += mktag(tag, k.strip())
+        if inner_only:
+            out += mktag(tag, k.strip(), tag_params=tag_params)
+        else:
+            out += mktag(tag, k.strip())
         out += v
         out += mktag('/' + tag)  # end cell
-    out += mktag('/tr') + '\n'  # end row
+
+    if not inner_only:
+        out += mktag('/tr') + '\n'  # end row
     return out
 
 
-def html_table(rows, colnames, rowclass="row", tableclass=""):
+def html_table(rows, colnames, rowclass="row", tableclass="", inner_only=False):
     """
     Generates html table with class defined
     each row can be a list - then rowclass applied
     or dict - {row:row, class:rowclass, param:rowparam}
     """
-    out = mktag('table', tableclass)
-    out += table_row(colnames, colnames, tag='th')
+    out = ''
+    if not inner_only:
+        out += mktag('table', tableclass)
+        out += table_row(colnames, colnames, tag='th')
 
     for r in rows:
         r_text = r['row'] if isinstance(r, dict) else r
@@ -341,7 +350,8 @@ def html_table(rows, colnames, rowclass="row", tableclass=""):
         r_param = r['tag_params'] if isinstance(r, dict) and 'tag_params' in r.keys() else None
         out += table_row(r_text, colnames, rowclass=r_class, tag_params=r_param)
 
-    out += mktag('/table')  # end table
+    if not inner_only:
+        out += mktag('/table')  # end table
     return out
 
 
