@@ -1,0 +1,741 @@
+
+.text {
+    max-width: 640px;
+    padding: 12px;
+}
+
+table.legend {
+    float: left;
+}
+
+table.legend td.box {
+    border:1px darkgray solid;
+}
+
+#pubyearmap td {
+    border-right: 1px solid grey;
+    border-bottom: 1px solid grey;
+    text-align: center;
+}
+
+#pubyearmap td.header {
+    font-weight: bold;
+    font-size: 12px;
+    width: 60px;
+}
+
+#pubyearmap td.year_widget {
+    background: #a8a8a8;
+}
+
+#pubyearmap td.decade {
+    background: lightgrey;
+    color: black;
+/*    border-color: white; */
+    font-weight: bold;
+    font-size: 12px;
+}
+
+#pubyearmap td.header {
+    color: black;
+}
+
+#pubyearmap td.zero-year {
+    background: #aaaaff;
+    color: black;
+    font-size: 12px;
+}
+
+#pubyearmap td.ord-year {
+    background: #ccf;
+    color: black;
+    font-size: 12px;
+}
+
+#pubyearmap td.year_widget {
+    background-color: #a8a8a8;
+}
+#pubyearmap td a:hover {
+    background:white;
+    cursor: pointer
+}
+
+/* Highlight row with link */
+tr.hrefrow:hover {
+    cursor: pointer;
+}
+
+th {
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.year_widget {
+    background-color: #a8a8a8;
+    overflow:visible;
+}
+
+.similar10 {
+    fill:lightsalmon;
+}
+
+/* Prexd */
+.privxd {
+    fill:#7fdbff;
+    color: #2f8baf;
+    background-color: #7fdbff;
+}
+
+.pubxd {
+    fill:#2ecc40;
+    color: #2ecc40;
+    background-color: #2ecc40;
+}
+
+.themexd {
+    fill:#ff95b0;
+    background-color: #ff95b0;
+}
+
+.dupxd {
+    fill:#ffdc00;
+    background-color: #ffdc00;
+}
+
+.suspxd {
+    text-color: black;
+    fill:#ff4136;
+    background-color: #ff4136;
+}
+
+.puzzles .calendar td.privxd {
+    color: black;
+}
+
+.puzzles .calendar td.pubxd {
+    color: black;
+}
+
+.year_widget text {
+    fill: black;
+    font: 10px sans-serif;
+    text-anchor: end;
+}
+
+/* actual year */
+table.year th {
+    font-size: 16px;
+}
+
+table.year td {
+    border: 1px solid black;
+    vertical-align: top;
+}
+
+table.year td.year-v {
+    vertical-align: middle;
+    padding: 5px;
+}
+table.year {
+    /*border: 1px solid black;*/
+    padding: 2px;
+}
+
+
+table.month {
+    border: 0px;
+    font-size: 12px;
+}
+
+table.month td {
+    border: 0px;
+}
+
+table.month th {
+    border-bottom: 1px solid black;
+}
+
+table.month th.month {
+    background-color: #ccf;
+    color: black;
+}
+
+th.mon, th.tue, th.wed, th.thu, th.fri, th.sat, th.sun {
+    padding: 1px;
+    text-align: center;
+}
+
+td.mon, td.tue, td.wed, td.thu, td.fri, td.sat, td.sun {
+    padding: 1px;
+    text-align: center;
+}
+
+.exists {
+    fill: #a8a8a8;
+}
+
+.notexists {
+    fill: #a8a8a8;
+}
+
+td:hover .exists {
+    fill: #666666;
+}
+
+td.biggrid {
+    color: red;
+}
+
+td.ordgrid {
+    color: black;
+}
+
+table.month td.pctfilled {
+    background: lightgreen;
+    color: black;
+}
+
+.anchor {
+  display: block;
+  height: 200px; /*same height as header*/
+  margin-top: -200px; /*same height as header*/
+  visibility: hidden;
+}
+
+br.break {
+    display: block;
+    margin-top: 5px;
+    margin: 5px 0;
+    content: " ";
+}
+
+
+        table.diff {font-family:Courier; border:medium;}
+        .diff_header {  background-color:#e0e0e0; color: #e0e0e0 }
+        td.diff_header { text-align:right; width: 0px}
+        table.diff td { padding-left: 5px }
+        .diff_next {display: none; }
+        .diff_add {background-color:#aaffaa}
+        .diff_chg {background-color:#ffff77}
+        .diff_sub {background-color:#ffaaaa}
+
+span.match {
+    background-color: #2ecc40;
+}
+
+td.clue {
+    vertical-align: top;
+}
+
+/* Empty row */
+
+.pubyears td.emptytd {
+    border-right:0px;
+    border-left:0px;
+}
+
+/*
+span.visible { color: blue; }
+.fixed {font-family:Courier; }
+div, textarea { margin-top: 1em; }
+
+body, body div { 
+    padding: 10px;
+    background-color: #ffeeee 
+}
+*/
+/* mkwww-publishers */
+/*
+body div { padding: 10px; background-color: #ffeeee }
+
+
+.ReceiptId, .PublisherAbbr, .PublicationAbbr, .Date {
+    display: none;
+}
+table {
+	font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif; 
+	font-size: 14px;
+	background: #fff;
+	margin: 25px;
+	border-collapse: collapse;
+	text-align: left;
+}
+th {
+	font-size: 16px;
+	font-weight: normal;
+	color: #039;
+	padding: 10px 8px;
+	border-bottom: 2px solid #6678b1;
+}
+option, select {
+	border-bottom: 1px solid #ccc;
+	color: #669;
+    width: 100%;
+	padding: 2px 2px;
+}
+td {
+	border-bottom: 1px solid #ccc;
+	color: #669;
+	padding: 6px 8px;
+}
+tbody tr:hover td {
+	background: #ccf;
+}
+*/
+
+tbody {
+    vertical-align: top;
+}
+
+td.header {
+    vertical-align: middle;
+}
+
+
+.theme {
+    color: #333;
+}
+
+/* --- analyze-puzzle --- */
+.fullgrid {
+    margin-left: 20px;
+    margin-top: 2px;
+}
+
+.xdgrid {
+    margin: auto;
+    margin-bottom: 2em;
+    display: table;
+    border-bottom: 1px solid black;
+    border-right: 1px solid black;
+    border-spacing: 0px;
+
+}
+
+.xdrow {
+    display: table-row;
+}
+
+.match {
+    background: lightgreen;
+}
+
+
+.theme {
+    color: #333;
+}
+
+/* --- analyze-puzzle --- */
+.fullgrid {
+    margin-left: 20px;
+    margin-top: 2px;
+}
+
+.xdgrid {
+    margin: auto;
+    margin-bottom: 2em;
+    display: table;
+    border-bottom: 1px solid black;
+    border-right: 1px solid black;
+    border-spacing: 0px;
+
+}
+
+.xdrow {
+    display: table-row;
+}
+
+.match {
+    background: lightgreen;
+}
+
+.xdcell {
+    display: table-cell;
+    text-align: center;
+    border-top: 1px solid black;
+    border-left: 1px solid black;
+    width: 10px;
+    height: 8px;
+    padding: 4px;
+}
+
+.xdcell.block {
+    background: black;
+}
+
+.xdcell.block.diff {
+    background: #440000;
+    color: #440000;
+    border-top: 1px solid #440000;
+    border-left: 1px solid #440000;
+}
+
+.main {
+    background: #ddddff;
+}
+
+.xdcell.diff {
+    background: #ffeedd;
+    color: #440000;
+    border-top: 1px solid #440000;
+    border-left: 1px solid #440000;
+}
+
+.clues td {
+    border-left: 1px solid grey;
+    border-bottom: 1px solid grey;
+    padding: 2px;
+    padding-left: 6px;
+}
+
+.original {
+    background:white;
+}
+
+.num { 
+    width: 8%; 
+    text-align: right;
+    padding-right: 4px;
+}
+table div {
+    float: none;
+}
+
+.grids .xdid {
+    text-align: center;
+}
+
+.grids > div {
+    float: left;
+}
+
+.clues {
+    clear: both;
+}
+
+.options { width: 85%; float: left; }
+
+div.actuals { width: 85%; }
+
+select {width: 100%; }
+
+.other-answers {
+    text-align: center;
+    }
+
+
+.pubyears {
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+.pubyears div {
+    text-align: center;
+}
+.pubyears th, .pubyears td {
+    font-size: 14px;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+.pubyears td.ord-year {
+    background: #ccf;
+    color: black;
+    border-color: white;
+}
+
+.pure {
+    fill: #ffffcc;
+    background: #ffffcc;
+}
+
+.pubyears .block {
+    background: #333333;
+}
+
+.pubyears .daily {
+    background: #00ff00;
+}
+.pubyears .semidaily {
+    background: #66ff66;
+}
+.pubyears .weekly{
+    background: #99ff99;
+}
+.pubyears .monthly {
+    background: #ddffdd;
+}
+
+.pubyears td {
+    width: 20px;
+    height: 20px;
+    border-right: 1px solid #333333;
+    border-bottom: 1px solid #333333;
+    border-top: 1px solid #333333;
+}
+
+.pubyears tr:hover td {
+    background: pink;
+}
+
+.pubyears tr:hover td.block {
+    background: #555555;
+}
+
+.pubyears a {
+    text-decoration: none;
+}
+
+.pubyears tr:hover td:hover {
+}
+
+.pubyears td.decade {
+    table-layout: fixed;
+    width: 50px;
+}
+
+.pubyears .this {
+    font-size: 80px;
+}
+
+/* puzzles */
+.puzzles {
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.puzzles th, .puzzles td {
+    font-size: 14px;
+    margin: 0;
+    padding: 7px 7px 7px 7px;
+}
+
+.puzzles th {
+    background-color:#ccf;
+    color:black;
+}
+
+.puzzles .block {
+    background: #333333;
+}
+
+.puzrow {
+    height: 1em;
+}
+
+tr.calendar {
+    height: 8px;
+}
+
+.puzzles .calendar th, .puzzles .calendar tr {
+    font-size: 10px;
+    margin: 0;
+    padding: 2px;
+    border-width:0;
+}
+
+.puzzles .calendar td {
+/*    width: 20px;*/
+    height: 1em;
+    border: 0;
+    padding: 2px;
+    color: #dddddd;
+}
+
+.puzzles tr, .puzzles th  {
+    border-style:solid;
+    border-width:1px;
+}
+
+.puzzles td {
+/*    width: 20px;*/
+    height: 20px;
+    border-right: 1px solid #333333;
+    border-bottom: 1px solid #333333;
+    border-top: 1px solid #333333;
+}
+
+.puzzles tr.hrefrow:hover td {
+    background: darkgray;
+}
+
+.puzzles tr:hover td.block {
+    background: #555555; 
+}
+
+.puzzles a {
+    text-decoration: none;
+}
+
+.puzzles tr:hover td:hover {
+}
+
+.puzzles .this {
+    font-size: 80px;
+}
+
+tr.puzzlehl {
+    background: lightgreen;
+}
+
+tr.puzzlehl:hover {
+    cursor: pointer;
+}
+
+.rowlink::before {
+    content: "";
+    display: block;
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 1.5em;
+}
+/* Pubyear header */
+
+.pubyearhead, .pubyearhead > th {
+    padding:2px 2px;
+    border-style:solid;
+    border-width:1px;
+}
+
+/* Empty row */
+
+.emptytd {
+    border-right:0px;
+    border-left:0px;
+}
+
+
+/* onepub */
+.onepub {
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.onepub th, .onepub td {
+    font-size: 14px;
+    margin: 0;
+    padding: 7px 7px 7px 7px;
+}
+
+.onepub th {
+    background-color:#ccf;
+    color:black;}
+
+.onepub .block {
+    background: #333333;
+}
+
+.onepub tr, .onepub th  {
+    border-style:solid;
+    border-width:1px;
+    text-align: center;
+}
+
+.onepub td {
+/*    width: 20px;*/
+    height: 20px;
+    border-right: 1px solid #333333;
+    border-bottom: 1px solid #333333;
+    border-top: 1px solid #333333;
+}
+
+.onepub tr:hover td {
+    background: pink;
+}
+
+.onepub tr:hover td.block {
+    background: #555555; 
+}
+
+.onepub a {
+    text-decoration: none;
+}
+
+.onepub tr:hover td:hover {
+}
+
+.onepub .this {
+    font-size: 80px;
+}
+
+/* nav from https://codepen.io/philhoyt/pen/ujHzd */
+
+#primary_nav_wrap
+{
+	margin-top:15px
+}
+
+#primary_nav_wrap ul
+{
+	list-style:none;
+	position:relative;
+	float:left;
+	margin:0;
+	padding:0
+}
+
+#primary_nav_wrap ul a
+{
+	display:block;
+	color:#333;
+	text-decoration:none;
+	font-weight:700;
+	font-size:12px;
+	line-height:32px;
+	padding:0 15px;
+	font-family:"HelveticaNeue","Helvetica Neue",Helvetica,Arial,sans-serif
+}
+
+#primary_nav_wrap ul li
+{
+	position:relative;
+	float:left;
+	margin:0;
+	padding:0
+}
+
+#primary_nav_wrap ul li.current-menu-item
+{
+	background:#ddd
+}
+
+#primary_nav_wrap ul li:hover
+{
+	background:#f6f6f6
+}
+
+#primary_nav_wrap ul ul
+{
+	display:none;
+	position:absolute;
+	top:100%;
+	left:0;
+	background:#fff;
+	padding:0
+}
+
+#primary_nav_wrap ul ul li
+{
+	float:none;
+	width:200px
+}
+
+#primary_nav_wrap ul ul a
+{
+	line-height:120%;
+	padding:10px 15px
+}
+
+#primary_nav_wrap ul ul ul
+{
+	top:0;
+	left:100%
+}
+
+#primary_nav_wrap ul li:hover > ul
+{
+	display:block
+}
+
+/* env nav */

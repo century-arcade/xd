@@ -14,17 +14,10 @@ answers some simple queries, like "what is the most used grid in this .zip of .x
 This is the oldest rebus crossword from the New York Times (found by `grep -r Rebus crosswords/nytimes | sort`), available thanks to the huge effort of the [Pre-Shortzian Puzzle Project](http://www.preshortzianpuzzleproject.com/):
 
     Title: New York Times, Saturday, January 1, 1955
-    Creator: Anthony Morse
-    Contributor: Margaret Farrar (Editor)
-    Rebus: 1=HEART,2=DIAMOND,3=SPADE,4=CLUB
-
-    Publisher: New York Times
+    Author: Anthony Morse
+    Editor: Margaret Farrar
+    Rebus: 1=HEART 2=DIAMOND 3=SPADE 4=CLUB
     Date: 1955-01-01
-    Type: Crossword Puzzle
-    Language: en-US
-
-    Source: http://www.xwordinfo.com/PS?date=1/1/1955
-    Source: http://www.nytimes.com/svc/crosswords/v2/puzzle/daily-19550101.puz
 
 
     1ACHE#ADAM#2LIL
@@ -156,8 +149,8 @@ whitespace between characters in a grid line.
 One line per row.  One UTF-8 character per cell.
 
 Uppercase A-Z refer to that letter in the solution; a '#' is a block.  In a few
-puzzles, '\_' is a non-existing block (on the edges), and '.' would be used for
-an empty cell (e.g. a partial solution).
+puzzles, '\_' means a space or non-existing block (on the edges), and '.' would
+be used for an empty cell (e.g. a partial solution).
 
 Lowercase a-z indicate Special cells. The 'Special' header indicates whether
 those cells are "shaded" or have a "circle".
@@ -167,7 +160,7 @@ those cells are "shaded" or have a "circle".
 Digits, most symbols, and printable unicode characters (if needed) can be used
 to indicate rebus cells.  The 'Rebus' header provides the translation:
 
-    Rebus: 1=ONE,2=TWO,3=THREE
+    Rebus: 1=ONE 2=TWO 3=THREE
 
 Lowercase letters always indicate Special cells if there is a Special header.
 If a puzzle has cells that are both Special and Rebus, a lowercase letter

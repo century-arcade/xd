@@ -1,0 +1,52 @@
+export AWS_ACCESS_KEY=
+export AWS_SECRET_KEY=
+
+# 7=midnight
+HOUR_START=3 # x:00
+HOUR_END=3   # x:55
+
+export ACCOUNTID=
+export DOMAIN=xd.saul.pw
+
+# the address to send logs and to commit changes
+export ADMIN_EMAIL=xd@saul.pw
+export ADMIN_NAME="Saul Pwanson"
+
+# the address to send puzzles
+export UPLOAD_EMAIL=upload@${DOMAIN}
+
+export XD_GIT=https://github.com/century-arcade/xd.git
+export GXD_GIT=
+export BRANCH=staging
+
+# AWS keypair name
+export KEY=
+
+# base AMI to install on top of
+export AMI_ID=ami-9ece19fe # Ubuntu Server 16.04 LTS amd64 hvm:ebs-ssd
+
+export REGION=us-west-2
+
+export XD_PROFILE="arn:aws:iam::99999999:instance-profile/xd-scraper"
+export INSTANCE_TYPE=r3.large
+export EBS_VOLUME_ID=
+export SSH_SECURITY_GID=
+export XDPRIV=
+#export INSTANCE_ID=
+
+# export QUICKRUN=True
+
+# local directory structure
+export GXD=gxd       # the corpus; input-only except for shelve/git-commit
+export PRIV=priv     # original sources and non-distributable caches
+export PUB=pub       # public non-web intermediates
+export WWW=wwwroot   # public website
+
+# automatically set variables
+export S3WWW=s3://${DOMAIN}
+export S3PUB=s3://${DOMAIN}/pub
+export S3PRIV=s3://${XDPRIV}
+
+export TODAY=`date +"%Y%m%d"`
+export NOW=`date +"%Y%m%d-%H%M%S"`
+
