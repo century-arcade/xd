@@ -3,7 +3,9 @@
 # Usage:
 #   $0 -o wwwroot/ pagebody.html [...]
 
+
 from xdfile import html, utils
+
 
 def main():
     args = utils.get_args()
@@ -12,9 +14,9 @@ def main():
     for htmlfn, contents in utils.find_files(*args.inputs):
         basepagename = utils.parse_pathname(htmlfn).base
 
-        outf.write_html('%s/index.html' % basepagename, contents.decode('utf-8'))
+        wrappeddiv = '<div class="text">' + contents.decode('utf-8') + '</div>'
+        outf.write_html('%s/index.html' % basepagename, wrappeddiv)
 
 
 if __name__ == "__main__":
     main()
-
