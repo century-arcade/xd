@@ -15,10 +15,6 @@ if [ ! -f $HOME/.ssh/gxd_rsa ] ; then
     chmod 600 $HOME/.ssh/gxd_rsa
 fi
 
-
-# TODO: track stdout/stderr separately
-/bin/bash scripts/05-beta-pipeline.sh &
-
 echo "Run deploy script"
 /bin/bash scripts/05-full-pipeline.sh
 
