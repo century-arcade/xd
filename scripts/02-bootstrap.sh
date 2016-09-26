@@ -20,8 +20,8 @@ source $WORKDIR/config
 export HOME=/home/ubuntu
 
 cd $HOME/xd
-git pull
 git checkout ${BRANCH}
+git pull
 
 exec scripts/03-startup.sh
 
