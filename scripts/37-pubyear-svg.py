@@ -14,7 +14,7 @@ from xdfile.utils import space_with_nbsp
 import xdfile
 from collections import defaultdict, OrderedDict
 
-DECADE_SKIP_START = 1910
+DECADE_SKIP_START = 1990
 DECADE_SKIP_END = 1980
 
 
@@ -411,9 +411,9 @@ def main():
     for pubid in pubyears_idx:
         pubs_total[pubid] = len(metadb.xd_puzzles(pubid))
 
-    # sort rows by most recent puzzle in collection, then by pubid
-    sorted_idx = OrderedDict(sorted(pubyears_idx.items(), key=lambda r: (-int(max(r[1])), r[0])))
-    for pub in args.inputs or sorted_idx:
+    # sort rows by number of puzzles
+    sorted_pubs = sorted(pubs_total.keys(), key=lambda pubid: pubs_total[pubid], reverse=True)
+    for pub in args.inputs or sorted_pubs:
         if pubs_total[pub] < 20:
             continue
 

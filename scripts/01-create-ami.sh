@@ -36,8 +36,9 @@ ec2-upload-bundle \
 --access-key ${AWS_ACCESS_KEY} \
 --secret-key ${AWS_SECRET_KEY}
 
+echo possible may need to run: aws s3 rb s3://${S3AMIDEST}
+
 $aws ec2 deregister-image --region ${REGION} --image-id ${AMI_ID}
-$aws s3 rb s3://${S3AMIDEST}
 
 DT=`date +"%Y%m%d-%H%M%S"`
 $aws ec2 register-image \
