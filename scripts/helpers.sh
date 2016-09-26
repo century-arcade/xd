@@ -13,3 +13,9 @@ fi
 
 sh="bash"
 python="/usr/bin/env python3"
+
+# automatically set variables
+export S3WWW=s3://${DOMAIN}
+export S3PUB=s3://${DOMAIN}/pub
+export S3PRIV=s3://${XDPRIV}
+
