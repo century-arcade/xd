@@ -1,3 +1,4 @@
+import re
 import cgi
 import time
 from collections import Counter
@@ -357,3 +358,10 @@ def html_table(rows, colnames, rowclass="row", tableclass="", inner_only=False):
 
 def tsv_to_table(rows):
     return html_table(rows, rows[0]._fields)
+
+def markup_to_html(s):
+    s = re.sub(r'{/(.*?)/}', r'<i>\1</i>', s)
+    s = re.sub(r'{\*(.*?)\*}', r'<b>\1</b>', s)
+    s = re.sub(r'{-(.*?)-}', r'<strike>\1</strike>', s)
+    s = re.sub(r'{_(.*?)_}', r'<u>\1</u>', s)
+    return s

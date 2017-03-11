@@ -185,10 +185,21 @@ class xdfile:
 
     def iterclues(self):
         for pos, clue, answer in self.clues:
-            if answer:  # skip cluegroup breaks
+            if pos:  # skip cluegroup breaks
                 yield "%s%s" % pos, clue, answer
 
-    def iteranswers(self):
+    def numberedPuzzle(self):
+        puzzle = []
+        for r in range(self.height()):
+            puzzle.append(['#' if c == '#' else None for c in self.grid[r]])
+
+        for _, clue_num, _, r, c in self.iteranswers_full():
+            puzzle[r][c] = clue_num
+
+        return puzzle
+
+    # generates: "A" or "D", clue_num, answer, r, c
+    def iteranswers_full(self):
 
         # construct rebus dict with all grid possibilities so that answers are complete
         rebus = {}
@@ -214,7 +225,7 @@ class xdfile:
 
                     if ncells > 1:
                         new_clue = True
-                        yield "A", clue_num, answer
+                        yield "A", clue_num, answer, r, c
 
                 if self.cell(r - 1, c) in NON_ANSWER_CHARS:  # down clue start
                     ncells = 0
@@ -226,10 +237,14 @@ class xdfile:
 
                     if ncells > 1:
                         new_clue = True
-                        yield "D", clue_num, answer
+                        yield "D", clue_num, answer, r, c
 
                 if new_clue:
                     clue_num += 1
+
+    def iteranswers(self):
+        for direction, clue_num, answer, r, c in self.iteranswers_full():
+            yield direction, clue_num, answer
 
     def get_answer(self, clueid):
         for pos, clue, answer in self.clues:
