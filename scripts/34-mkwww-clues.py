@@ -25,9 +25,11 @@ def mkwww_cluepage(bc):
     clue_html += '<hr/>'
     clue_html += '<div>Answers for this clue: ' + html_select_options([ ca.answer for ca in bcs ]) + '</div>'
     clue_html += '<hr/>'
-    clue_html += pubyear.pubyear_html([ (ca.pubyear()[0], ca.pubyear()[1], 1) for ca in bcs ])
-    
-    return clue_html 
+
+# TODO: maybe add pubyear chart back in, using stats.tsv as source data (by day-of-week)
+#    clue_html += pubyear.pubyear_html([ (ca.pubyear()[0], ca.pubyear()[1], 1) for ca in bcs ])
+
+    return clue_html
 
 def main():
     global boiled_clues
@@ -74,5 +76,6 @@ def main():
         outf.write_html('pub/clue/%s/index.html' % bc, mkwww_cluepage(bc), title=bc)
 
     outf.write_html('pub/clue/index.html', biggest_clues + most_ambig, title="Clues")
-        
+
+
 main()

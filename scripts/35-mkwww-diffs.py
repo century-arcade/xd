@@ -7,6 +7,7 @@ import difflib
 import datetime
 from xdfile import utils
 from xdfile.html import mktag, mkhref
+from xdfile.utils import info, warn
 
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 #from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
@@ -87,15 +88,25 @@ def main():
     outf = utils.open_output()
 
     similars = utils.parse_tsv('gxd/similar.tsv', 'Similar')
-    xdids_todo = args.inputs or [ xdid for xdid, matches in metadb.get_similar_grids().items() if matches ]
+    xdids_todo = {}
+
+    for row in metadb.xd_similar_all():
+        if row.xdid not in xdids_todo:
+            xdids_todo[row.xdid] = []
+
+        xdids_todo[row.xdid].append(row)
+
+
     for mainxdid in xdids_todo:
         progress(mainxdid)
 
         mainxd = xdfile.get_xd(mainxdid)
         if not mainxd:
+            warn('%s not in corpus' % mainxdid)
             continue
 
-        matches = metadb.get_similar_grids().get(mainxdid, [])
+        matches = xdids_todo[mainxdid]
+        info('generating diffs for %s (%d matches)' % (mainxdid, len(matches)))
 
         xddates = {}
         xddates[mainxdid] = mainxd.date() # Dict to store XD dates for further sort
@@ -107,13 +118,17 @@ def main():
         # Add for main XD
         diff_l = []
         for pos, mainclue, mainanswer in mainxd.iterclues():
+            if not mainclue:
+                continue
             diff_h = mktag('div','fullgrid main') + '%s.&nbsp;' %pos
             diff_h += mainclue
             diff_h += mktag('span', tagclass='main', inner='&nbsp;~&nbsp;' + mainanswer.upper())
             diff_l.append(diff_h)
         html_clues[mainxdid] = diff_l
+
         # Process for all matches
-        for xdid in matches:
+        for row in matches:
+            xdid = row.match_xdid
             xd = xdfile.get_xd(xdid)
             # Continue if can't load xdid
             if not xd:
@@ -125,6 +140,8 @@ def main():
             # output comparison of each set of clues
             for pos, clue, answer in xd.iterclues():
                 diff_h = mktag('div','fullgrid') + '%s.&nbsp;' %pos
+                if not clue:
+                    continue
                 # Sometimes can return clue == None
                 mainclue = mainxd.get_clue_for_answer(answer)
                 sm = difflib.SequenceMatcher(lambda x: x == ' ', mainclue or '', clue)
@@ -161,6 +178,7 @@ def main():
                     diff_h += mktag('td') + html_clues[w][i] + mktag('/td')
             diff_h += mktag('/tr')
         diff_h += mktag('/table')
+
         outf.write_html('pub/%s/index.html' % mainxdid, diff_h, title='Comparison for ' + mainxdid)
 
 

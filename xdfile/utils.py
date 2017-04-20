@@ -232,7 +232,7 @@ def datestr_to_datetime(s):
         error("datestr_to_datetime(): %s" % str(e))
         if g_args.debug:
             raise
-        dt = None
+        dt = datetime.date.today()
     return dt
 
 
