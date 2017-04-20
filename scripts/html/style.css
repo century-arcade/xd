@@ -413,15 +413,38 @@ table div {
     clear: both;
 }
 
-.options { width: 85%; float: left; }
+div.options {
+    width: 85%;
+    float: left;
+}
 
-div.actuals { width: 85%; }
+@media (min-width: 500px) {
+    div.main-container {
+        max-width: 500px;
+    }
+}
+
+/* add larger widths below smaller widths */
+@media (min-width: 800px) {
+    div.main-container {
+        max-width: 800px;
+    }
+}
+
+div.actuals {
+    width: 85%;
+    float: left;
+}
 
 select {width: 100%; }
 
+.deepclues th {
+    text-align: left;
+}
+
 .other-answers {
-    text-align: center;
-    }
+    text-align: left;
+}
 
 
 .pubyears {

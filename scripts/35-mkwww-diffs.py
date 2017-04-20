@@ -2,11 +2,10 @@
 #
 #
 
-from queries.similarity import grid_similarity
 import difflib
 import datetime
 from xdfile import utils
-from xdfile.html import mktag, mkhref
+from xdfile.html import mktag, mkhref, grid_diff_html
 from xdfile.utils import info, warn
 
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
@@ -15,72 +14,6 @@ from xdfile import BLOCK_CHAR
 from xdfile import metadatabase as metadb
 import xdfile
 import operator
-
-def headers_to_html(xd):
-    # headers
-    r = '<div class="xdheaders"><ul class="xdheaders">'
-    for k in "Title Author Editor Copyright".split():
-        v = xd.get_header(k)
-        if v:
-            r += '<li class="%s">%s: <b>%s</b></li>' % (k, k, v)
-        else:
-            r += '<li></li>'
-    r += '</ul></div>'
-    return r
-
-
-def grid_to_html(xd, compare_with=None):
-    "htmlify this puzzle's grid"
-
-    grid_html = '<div class="xdgrid">'
-    for r, row in enumerate(xd.grid):
-        grid_html += '<div class="xdrow">'
-        for c, cell in enumerate(row):
-            classes = [ "xdcell" ]
-
-            if cell == BLOCK_CHAR:
-                classes.append("block")
-
-            if compare_with:
-                if cell == compare_with.cell(r, c):
-                    classes.append("match")
-                else:
-                    classes.append("diff")
-
-            grid_html += '<div class="%s">' % " ".join(classes)
-            grid_html += cell  # TODO: expand rebus
-            #  include other mutations that would still be valid
-            grid_html += '</div>' # xdcell
-        grid_html += '</div>' #  xdrow
-    grid_html += '</div>' # xdgrid
-
-    return grid_html
-
-
-def grid_diff_html(xd, compare_with=None):
-    if compare_with:
-        r = mktag('div', tagclass='fullgrid')
-    else:
-        r = mktag('div', tagclass='fullgrid main')
-
-    similarity_pct = ''
-    if compare_with:
-        real_pct = grid_similarity(xd, compare_with)
-        if real_pct < 25:
-            return ''
-
-        similarity_pct = " (%d%%)" % real_pct
-
-    xdlink = mktag('div', tagclass='xdid', inner=mkhref("%s %s" % (xd.xdid(), similarity_pct), '/pub/' + xd.xdid()))
-    if compare_with is not None:
-        r += xdlink
-    else:
-        r += mktag('b', inner=xdlink)
-    r += headers_to_html(xd)
-    r += grid_to_html(xd, compare_with)
-
-    r += '</div>' # solution
-    return r
 
 
 def main():

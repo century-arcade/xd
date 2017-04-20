@@ -7,6 +7,8 @@ from calendar import HTMLCalendar
 from datetime import date
 from xdfile import utils
 
+from queries.similarity import grid_similarity
+
 
 def year_widget(dow_dict, total, fill_class=None):
     # Generate SVG based widget for day of week dispersion for year
@@ -255,20 +257,9 @@ def tr_empty(class_="emptytd"):
 # list of options, possibly duplicate.  presents and groups by strmaker(option)
 
 
-def html_select_options(options, strmaker=str, force_top=""):
-    def strnum(s, n):
-        assert n > 0
-        if n == 1:
-            return s
-        else:
-            return "%s [x%s]" % (s, n)
-
+def html_select_options(options, strmaker=str, force_top="", add_total=True):
     if not options:
         return strmaker(force_top)
-
-    freq_sorted = []
-    if force_top:
-        freq_sorted.append((1, strmaker(force_top)))
 
     if isinstance(options, Counter):
         pairs = options.items()
@@ -283,10 +274,29 @@ def html_select_options(options, strmaker=str, force_top=""):
 
         pairs = [(k, len(v)) for k, v in groups.items()]
 
+    return html_select_options_freq(pairs, strmaker=strmaker, force_top=force_top, add_total=add_total)
+
+
+def html_select_options_freq(pairs, strmaker=str, force_top="", add_total=True):
+    def strnum(s, n):
+        assert n > 0
+        if n == 1:
+            return s
+        else:
+            return "%s [x%s]" % (s, n)
+
+    freq_sorted = []
+
+    if force_top:
+        # TODO: get actual nuses if already in pairs
+        freq_sorted.append((1, strmaker(force_top)))
+
     freq_sorted.extend(sorted([(v, k or "(misc)") for k, v in pairs], reverse=True))
+
 
     if not freq_sorted:
         return ""
+
     elif len(freq_sorted) == 1:
         n, k = freq_sorted[0]
         return strnum(k, n)
@@ -299,7 +309,8 @@ def html_select_options(options, strmaker=str, force_top=""):
 
     r += mktag('/select')
     r += mktag('/div')
-    r += '<div class="num"> %s</div>' % len(freq_sorted)
+    if add_total:
+        r += '<span class="num"> %s</span>' % len(freq_sorted)
     return r
 
 
@@ -365,3 +376,71 @@ def markup_to_html(s):
     s = re.sub(r'{-(.*?)-}', r'<strike>\1</strike>', s)
     s = re.sub(r'{_(.*?)_}', r'<u>\1</u>', s)
     return s
+
+
+def headers_to_html(xd):
+    # headers
+    r = '<div class="xdheaders"><ul class="xdheaders">'
+    for k in "Title Author Editor Copyright".split():
+        v = xd.get_header(k)
+        if v:
+            r += '<li class="%s">%s: <b>%s</b></li>' % (k, k, v)
+        else:
+            r += '<li></li>'
+    r += '</ul></div>'
+    return r
+
+
+def grid_to_html(xd, compare_with=None):
+    "htmlify this puzzle's grid"
+
+    grid_html = '<div class="xdgrid">'
+    for r, row in enumerate(xd.grid):
+        grid_html += '<div class="xdrow">'
+        for c, cell in enumerate(row):
+            classes = [ "xdcell" ]
+
+            if cell == xdfile.BLOCK_CHAR:
+                classes.append("block")
+
+            if compare_with:
+                if cell == compare_with.cell(r, c):
+                    classes.append("match")
+                else:
+                    classes.append("diff")
+
+            grid_html += '<div class="%s">' % " ".join(classes)
+            grid_html += cell  # TODO: expand rebus
+            #  include other mutations that would still be valid
+            grid_html += '</div>' # xdcell
+        grid_html += '</div>' #  xdrow
+    grid_html += '</div>' # xdgrid
+
+    return grid_html
+
+
+def grid_diff_html(xd, compare_with=None):
+    if compare_with:
+        r = mktag('div', tagclass='fullgrid')
+    else:
+        r = mktag('div', tagclass='fullgrid main')
+
+    similarity_pct = ''
+    if compare_with:
+        real_pct = grid_similarity(xd, compare_with)
+        if real_pct < 25:
+            return ''
+
+        similarity_pct = " (%d%%)" % real_pct
+
+    xdlink = mktag('div', tagclass='xdid', inner=mkhref("%s %s" % (xd.xdid(), similarity_pct), '/pub/' + xd.xdid()))
+    if compare_with is not None:
+        r += xdlink
+    else:
+        r += mktag('b', inner=xdlink)
+    r += headers_to_html(xd)
+    r += grid_to_html(xd, compare_with)
+
+    r += '</div>' # solution
+    return r
+
