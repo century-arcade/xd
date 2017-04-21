@@ -73,11 +73,11 @@ def main():
     outf = utils.open_output()
 
     similars = utils.parse_tsv('gxd/similar.tsv', 'Similar')
-    xds_todo = [ xdfile.xdfile(open(fn).read(), fn) for fn in args.inputs ]
-    if not xds_todo:
-        # get list of all puzzles within last N days
-        first_dt = datetime.date.today() - datetime.timedelta(days=30)
-        xds_todo = [xd for xd in xdfile.corpus() if datestr_to_datetime(xd.date()) > first_dt]
+
+    xds_todo = []
+    for fn, contents in find_files(*args.inputs, ext='.xd'):
+        xd = xdfile.xdfile(contents.decode('utf-8'), fn)
+        xds_todo.append(xd)
 
     for mainxd in xds_todo:
         mainxdid = mainxd.xdid()

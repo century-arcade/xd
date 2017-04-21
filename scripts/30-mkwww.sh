@@ -13,6 +13,11 @@ mkdir -p $WWW/pub/gxd
 #cp $GXD/*.tsv $WWW/pub/gxd/
 #cp $PUB/*.tsv $WWW/pub/
 
+RECENT_XDS=`cd $GXD; git log --pretty="format:" --since="30 days ago" --name-only | sort | uniq`
+TODAY_XDS=`cd $GXD; git log --pretty="format:" --since="1 days ago" --name-only | sort | uniq`
+
+echo "SUMMARY: xds added within last 24 hours: $TODAY_XDS"
+
 echo -en "${GREEN}Generate /pub/ index${NORMAL}\n"
 $python scripts/37-pubyear-svg.py -o $WWW/
 $aws s3 mv --recursive --region $REGION $WWW ${S3WWW}/ --acl public-read
@@ -22,7 +27,7 @@ $python scripts/33-mkwww-words.py $CORPUS -o $WWW/
 $aws s3 mv --recursive --region $REGION $WWW ${S3WWW}/ --acl public-read
 
 echo -en "${GREEN}Generate /pub/clue/<boiledclue>${NORMAL}\n"
-$python scripts/34-mkwww-clues.py $CORPUS -o $WWW/
+$python scripts/34-mkwww-clues.py $CORPUS -o $WWW/ $RECENT_XDS
 $aws s3 mv --recursive --region $REGION $WWW ${S3WWW}/ --acl public-read
 
 echo -en "${GREEN}Generate /pub/<xdid>${NORMAL}\n"
@@ -30,7 +35,7 @@ $python scripts/35-mkwww-diffs.py $CORPUS -o $WWW/
 $aws s3 mv --recursive --region $REGION $WWW ${S3WWW}/ --acl public-read
 
 echo -en "${GREEN}Generate /pub/clue/<xdid>${NORMAL}\n"
-$python scripts/36-mkwww-deepclues.py $CORPUS -o $WWW/
+$python scripts/36-mkwww-deepclues.py $CORPUS -o $WWW/ $RECENT_XDS
 $aws s3 mv --recursive --region $REGION $WWW ${S3WWW}/ --acl public-read
 
 echo -en "${GREEN}From gxd/redirects.tsv${NORMAL}\n"
