@@ -23,7 +23,7 @@ def esc(s):
     return cgi.escape(s)
 
 
-def html_prev_uses(pub_uses, mainxd, mainclue):
+def prev_uses(pub_uses, mainxd, mainclue):
     sortable_uses = []
     mainxdid = mainxd.xdid()
     if pub_uses:
@@ -37,10 +37,7 @@ def html_prev_uses(pub_uses, mainxd, mainclue):
                     else:
                         sortable_uses.append((u.date, u, 1))
 
-    if sortable_uses:
-        return html_select_options([ (clue, nuses) for dt, clue, nuses in sorted(sortable_uses, key=lambda x: x[0], reverse=True) ], force_top=mainclue)
-    else:
-        return ''
+    return [(clue, nuses) for dt, clue, nuses in sorted(sortable_uses, key=lambda x: x[2], reverse=True)]
 
 
 def html_other_clues(mainanswer, mainclue, mainxd):
@@ -134,9 +131,9 @@ def main():
             # add 'other uses' to clues_html
             deepcl_html.append('<td class="other-uses">')
 
-            prev_uses = html_prev_uses(pub_uses, mainxd, mainclue)
-            if prev_uses:
-                deepcl_html.append('<a href="/pub/clue/%s">%s [x%d]</a>' % (boil(mainclue), mainclue, len(prev_uses)))
+            prev = prev_uses(pub_uses, mainxd, mainclue)
+            if prev:
+                deepcl_html.append('<a href="/pub/clue/%s">%s [x%s]</a>' % (boil(mainclue), mainclue, len(prev)))
                 nstaleclues += 1
             else:
                 deepcl_html.append(mainclue)
