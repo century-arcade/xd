@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, unboil
+from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, unboil, boil
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 from xdfile.html import th, td, mkhref, html_select_options
 from xdfile import corpus, clues, pubyear
@@ -16,6 +16,9 @@ def maybe_multstr(n):
     return (n > 1) and ("[x%d]" % n) or ""
 
 def mkwww_cluepage(bc):
+    if bc not in boiled_clues:
+        return ''
+
     bcs = boiled_clues[bc]
 
     clue_html = ''
@@ -80,7 +83,9 @@ def main():
     most_ambig += '</table>'
 
     for bc in cluepages_to_make:
-        outf.write_html('pub/clue/%s/index.html' % bc, mkwww_cluepage(bc), title=bc)
+        contents = mkwww_cluepage(bc)
+        if contents:
+            outf.write_html('pub/clue/%s/index.html' % bc, contents, title=bc)
 
     outf.write_html('pub/clue/index.html', biggest_clues + most_ambig, title="Clues")
 
