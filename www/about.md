@@ -14,7 +14,7 @@ To this end, I chose a kind of ‘long serverless’ architecture which does dai
 Ideally this crossword cloud capsule would survive until all of the crossword data can be released publicly.
 But as it will probably fall short of this goal, I took great care with the data formats and organization, so that the curated data could be easily salvaged by a capable and responsible steward.
 
-In the meantime, all [public crossword data can be downloaded](/data#download) for free, and the entire [source code is available on Github](github.com/century-arcade/xd).
+In the meantime, all [public crossword data can be downloaded](/data#download) for free, and the entire [source code is available on Github](http://github.com/century-arcade/xd).
 
 
 Please send all suggestions, offers, and complaints to [xd@saul.pw](mailto:xd@saul.pw).
