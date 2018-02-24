@@ -423,7 +423,7 @@ def main():
             pubname = pubobj.PublicationName or pubobj.PublisherName
         else:
             pubname = pub
-        html_out.append('<tr><td class="header">{}</td>'.format(html.mkhref(pubname, pub)))
+        html_out.append('<tr><td class="header">{}</td>'.format(html.mkhref(pubname, 'pub/' + pub)))
 
         for year in sorted(allyears):
             html_out.append('<td class="year_widget">')
@@ -442,7 +442,7 @@ def main():
 
         # Add totals + publishers
         html_out.append('<td class="header">{}</td>'.format(pubs_total[pub]))
-        html_out.append('<td class="header">{}</td>'.format(html.mkhref(pubname, pub)))
+        html_out.append('<td class="header">{}</td>'.format(html.mkhref(pubname, 'pub/' + pub)))
         html_out.append('</tr>')
 
 
