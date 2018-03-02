@@ -14,7 +14,7 @@ def main():
 
     outf.write_row("PublicationId Date Answer Clue".split())
     for xd in corpus(*args.inputs):
-        pubid = xd.publication_id()
+        pubid = xd.publication_id
         dt = xd.date()
         for pos, clue, answer in xd.clues:
             outf.write_row((pubid or "", dt or "", answer, clue))

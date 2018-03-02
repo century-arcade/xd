@@ -43,7 +43,7 @@ def main():
             info("similar: " + " ".join(("%s=%s" % (xd2.xdid(), pct))
                                        for pct, xd1, xd2 in similar_grids))
 
-        mainpubid = mainxd.publication_id()
+        mainpubid = mainxd.publication_id
         maindate = mainxd.date()
 
         # go over each clue/answer, find all other uses, other answers, other possibilities.
