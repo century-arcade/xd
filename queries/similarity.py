@@ -13,7 +13,7 @@ import random
 
 
 from xdfile.utils import progress, get_args, find_files, open_output, COLUMN_SEPARATOR, EOL, debug
-from xdfile import xdfile, corpus, clues
+from xdfileobj import xdfile, corpus, clues
 
 
 g_boiled_clues = { }  # ["boiled clue"] = list(ClueAnswer(dt, pubid, clue, answer))

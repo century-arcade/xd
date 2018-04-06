@@ -6,7 +6,7 @@
 
 from xdfile import metadatabase as metadb
 from xdfile import utils
-import xdfile
+import xdfileobj
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     outf.toplevel = 'xd'
     outf.write_file('README', open('doc/zip-README').read())
 
-    all_clues = [(ca.pubid, str(xdfile.year_from_date(ca.date)), ca.answer, ca.clue) for ca in xdfile.clues()]
+    all_clues = [(ca.pubid, str(xdfileobj.year_from_date(ca.date)), ca.answer, ca.clue) for ca in xdfileobj.clues()]
 
     clues_tsv = ''
 

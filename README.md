@@ -2,9 +2,9 @@
 
 .xd is a corpus-oriented format, modeled after the simplicity and intuitiveness of the markdown format.  It supports 99.99% of published crosswords, and is intended to be convenient for bulk analysis of crosswords by both humans and machines, from the present and into the future.
 
-## xdfile.py
+## xdfileobj.py
 
-  * `xdfile.py` has a simple parser for .xd files with example code that
+  * `xdfileobj.py` has a simple parser for .xd files with example code that
 answers some simple queries, like "what is the most used grid in this .zip of .xd files?"
 
   * `puz2xd.py` will convert Across-Lite .puz format to .xd.  Scripts to convert other formats are also in `src/`.

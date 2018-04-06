@@ -3,7 +3,7 @@ import re
 
 from xdfile import utils
 from xdfile import metadatabase as metadb
-import xdfile
+import xdfileobj
 
 PUBREGEX_TSV = 'gxd/pubregex.tsv'
 
@@ -105,7 +105,7 @@ def deduce_xdid(xd, mdtext):
 
     dt = xd.get_header("Date")
     if dt:
-        year = xdfile.year_from_date(dt)
+        year = xdfileobj.year_from_date(dt)
         return "%s%s" % (pubid, dt)
 
 
@@ -138,6 +138,6 @@ def get_shelf_path(xd, pubid, mdtext):
         utils.warn("neither Number nor Date for '%s'" % xd.filename)
         return 'misc/' + xd.filename
 
-    year = xdfile.year_from_date(dt)
+    year = xdfileobj.year_from_date(dt)
     return "%s/%s/%s%s" % (publisher, year, pubid, dt)
 

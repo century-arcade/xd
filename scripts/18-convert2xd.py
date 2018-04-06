@@ -11,7 +11,7 @@ from collections import namedtuple
 import time
 import zipfile
 
-from xdfile import IncompletePuzzleParse
+from xdfileobj import IncompletePuzzleParse
 
 from xdfile.utils import log, debug, error
 from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, strip_toplevel
@@ -27,7 +27,7 @@ from xdfile.xwordinfo2xd import parse_xwordinfo
 
 from xdfile import catalog
 
-import xdfile
+import xdfileobj
 
 def main():
     global args
@@ -142,7 +142,7 @@ def main():
 
                             rejected = ""
                             break  # stop after first successful parsing
-                        except xdfile.NoShelfError as e:
+                        except xdfileobj.NoShelfError as e:
                             error("could not shelve: %s" % str(e))
                             rejected += "[shelver] %s  " % str(e)
                         except Exception as e:

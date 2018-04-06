@@ -11,7 +11,7 @@ from xdfile import utils
 from xdfile import metadatabase as metadb
 from xdfile import html
 from xdfile.utils import space_with_nbsp
-import xdfile
+import xdfileobj
 from collections import defaultdict, OrderedDict
 
 DECADE_SKIP_START = 1990

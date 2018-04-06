@@ -8,7 +8,7 @@ import urllib.request, urllib.parse, urllib.error
 
 import mkwww
 import findsimilar
-import xdfile
+import xdfileobj
 
 body_html = """
 <form method="get" action="find">
@@ -42,7 +42,7 @@ class httpxd(object):
 
     @staticmethod
     def xd_from_grid(grid):
-        return xdfile.xdfile("Author: %s\n\n\n%s" % (cherrypy.request.remote.ip, grid))
+        return xdfileobj.xdfile("Author: %s\n\n\n%s" % (cherrypy.request.remote.ip, grid))
 
     def error(self, errmsg):
         return mkwww.html_header.format(title="Crossword Grid Search") + body_html + '<div class="error">Error: %s</div>' % errmsg + mkwww.html_footer
@@ -59,10 +59,10 @@ class httpxd(object):
         for pct, needle, other, same_answers in sorted(dups):
             pct *= 100
             if xd:
-                parms = {"left": xdfile.get_base_filename(other.filename), "right": xd}
+                parms = {"left": xdfileobj.get_base_filename(other.filename), "right": xd}
             else:
-                parms = {"left": xdfile.get_base_filename(other.filename), "right": grid}
-            index_line = '%d%% <a href="/diff/?%s">%s</a> %s' % (pct, urllib.parse.urlencode(parms), xdfile.get_base_filename(other.filename), other.get_header("Author") or "")
+                parms = {"left": xdfileobj.get_base_filename(other.filename), "right": grid}
+            index_line = '%d%% <a href="/diff/?%s">%s</a> %s' % (pct, urllib.parse.urlencode(parms), xdfileobj.get_base_filename(other.filename), other.get_header("Author") or "")
 
             index_list.append((pct, index_line))
 

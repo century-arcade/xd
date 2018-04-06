@@ -4,7 +4,7 @@ import os
 import zipfile
 import itertools
 
-import xdfile
+import xdfileobj
 
 EOL = '\n'
 
@@ -13,8 +13,8 @@ def get_blank_grid(xd):
     emptygrid = ""
     for row in xd.grid:
         for c in row:
-            if c == xdfile.BLOCK_CHAR:
-                emptygrid += xdfile.BLOCK_CHAR
+            if c == xdfileobj.BLOCK_CHAR:
+                emptygrid += xdfileobj.BLOCK_CHAR
             else:
                 emptygrid += "."
         emptygrid += EOL
@@ -23,14 +23,14 @@ def get_blank_grid(xd):
 
 
 def find_grid(fn):
-    needle = get_blank_grid(xdfile(file(fn).read()))
+    needle = get_blank_grid(xdfileobj.xdfile(file(fn).read()))
 
-    return [xd for xd in xdfile.corpus() if needle == get_blank_grid(xd)]
+    return [xd for xd in xdfileobj.corpus() if needle == get_blank_grid(xd)]
 
 
 def get_all_words():
     ret = {}  # ["ANSWER"] = number of uses
-    for xd in xdfile.corpus():
+    for xd in xdfileobj.corpus():
         for pos, clue, answer in xd.clues:
             ret[answer] = ret.get(answer, 0) + 1
 
@@ -40,7 +40,7 @@ def get_all_words():
 def most_used_grids(n=1):
 
     all_grids = {}
-    for xd in xdfile.corpus():
+    for xd in xdfileobj.corpus():
         empty = get_blank_grid(xd)
 
         if empty not in all_grids:
@@ -63,7 +63,7 @@ def most_used_grids(n=1):
 def get_duplicate_puzzles():
     dupgrids = {}
     grids = {}
-    for xd in xdfile.corpus():
+    for xd in xdfileobj.corpus():
         g = EOL.join(xd.grid)
         if g not in grids:
             grids[g] = [xd]
@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
     print
     groups = {"small": 0, "medium":0, "large":0, "huge":0}
-    for xd in xdfile.corpus():
+    for xd in xdfileobj.corpus():
         if xd.width() < 14 and xd.height() < 14:
             groups["small"] += 1
         elif xd.height() < 17 and xd.height() < 17:

@@ -9,7 +9,7 @@ import crossword
 import urllib.request, urllib.parse, urllib.error
 import time
 
-import xdfile
+import xdfileobj
 from xdfile.utils import warn
 
 
@@ -52,11 +52,11 @@ def parse_puz(contents, filename):
         emsg = e.message
         if "<html>" in contents.decode('utf-8').lower():
             emsg += " (looks like html)"
-        raise xdfile.PuzzleParseError(emsg)
+        raise xdfileobj.PuzzleParseError(emsg)
 
     grid_dict = dict(list(zip(string.ascii_uppercase, string.ascii_uppercase)))
 
-    xd = xdfile.xdfile('', filename)
+    xd = xdfileobj.xdfile('', filename)
 
     xd.set_header("Author", puzobj.author)
     xd.set_header("Copyright", puzobj.copyright)
@@ -81,20 +81,20 @@ def parse_puz(contents, filename):
                 used_rebuses[key] = rebuskey
                 rebus[rebuskey] = decode(value)
 
-            rebustr = xdfile.REBUS_SEP.join([("%s=%s" % (k, v)) for k, v in sorted(rebus.items())])
+            rebustr = xdfileobj.REBUS_SEP.join([("%s=%s" % (k, v)) for k, v in sorted(rebus.items())])
             xd.set_header("Rebus", rebustr)
 
     for r, row in enumerate(puzzle):
         rowstr = ""
         for c, cell in enumerate(row):
             if puzzle.block is None and cell.solution == '.':
-                rowstr += xdfile.BLOCK_CHAR
+                rowstr += xdfileobj.BLOCK_CHAR
             elif cell.solution == puzzle.block:
-                rowstr += xdfile.BLOCK_CHAR
+                rowstr += xdfileobj.BLOCK_CHAR
             elif cell.solution == ':':
-                rowstr += xdfile.OPEN_CHAR
+                rowstr += xdfileobj.OPEN_CHAR
             elif cell == puzzle.empty:
-                rowstr += xdfile.UNKNOWN_CHAR
+                rowstr += xdfileobj.UNKNOWN_CHAR
             else:
                 n = r * puzobj.width + c
                 reb = puzobj.rebus()
@@ -132,7 +132,7 @@ def parse_puz(contents, filename):
         for number, clue in puzzle.clues.across():
             cluenum = "A" + str(number)
             if cluenum not in answers:
-                raise xdfile.IncompletePuzzleParse(xd, "Clue number doesn't match grid: " + cluenum)
+                raise xdfileobj.IncompletePuzzleParse(xd, "Clue number doesn't match grid: " + cluenum)
             xd.clues.append((("A", number), decode(clue), answers.get(cluenum, "")))
 
         # xd.append_clue_break()
@@ -140,10 +140,10 @@ def parse_puz(contents, filename):
         for number, clue in puzzle.clues.down():
             cluenum = "D" + str(number)
             if cluenum not in answers:
-                raise xdfile.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + cluenum)
+                raise xdfileobj.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + cluenum)
             xd.clues.append((("D", number), decode(clue), answers.get(cluenum, "")))
     except KeyError as e:
-        raise xdfile.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + str(e))
+        raise xdfileobj.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + str(e))
 
     return xd
 

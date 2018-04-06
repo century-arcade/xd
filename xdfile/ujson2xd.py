@@ -5,7 +5,7 @@ import re
 import json
 from urllib.parse import unquote
 
-from . import xdfile
+from . import xdfileobj
 
 POSSIBLE_META_DATA = ['Title', 'Author', 'Editor', 'Copyright']
 
@@ -14,7 +14,7 @@ def parse_ujson(content, filename):
 
     # init crossword
     rows = int(json_data['Height'])
-    xd = xdfile.xdfile()
+    xd = xdfileobj.xdfile()
 
     # add meta data
     for item in POSSIBLE_META_DATA:
@@ -25,7 +25,7 @@ def parse_ujson(content, filename):
     # add puzzle
     for row in range(1, rows + 1):
         line = json_data['Solution']['Line' + str(row)]
-        xd.grid.append("".join(line.replace(' ', xdfile.BLOCK_CHAR)))
+        xd.grid.append("".join(line.replace(' ', xdfileobj.BLOCK_CHAR)))
 
     # add clues
     layout = json_data['Layout']
@@ -59,17 +59,17 @@ def _get_solution(number, direction, layout, puzzle):
     text = ''
     if direction == 'A':
         try:
-            x_limit = puzzle[y].index(xdfile.BLOCK_CHAR, x)
+            x_limit = puzzle[y].index(xdfileobj.BLOCK_CHAR, x)
         except ValueError:
             x_limit = len(puzzle[y])
         text = ''.join(puzzle[y][x:x_limit])
     elif direction == 'D':
         for row in range(y, len(puzzle)):
             char = puzzle[row][x]
-            if char == xdfile.BLOCK_CHAR:
+            if char == xdfileobj.BLOCK_CHAR:
                 break
             text += char
     return text
 
 if __name__ == "__main__":
-    xdfile.main_parse(parse_ujson)
+    xdfileobj.main_parse(parse_ujson)

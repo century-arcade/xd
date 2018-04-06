@@ -3,7 +3,7 @@
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 from xdfile.html import th, td, mkhref, html_select_options
-from xdfile import corpus, clues, pubyear, metadatabase as metadb, utils
+from xdfileobj import corpus, clues, pubyear, metadatabase as metadb, utils
 
 from collections import Counter
 import random

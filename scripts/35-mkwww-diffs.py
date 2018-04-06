@@ -10,9 +10,9 @@ from xdfile.utils import info, warn
 
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 #from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
-from xdfile import BLOCK_CHAR
+from xdfileobj import BLOCK_CHAR
 from xdfile import metadatabase as metadb
-import xdfile
+import xdfileobj
 import operator
 
 
@@ -33,7 +33,7 @@ def main():
     for mainxdid in xdids_todo:
         progress(mainxdid)
 
-        mainxd = xdfile.get_xd(mainxdid)
+        mainxd = xdfileobj.get_xd(mainxdid)
         if not mainxd:
             warn('%s not in corpus' % mainxdid)
             continue
@@ -46,7 +46,7 @@ def main():
         html_grids = {}
         html_clues = {}
         # Store in list to make further formatting as html table easier
-        html_grids[mainxdid] = grid_diff_html(xdfile.get_xd(mainxdid))
+        html_grids[mainxdid] = grid_diff_html(xdfileobj.get_xd(mainxdid))
 
         # Add for main XD
         diff_l = []
@@ -62,7 +62,7 @@ def main():
         # Process for all matches
         for row in matches:
             xdid = row.match_xdid
-            xd = xdfile.get_xd(xdid)
+            xd = xdfileobj.get_xd(xdid)
             # Continue if can't load xdid
             if not xd:
                 continue

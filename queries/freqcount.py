@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-import xdfile
+import xdfileobj
 import string
 
 freqdist = {}
 
 ok = string.uppercase + string.digits + "#"
 
-for xd in xdfile.corpus():
+for xd in xdfileobj.corpus():
     for letter in u"".join(xd.grid):
         letter = letter.upper()
         freqdist[letter] = freqdist.get(letter, 0) + 1

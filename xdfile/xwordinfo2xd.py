@@ -7,7 +7,7 @@ import re
 
 from lxml import html
 from xdfile.utils import info, debug, error
-import xdfile
+import xdfileobj
 
 SPLIT_REBUS_TITLES = "CRYPTOCROSSWORD TIC-TAC-TOE".split()
 
@@ -78,7 +78,7 @@ def parse_xwordinfo(content, filename):
     rebus = {}
     rebus_order = []
 
-    xd = xdfile.xdfile('', filename)
+    xd = xdfileobj.xdfile('', filename)
 
     # get crossword info
     title = root.cssselect(xwiprefix + 'TitleLabel')[0].text.strip()
@@ -119,10 +119,10 @@ def parse_xwordinfo(content, filename):
                 cell_type = 'circle'
 
             letter = cell.cssselect('div.letter')
-            letter = (len(letter) and letter[0].text) or xdfile.BLOCK_CHAR
+            letter = (len(letter) and letter[0].text) or xdfileobj.BLOCK_CHAR
 
             # handle rebuses
-            if letter == xdfile.BLOCK_CHAR:
+            if letter == xdfileobj.BLOCK_CHAR:
                 subst = cell.cssselect('div.subst2')
                 subst = (len(subst) and subst[0].text) or ''
                 if not subst:

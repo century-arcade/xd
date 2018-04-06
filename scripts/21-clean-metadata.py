@@ -6,7 +6,7 @@
 #
 
 from xdfile import utils, metadatabase as metadb
-import xdfile
+import xdfileobj
 import re
 
 
@@ -95,7 +95,7 @@ def clean_headers(xd):
         if hdr in ["Source", "Identifier", "Acquired", "Issued", "Category"]:
             xd.set_header(hdr, None)
         else:
-            if hdr.lower() not in xdfile.HEADER_ORDER:
+            if hdr.lower() not in xdfileobj.HEADER_ORDER:
                 utils.warn("%s: '%s' header not known: '%s'" % (xd.filename, hdr, xd.headers[hdr]))
 
     # clean Author and Editor headers
@@ -150,7 +150,7 @@ def main():
 
     for input_source in args.inputs:
         for fn, contents in utils.find_files(input_source, ext='.xd'):
-            xd = xdfile.xdfile(contents.decode('utf-8'), fn)
+            xd = xdfileobj.xdfile(contents.decode('utf-8'), fn)
             clean_headers(xd)
             metadb.update_puzzles_row(xd)
 

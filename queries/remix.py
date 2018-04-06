@@ -2,7 +2,7 @@
 
 from xdfile.utils import get_args, open_output, find_files, log, debug, info, error, get_log, COLUMN_SEPARATOR, EOL
 from xdfile.utils import parse_tsv, progress, parse_pathname
-from xdfile import corpus, xdfile, BLOCK_CHAR
+from xdfileobj import corpus, xdfile, BLOCK_CHAR
 
 
 # for a given grid

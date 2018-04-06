@@ -2,7 +2,7 @@ import re
 import cgi
 import time
 from collections import Counter
-import xdfile
+import xdfileobj
 from calendar import HTMLCalendar
 from datetime import date
 from xdfile import utils
@@ -128,7 +128,7 @@ def navbar_helper(item, current_url):
     return r
 
 def html_header(current_url=None, title='xd page'):
-    npuzzles = len(xdfile.g_corpus)
+    npuzzles = len(xdfileobj.g_corpus)
 
     h = """
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
@@ -400,7 +400,7 @@ def grid_to_html(xd, compare_with=None):
         for c, cell in enumerate(row):
             classes = [ "xdcell" ]
 
-            if cell == xdfile.BLOCK_CHAR:
+            if cell == xdfileobj.BLOCK_CHAR:
                 classes.append("block")
 
             if compare_with:

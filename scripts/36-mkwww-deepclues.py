@@ -13,9 +13,9 @@ from xdfile.html import mktag, mkhref, html_select_options, html_select_options_
 import cgi
 
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname, info, datestr_to_datetime
-from xdfile import BLOCK_CHAR, ClueAnswer
+from xdfileobj import BLOCK_CHAR, ClueAnswer
 from xdfile import metadatabase as metadb
-import xdfile
+import xdfileobj
 import operator
 
 
@@ -76,7 +76,7 @@ def main():
 
     xds_todo = []
     for fn, contents in find_files(*args.inputs, ext='.xd'):
-        xd = xdfile.xdfile(contents.decode('utf-8'), fn)
+        xd = xdfileobj.xdfile(contents.decode('utf-8'), fn)
         xds_todo.append(xd)
 
     for mainxd in xds_todo:

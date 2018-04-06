@@ -7,8 +7,8 @@ from collections import defaultdict, Counter
 
 from xdfile.utils import error, debug, info
 from xdfile import utils, metadatabase as metadb
-from xdfile import year_from_date, dow_from_date
-import xdfile
+from xdfileobj import year_from_date, dow_from_date
+import xdfileobj
 
 def boil(x):
     return ''.join(c for c in x.lower() if c in string.ascii_lowercase)
@@ -32,7 +32,7 @@ def main():
     weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
 
     pubyears = {} # set()
-    for xd in xdfile.corpus():
+    for xd in xdfileobj.corpus():
         puby = (xd.publication_id, xd.year())
         if puby not in pubyears:
             pubyears[puby] = []
@@ -63,7 +63,7 @@ def main():
         for r in metadb.xd_similar(pubid + str(year)):
             if r.match_pct < 25:
                 continue
-            xd = xdfile.get_xd(r.xdid)
+            xd = xdfileobj.get_xd(r.xdid)
 
             if xd:
                 dt = xd.get_header('Date')
@@ -123,8 +123,8 @@ def main():
             copies = 0
             themecopies = 0
             for r in byweekday_similar[weekday]:
-                xd1 = xdfile.get_xd(r.xdid)
-                xd2 = xdfile.get_xd(r.match_xdid)
+                xd1 = xdfileobj.get_xd(r.xdid)
+                xd2 = xdfileobj.get_xd(r.match_xdid)
                 if xd1 is None:
                     info("%s: similar puzzle %s not in corpus" % (r.match_xdid, r.xdid))
                     continue

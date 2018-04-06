@@ -4,7 +4,7 @@ import re
 from urllib.parse import unquote
 from lxml import etree
 
-import xdfile
+import xdfileobj
 from xdfile.utils import escape, consecutive, xml_escape_table, rev_xml_escape_table
 
 
@@ -40,7 +40,7 @@ def parse_uxml(content, filename):
     # init crossword
     # rows = int(root.xpath('//crossword/Height')[0].attrib['v'])
     cols = int(root.xpath('//crossword/Width')[0].attrib['v'])
-    xd = xdfile.xdfile('', filename)
+    xd = xdfileobj.xdfile('', filename)
 
     # add meta data
     for item in POSSIBLE_META_DATA:
@@ -53,7 +53,7 @@ def parse_uxml(content, filename):
 
     # add puzzle
     all_answers = root.xpath('//crossword/AllAnswer')[0].attrib['v']
-    all_answers = all_answers.replace('-', xdfile.BLOCK_CHAR)
+    all_answers = all_answers.replace('-', xdfileobj.BLOCK_CHAR)
     index = 0
     while index < len(all_answers):
         row = all_answers[index:index + cols]
@@ -72,4 +72,4 @@ def parse_uxml(content, filename):
     return xd
 
 if __name__ == "__main__":
-    xdfile.main_parse(parse_uxml)
+    xdfileobj.main_parse(parse_uxml)

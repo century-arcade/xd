@@ -6,7 +6,7 @@ from collections import Counter, namedtuple
 
 from .html import mkhref, html_select_options
 from .utils import COLSEP, EOL
-from .xdfile import corpus
+from .xdfileobj import corpus
 
 from xdfile import utils
 

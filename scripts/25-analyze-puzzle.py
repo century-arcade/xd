@@ -8,7 +8,7 @@
 
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, grid_similarity
 from xdfile.utils import get_args, open_output, find_files, log, info, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
-from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
+from xdfileobj import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 import time
 from xdfile import utils, metadatabase as metadb
 

@@ -4,7 +4,7 @@
 import string
 import re
 from lxml import etree
-import xdfile
+import xdfileobj
 from xdfile.utils import escape, consecutive, xml_escape_table, rev_xml_escape_table, error
 
 
@@ -39,7 +39,7 @@ def parse_ccxml(data, filename):
     rows = int(grid.attrib['height'])
     cols = int(grid.attrib['width'])
 
-    xd = xdfile.xdfile('', filename)
+    xd = xdfileobj.xdfile('', filename)
 
     # add metadata
     for metadata in root.xpath('//puzzle:metadata', namespaces=ns)[0]:
@@ -61,7 +61,7 @@ def parse_ccxml(data, filename):
         if 'solution' in cell.attrib:
             value = cell.attrib['solution']
         if 'type' in cell.attrib and cell.attrib['type'] == 'block':
-            value = xdfile.BLOCK_CHAR
+            value = xdfileobj.BLOCK_CHAR
         puzzle[y][x] = value
 
     xd.grid = ["".join(row) for row in puzzle]

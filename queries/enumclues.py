@@ -6,7 +6,7 @@
 # enumerates all answers/clues in the given inputs and writes them to the output .tsv
 
 from xdfile.utils import get_args, open_output
-from xdfile import corpus
+from xdfileobj import corpus
 
 def main():
     args = get_args("save all clues in simple .tsv")

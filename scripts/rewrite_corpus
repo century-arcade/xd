@@ -2,7 +2,7 @@
 
 from xdfile.utils import get_args, get_parser, open_output, log, info, error, warn
 
-import xdfile
+import xdfileobj
 import os
 
 
@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     outf = open_output()
 
-    for xd in xdfile.corpus():
+    for xd in xdfileobj.corpus():
         if not xd.grid:
             continue
 

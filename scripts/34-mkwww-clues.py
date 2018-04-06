@@ -3,8 +3,8 @@
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers, unboil, boil
 from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
 from xdfile.html import th, td, mkhref, html_select_options
-from xdfile import corpus, clues, pubyear
-import xdfile
+from xdfileobj import corpus, clues, pubyear
+import xdfileobj
 
 from collections import Counter
 import random
@@ -51,7 +51,7 @@ def main():
     # add all boiled clues from all input .xd files
     for fn, contents in find_files(*args.inputs, ext='.xd'):
         progress(fn)
-        xd = xdfile.xdfile(contents.decode('utf-8'), fn)
+        xd = xdfileobj.xdfile(contents.decode('utf-8'), fn)
         for pos, mainclue, mainanswer in xd.iterclues():
             cluepages_to_make.add(boil(mainclue))
 
