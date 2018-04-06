@@ -10,7 +10,7 @@ import urllib.request, urllib.parse, urllib.error
 import time
 
 import xdfile
-from xdfile.utils import warn
+from .utils import log, error, warn
 
 
 def reparse_date(s):

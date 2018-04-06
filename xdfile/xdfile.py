@@ -7,8 +7,8 @@ import functools
 import re
 import datetime
 
-from xdfile.utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
-from xdfile.utils import log, error, warn
+from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
+from .utils import log, error, warn
 
 g_corpus = []  # list of xdfile
 g_all_clues = []  # list of ClueAnswer
@@ -59,6 +59,9 @@ class xdfile:
         else:
             self._publication_id = pubid
 
+        if not self._publication_id:
+            raise Error("No Publication Id in '%s'" % filename)
+
         if xd_contents:
             self.parse_xd(xd_contents)
 
@@ -81,23 +84,21 @@ class xdfile:
     def xdid(self):
         num = self.get_header("Number")
         if num:
-            return '%s-%03d' % (self.publication_id, int(num))
+            return '%s-%03d' % (self._publication_id, int(num))
 
         assert self.date()
-        return '%s%s' % (self.publication_id, self.date())
+        return '%s%s' % (self._publication_id, self.date())
 
     def date(self):
         dt = self.get_header("Date")
-        if not dt and self.publication_id:
-            dt = parse_pathname(self.filename).base[len(self.publication_id):]
+        if not dt and self._publication_id:
+            dt = parse_pathname(self.filename).base[len(self._publication_id):]
         return dt
 
     def year(self):
         return self.date().split('-')[0]
 
-    @property
     def publication_id(self):  # "nyt"
-        assert self._publication_id, "no publication id"
         return self._publication_id
 
     def iterdiffs(self, other):

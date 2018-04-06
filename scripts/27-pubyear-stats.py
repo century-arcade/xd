@@ -33,7 +33,7 @@ def main():
 
     pubyears = {} # set()
     for xd in xdfile.corpus():
-        puby = (xd.publication_id, xd.year())
+        puby = (xd.publication_id(), xd.year())
         if puby not in pubyears:
             pubyears[puby] = []
         pubyears[puby].append(xd)

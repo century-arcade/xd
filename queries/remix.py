@@ -168,7 +168,7 @@ def main():
         remixed = set()
         for pubid, pub_clues in list(all_clues.items()):
             try:
-                if pubid == xd.publication_id:
+                if pubid == xd.publication_id():
                     continue  # don't use same publisher's clues
 
                 nmissing = reclue(xd, pub_clues)
