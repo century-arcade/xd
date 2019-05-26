@@ -10,7 +10,7 @@ import urllib.request, urllib.parse, urllib.error
 import time
 
 import xdfile
-from .utils import log, error, warn
+from .utils import log, error, warn, parse_pathname, parse_date_from_filename
 
 
 def reparse_date(s):
@@ -60,6 +60,9 @@ def parse_puz(contents, filename):
 
     xd.set_header("Author", puzobj.author)
     xd.set_header("Copyright", puzobj.copyright)
+    dt = parse_date_from_filename(parse_pathname(filename).base)
+    if dt:
+        xd.set_header("Date", dt)
     xd.set_header("Notes", puzobj.notes)
     xd.set_header("Postscript", "".join(x for x in puzobj.postscript if ord(x) >= ord(' ')))
     xd.set_header("Preamble", puzobj.preamble)
