@@ -59,8 +59,6 @@ class Crossword:
         else:
             self._publication_id = pubid
 
-        if not self._publication_id:
-            raise Error("No Publication Id in '%s'" % filename)
 
         if xd_contents:
             self.parse_xd(xd_contents)
@@ -264,6 +262,10 @@ class Crossword:
             # leading whitespace is decorative
             line = line.strip()
 
+            if section > 3: #  notes
+                self.notes += line + EOL
+                continue
+
             # collapse consecutive lines of whitespace into one line and start next group
             if not line:
                 nblanklines += 1
@@ -294,7 +296,7 @@ class Crossword:
                     else:
                         self.set_header(k, v)
                 else:
-                    self.notes += line + "\n"
+                    self.notes += line + EOL
 
             elif section == 2:
                 assert self.headers, "no headers"
@@ -323,8 +325,7 @@ class Crossword:
                     cluenum = pos  # fallback to strings for non-numeric clue "numbers"
                 self.clues.append(((cluedir, cluenum), clue.strip(), answer.strip()))
             else:  # anything remaining
-                if line:
-                    self.notes += line + EOL
+                self.notes += line + EOL
 
 
     def iterheaders(self):
@@ -363,8 +364,8 @@ class Crossword:
         if emit_clues:
             prevdir = None
             for pos, clue, answer in self.clues:
-                if not answer:
-                    r += EOL
+                if not clue and not answer:
+                    # ignore separators
                     continue
 
                 cluedir, cluenum = pos
@@ -377,7 +378,7 @@ class Crossword:
 
             if self.notes:
                 r += EOL + EOL
-                r += self.notes
+                r += self.notes.strip()
 
         r += EOL
 
