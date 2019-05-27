@@ -7,8 +7,8 @@ import functools
 import re
 import datetime
 
-from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
-from .utils import log, error, warn
+from xdfile.utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
+from xdfile.utils import log, error, warn
 
 g_corpus = []  # list of xdfile
 g_all_clues = []  # list of ClueAnswer
@@ -46,7 +46,7 @@ HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'number', 'date',
                 'relation', 'special', 'rebus', 'cluegroup', 'description', 'notes']
 
 
-class xdfile:
+class Crossword:
     def __init__(self, xd_contents=None, filename=None, pubid=None):
         self.filename = filename
         self.headers = {}  # [key] -> value or list of values
@@ -417,11 +417,12 @@ class xdfile:
         flipxd.clues = sorted(flipxd.clues)
         return flipxd
 
+xdfile = Crossword
 
 # get_args(...) should be called before corpus()
 @memoize
 def corpus():
-    from .utils import log
+    from xdfile.utils import log
 
     args = get_args()
 
