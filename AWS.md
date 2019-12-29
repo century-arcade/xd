@@ -16,7 +16,7 @@ aws ec2 detach-volume --volume-id {cur_root_volume}
 aws ec2 attach-volume --volume-id {new_root_volume_step3} --instance-id i-5fc17aca --device /dev/sda1
 
 6) Start instance and process with partition extension
-http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-expand-volume.html#recognize-expanded-volume-linux
+https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-expand-volume.html#recognize-expanded-volume-linux
 
 7) If all ok, delete old root volume
 ws ec2 delete-volume --volume-id {cur_root_volume_step2}

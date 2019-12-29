@@ -2,7 +2,7 @@
 
 The xd crossword corpus started as a model "small data" project, testing my thesis that simple file formats and obsessive curation are [unreasonably effective](https://en.wikipedia.org/wiki/The_Unreasonable_Effectiveness_of_Mathematics_in_the_Natural_Sciences) in the data sciences.
 
-Since the project did uncover some [malfeasance in the crossword industry](http://www.slate.com/articles/life/gaming/2016/03/how_to_spot_a_plagiarized_crossword.html), it seems important to have an ongoing process for analyzing crosswords, to discourage copytheft and programmatic puzzle generation.
+Since the project did uncover some [malfeasance in the crossword industry](https://www.slate.com/articles/life/gaming/2016/03/how_to_spot_a_plagiarized_crossword.html), it seems important to have an ongoing process for analyzing crosswords, to discourage copytheft and programmatic puzzle generation.
 
 The xd [design](/doc) is intentionally textpunk and therefore platform-agnostic. Anyone can browse, contribute, or consume data with minimal effort.
 
@@ -34,7 +34,7 @@ Register your crosswords with the .xd project and let us add them to the corpus!
 
 ### Help improve the curation, analysis, or presentation
 
-- View the entire codebase at http://github.com/century-arcade/xd[github.com/century-arcade/xd]
+- View the entire codebase at https://github.com/century-arcade/xd[github.com/century-arcade/xd]
 
 ### Thanks to
 
