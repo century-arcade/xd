@@ -43,7 +43,7 @@ def is_block(puz, x, y):
 
 
 def parse_puz(contents, filename):
-    rebus_shorthands = list("⚷⚳♇♆⛢♄♃♂♁♀☿♹♸♷♶♵♴♳⅘⅗⅖⅕♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠+&%$@?*zyxwvutsrqponmlkjihgfedcba0987654321")
+    rebus_shorthands = list("zyxwvutsrqponmlkjihgfedcba⚷⚳♇♆⛢♄♃♂♁♀☿♹♸♷♶♵♴♳⅘⅗⅖⅕♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠+&%$@?*0987654321")
 
     try:
         puzobj = puz.load(contents)
@@ -84,6 +84,13 @@ def parse_puz(contents, filename):
             rebustr = xdfile.REBUS_SEP.join([("%s=%s" % (k, v)) for k, v in sorted(rebus.items())])
             xd.set_header("Rebus", rebustr)
 
+    # check for circles and record them if they exist
+    circles = []
+    if b"GEXT" in puzobj.extensions: 
+        for i, c in enumerate(puzobj.extensions[b"GEXT"]):
+            if c == 0x80: circles.append(i)
+    if circles: xd.set_header("Special", "circle")
+
     for r, row in enumerate(puzzle):
         rowstr = ""
         for c, cell in enumerate(row):
@@ -116,7 +123,8 @@ def parse_puz(contents, filename):
                         xd.set_header("Rebus", xd.get_header("Rebus") + " %s=%s" % (cellch, ch))
 
                         grid_dict[ch] = cellch
-                    rowstr += grid_dict[ch]
+                    rowstr += grid_dict[ch].lower() if n in circles else grid_dict[ch]
+                    # ^ assumes a cell is never rebus and circle.
 
         xd.grid.append(rowstr)
 
