@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from xdfile.utils import open_output, info, log, find_files, get_args, parse_pathname, generate_zip_files, iso8601, to_timet
+from xdfile.utils import open_output, info, summary, log, find_files, get_args, parse_pathname, generate_zip_files, iso8601, to_timet
 from xdfile.metadatabase import xd_sources_header, xd_sources_row
 from xdfile.cloud import xd_send_email
 
@@ -57,10 +57,10 @@ def main():
 
         summary("%s puzzles from %s" % (len(email_files), upload_src))
 
-            if len(puzdata) > 1000 and len(puzdata) < 100000:
-                email_sources_tsv.append(xd_sources_row(puzfn, upload_src, iso8601(puzdt)))
+        if len(puzdata) > 1000 and len(puzdata) < 100000:
+            email_sources_tsv.append(xd_sources_row(puzfn, upload_src, iso8601(puzdt)))
 
-                outf.write_file(puzfn, puzdata)
+            outf.write_file(puzfn, puzdata)
 
         # generate receipt row, send receipt email
 

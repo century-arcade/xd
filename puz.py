@@ -15,15 +15,6 @@ __license__ = 'MIT'
 __copyright__ = 'Copyright 2009 Alex DeJarnatt'
 
 
-PY3 = sys.version_info[0] >= 3
-
-if PY3:
-    str = str
-    range = range
-else:
-    str = unicode
-    range = xrange
-
 HEADER_FORMAT = '''<
              H 11s        xH
              Q       4s  2sH

@@ -23,7 +23,7 @@ def get_blank_grid(xd):
 
 
 def find_grid(fn):
-    needle = get_blank_grid(xdfile(file(fn).read()))
+    needle = get_blank_grid(xdfile(open(fn).read()))
 
     return [xd for xd in xdfile.corpus() if needle == get_blank_grid(xd)]
 
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     all_words = get_all_words()
     print("%d unique words.  most used words:" % len(all_words))
     for word, num_uses in sorted(all_words.items(), key=lambda x: -x[1])[0:10]:
-        print num_uses, word
+        print (num_uses, word)
 
     print
     groups = {"small": 0, "medium":0, "large":0, "huge":0}
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         elif xd.height() < 25 and xd.height() < 25:
             groups["large"] += 1
         else:
-            print xd
+            print (xd)
             groups["huge"] += 1
 
     for k, v in groups.items():
