@@ -146,7 +146,7 @@ def download_puzzles(outf, puzsrc, pubid, dates_to_get):
 #        sources_tsv += xd_sources_row(fn, url, todaystr)
         time.sleep(2)
 
-    return max(actually_gotten)
+    return max(actually_gotten) if actually_gotten else 0
 
 
 if __name__ == "__main__":
