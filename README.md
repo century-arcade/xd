@@ -51,15 +51,67 @@ This is the oldest rebus crossword from the New York Times (found by `grep -r Re
 
 The .xd format is a simple UTF-8 text file, and can often be 7-bit ASCII clean.
 
-Sections are delineated by two or more blank lines (3 consecutive newlines
-(0x0A)).  Subsections are delineated by a single blank line.
+The file is specified in one of two methods:
 
-### Headers (Section 1)
+- Using an implicit order, with sections being delineated by two or more blank 
+  lines (3 consecutive newlines (0x0A)).
+
+- Using `## [Section Name]` to declare the lines after as a certain section. 
+  Sections with case-insensitive headers which are not `"meta"`, `"grid"` or 
+  `"clues"` are ignored.  Order is unimportant.
+
+  <details>
+    <summary>An example of the previous full example using the explicit headers.</summary>
+
+      ## Meta
+
+      Title: New York Times, Saturday, January 1, 1955
+      Author: Anthony Morse
+      Editor: Margaret Farrar
+      Rebus: 1=HEART 2=DIAMOND 3=SPADE 4=CLUB
+      Date: 1955-01-01
+
+      ## Grid
+
+      1ACHE#ADAM#2LIL
+      BLUER#GULL#MATA
+      EATIN#APEX#ICER
+      ATAR#TILE#SNEAK
+      TEN#MANI#ITE###
+      ##DRUB#CANASTAS
+      FADED#BAGGY#OIL
+      ONES#KATES#TUNA
+      ETA#JOKER#JORUM
+      SILLABUB#SOON##
+      ###ACE#RUIN#ARK
+      3WORK#JINX#4MAN
+      BIRD#WADS#SCENE
+      ISLE#EDGE#PANEL
+      DEER#BEET#ARTEL
+
+      ## Clues
+
+      A1. Sadness. ~ HEARTACHE
+      A6. Progenitor. ~ ADAM
+      A10. Mae West stand-by. ~ DIAMONDLIL
+      [...]
+
+      D1. Vital throb. ~ HEARTBEAT
+      D2. Having wings. ~ ALATE
+      D3. Start the card game. ~ CUTANDDEAL
+      [...]
+
+  </details>
+
+
+HTML-style comments are allowed, started via `<!--`  and finishing via: `-->`.
+
+### Meta (Section 1)
 
 The first section is a set of key:value pairs, one per line.  Title, Author,
-Editor, Copyright, and Date are the standard headers.  Other headers describing
-the puzzle semantics are given below.  Additional headers are allowed but will
-be ignored.  Multiple entries with the same key are not allowed.
+Editor, Copyright, and Date are the standard headers in the meta section.  Other 
+headers describing the puzzle semantics are given below.  Additional headers are 
+allowed but will be ignored.  Multiple entries with the same key are not allowed.
 
 ### Grid (Section 2)
 
