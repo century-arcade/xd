@@ -57,13 +57,13 @@ The file is specified in one of two methods:
   lines (3 consecutive newlines (0x0A)).
 
 - Using `## [Section Name]` to declare the lines after as a certain section. 
-  Sections with case-insensitive headers which are not `"meta"`, `"grid"` or 
+  Sections with case-insensitive headers which are not `"metadata"`, `"grid"` or 
   `"clues"` are ignored.  Order is unimportant.
 
   <details>
     <summary>An example of the previous full example using the explicit headers.</summary>
 
-      ## Meta
+      ## Metadata
 
       Title: New York Times, Saturday, January 1, 1955
       Author: Anthony Morse
@@ -104,9 +104,7 @@ The file is specified in one of two methods:
   </details>
 
 
-HTML-style comments are allowed, started via `<!--`  and finishing via: `-->`.
-
-### Meta (Section 1)
+### Metadata (Section 1)
 
 The first section is a set of key:value pairs, one per line.  Title, Author,
 Editor, Copyright, and Date are the standard headers in the meta section.  Other 
