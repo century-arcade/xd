@@ -1,10 +1,10 @@
-# .xd futureproof crossword format
+# .xd futureproof crossword format 2.0
 
 .xd is a corpus-oriented format, modeled after the simplicity and intuitiveness of the markdown format.  It supports 99.99% of published crosswords, and is intended to be convenient for bulk analysis of crosswords by both humans and machines, from the present and into the future.
 
 ## xdfile.py
 
-  * `xdfile.py` has a simple parser for .xd files with example code that
+  * `xdfile.py` has a simple parser for v1 .xd files with example code that
 answers some simple queries, like "what is the most used grid in this .zip of .xd files?"
 
   * `puz2xd.py` will convert Across-Lite .puz format to .xd.  Scripts to convert other formats are also in `src/`.
@@ -159,3 +159,8 @@ The backslash ('\\') is used as a line separator in the rare case of a multi-lin
 The free-format final section can contain any amount of notes.
 
 
+## CHANGELOG
+
+### 2.0
+
+The 2.0 version of the specification adds support for `## [headers]` for sections of xd content. You can read more in [format specification](https://github.com/century-arcade/xd#format-specification) above.
