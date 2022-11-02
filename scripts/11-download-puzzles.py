@@ -10,6 +10,8 @@ import urllib.request, urllib.error, urllib.parse
 import datetime
 import time
 import re
+import json
+import base64
 
 from xdfile import utils, metadatabase as metadb
 from xdfile.utils import get_args, log, error, warn, summary, debug, open_output, datestr_to_datetime, args_parser
@@ -125,11 +127,35 @@ def main():
 # returns most recent date actually gotten
 def download_puzzles(outf, puzsrc, pubid, dates_to_get):
     actually_gotten = []
+
+    # AmuseLabs query urls require a pickerToken
+    al_pubs_tokens = {'lat': 'https://cdn4.amuselabs.com/lat/date-picker?set=latimes'}
+    token = None
+    if pubid in al_pubs_tokens.keys():
+        response = urllib.request.urlopen(al_pubs_tokens[pubid], timeout=10)
+        picker_source = response.read()
+
+        rawsps = next((line.strip() for line in picker_source.splitlines()
+            if b'pickerParams.rawsps' in line), None)
+
+        if rawsps:
+            rawsps = rawsps.split(b"'")[1]
+            picker_params = json.loads(base64.b64decode(rawsps).decode("utf-8"))
+            token = picker_params.get('pickerToken', None)
+            if token:
+                token = '&pickerToken=' + token
+        debug("setting pickerToken '%s' for '%s'" % (token, pubid))
+
+
     for dt in sorted(dates_to_get):
         try:
             xdid = construct_xdid(pubid, dt)
             url = dt.strftime(puzsrc.urlfmt)
             fn = "%s.%s" % (xdid, puzsrc.ext)
+
+            # AmuseLabs query urls require a pickerToken
+            if token:
+                url += token
 
             debug("downloading '%s' from '%s'" % (fn, url))
 
