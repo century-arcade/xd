@@ -126,26 +126,11 @@ def main():
 
 # returns most recent date actually gotten
 def download_puzzles(outf, puzsrc, pubid, dates_to_get):
+    from xword_dl import by_keyword
     actually_gotten = []
 
     # AmuseLabs query urls require a pickerToken
-    al_pubs_tokens = {'lat': 'https://cdn4.amuselabs.com/lat/date-picker?set=latimes'}
-    token = None
-    if pubid in al_pubs_tokens.keys():
-        response = urllib.request.urlopen(al_pubs_tokens[pubid], timeout=10)
-        picker_source = response.read()
-
-        rawsps = next((line.strip() for line in picker_source.splitlines()
-            if b'pickerParams.rawsps' in line), None)
-
-        if rawsps:
-            rawsps = rawsps.split(b"'")[1]
-            picker_params = json.loads(base64.b64decode(rawsps).decode("utf-8"))
-            token = picker_params.get('pickerToken', None)
-            if token:
-                token = '&pickerToken=' + token
-        debug("setting pickerToken '%s' for '%s'" % (token, pubid))
-
+    xworddl_outlets = ['lat']
 
     for dt in sorted(dates_to_get):
         try:
@@ -153,14 +138,15 @@ def download_puzzles(outf, puzsrc, pubid, dates_to_get):
             url = dt.strftime(puzsrc.urlfmt)
             fn = "%s.%s" % (xdid, puzsrc.ext)
 
-            # AmuseLabs query urls require a pickerToken
-            if token:
-                url += token
-
             debug("downloading '%s' from '%s'" % (fn, url))
 
-            response = urllib.request.urlopen(url, timeout=10)
-            content = response.read()
+            if pubid in xworddl_outlets:
+                # content is a puz.Puz object
+                content, filename = by_keyword(pubid, date=dt.strftime("%Y-%m-%d"))
+
+            else:
+                response = urllib.request.urlopen(url, timeout=10)
+                content = response.read()
 
             outf.write_file(fn, content)
             actually_gotten.append(dt)
