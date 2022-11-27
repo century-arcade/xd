@@ -163,6 +163,9 @@ $(CORPUS)-meta.zip: crosswords/puzzles.tsv crosswords/publications.tsv
 findgrids: src/findgrids.c
 	gcc -std=c99 -ggdb -O3 -o $@ $<
 
+gxd.sqlite:
+	./scripts/26-mkdb-sqlite.py -o gxd.sqlite gxd/
+
 transpose-diffs.txt:
 	PYTHONPATH=. ${SCRIPTDIR}/transpose_corpus > transpose-diffs.txt
 

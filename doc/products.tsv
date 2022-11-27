@@ -1,7 +1,7 @@
 output	location	script
 recent-downloads.tsv	gxd	10-download-puzzles
 receipts.tsv	gxd	20-convert2xd
-puzzles.tsv	pub	30-clean-metadata
+puzzles.tsv	pub	21-clean-metadata
 pubyears.tsv	pub	41-pubyears
 similar.tsv	gxd	50-find-similar
 /pub/{xdid}/index.html	www	60-mkwww-diffs
