@@ -26,7 +26,7 @@ sql_gridcmp(sqlite3_context *ctx, int argc, sqlite3_value **argv)
     int nmatches = 0;
     int nblocks = 0;
     int ntotal = 0;
-    for (int i=0; i < grid2_size; ++i) {
+    for (int i=0; i < grid1_size; ++i) {
         if (grid1[i] == '|') {
             continue;
         }
@@ -49,6 +49,12 @@ sql_gridcmp(sqlite3_context *ctx, int argc, sqlite3_value **argv)
                 t_nmatches++;
             }
         }
+    }
+
+    if (ntotal == nblocks) {
+        sqlite3_result_null(ctx);
+        return;
+
     }
 
     int pct = (nmatches - nblocks)*100/(ntotal - nblocks);

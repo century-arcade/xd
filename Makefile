@@ -166,6 +166,9 @@ findgrids: src/findgrids.c
 gxd.sqlite:
 	./scripts/26-mkdb-sqlite.py -o gxd.sqlite gxd/
 
+gridmatches: gxd.sqlite
+	cat findmatches.sql | time sqlite3 gxd.sqlite
+
 transpose-diffs.txt:
 	PYTHONPATH=. ${SCRIPTDIR}/transpose_corpus > transpose-diffs.txt
 
@@ -176,4 +179,3 @@ clues.tsv:
 	./queries/enumclues.py
 
 .PHONY: always
-
