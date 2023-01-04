@@ -27,7 +27,7 @@ def get_dates_between(before_date, after_date, days_to_advance=1):
         before_date, after_date = after_date, before_date
 
     days_diff = (after_date - before_date).days
-    return [before_date + datetime.timedelta(days=x) for x in range(days_to_advance, days_diff, days_to_advance)]
+    return [before_date + datetime.timedelta(days=x) for x in range(0, days_diff, days_to_advance)]
 
 
 def add_days(dt, ndays):
@@ -99,10 +99,11 @@ def main():
             warn("no source url for '%s', skipping" % pubid)
             continue
 
-        from_date = latest_date
+        from_date = today-datetime.timedelta(days=1)
         to_date = today
-#        dates_to_get = get_dates_between(from_date, to_date, int(puzsrc.freq))
-        dates_to_get = get_ungotten_dates(pubid, from_date, to_date, int(puzsrc.freq))
+        dates_to_get = get_dates_between(from_date, to_date, int(puzsrc.freq))
+        log(dates_to_get)
+#        dates_to_get = get_ungotten_dates(pubid, from_date, to_date, int(puzsrc.freq))
         if not dates_to_get:
             warn("*** %s: nothing to get since %s" % (pubid, from_date))
             continue
@@ -111,17 +112,18 @@ def main():
         dates_to_get = dates_to_get[0:10] + dates_to_get[-10:]
 
         summary("*** %s: %d puzzles from %s to %s not yet gotten, getting %d of them" % (pubid, len(all_dates_to_get), all_dates_to_get[0], to_date, len(dates_to_get)))
+        # TODO: download_puzzles is returning 0
         most_recent[pubid] = str(download_puzzles(outf, puzsrc, pubid, dates_to_get))
 
-    for k, v in most_recent.items():
-        new_recents_tsv.append(xd_recent_download(k, v))
+    #for k, v in most_recent.items():
+    #    new_recents_tsv.append(xd_recent_download(k, v))
 
 #    if sources_tsv:
 #        outf.write_file("sources.tsv", xd_sources_header + sources_tsv)
 
-    if new_recents_tsv:
+    #if new_recents_tsv:
         # on filesystem
-        open(metadb.RECENT_DOWNLOADS_TSV, "w").write(xd_recents_header + "".join(sorted(new_recents_tsv)))
+     #   open(metadb.RECENT_DOWNLOADS_TSV, "w").write(xd_recents_header + "".join(sorted(new_recents_tsv)))
 
 
 # returns most recent date actually gotten
@@ -148,12 +150,14 @@ def download_puzzles(outf, puzsrc, pubid, dates_to_get):
                 response = urllib.request.urlopen(url, timeout=10)
                 content = response.read()
 
-            outf.write_file(fn, content)
+            # TODO we will need to check if object is puz.Puzzle
+            # if it is, it needs content.tobytes()
+            outf.write_file(fn, content.tobytes())
             actually_gotten.append(dt)
         except (urllib.error.HTTPError, urllib.error.URLError) as err:
             error('%s %s: %s' % (xdid, err, url))
         except Exception as e:
-            error(str(e))
+            raise e
 
 #        sources_tsv += xd_sources_row(fn, url, todaystr)
         time.sleep(2)
