@@ -7,6 +7,7 @@
 #
 
 import urllib.request, urllib.error, urllib.parse
+import puz
 import datetime
 import time
 import re
@@ -138,9 +139,9 @@ def download_puzzles(outf, puzsrc, pubid, dates_to_get):
                 response = urllib.request.urlopen(url, timeout=10)
                 content = response.read()
 
-            # TODO we will need to check if object is puz.Puzzle
-            # if it is, it needs content.tobytes()
-            outf.write_file(fn, content.tobytes())
+            if isinstance(content, puz.Puzzle):
+                content = content.tobytes()
+            outf.write_file(fn, content)
             actually_gotten.append(dt)
         except (urllib.error.HTTPError, urllib.error.URLError) as err:
             error('%s %s: %s' % (xdid, err, url))
