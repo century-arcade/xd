@@ -99,21 +99,9 @@ def main():
             warn("no source url for '%s', skipping" % pubid)
             continue
 
-        from_date = today-datetime.timedelta(days=1)
-        to_date = today
-        dates_to_get = get_dates_between(from_date, to_date, int(puzsrc.freq))
-        log(dates_to_get)
-#        dates_to_get = get_ungotten_dates(pubid, from_date, to_date, int(puzsrc.freq))
-        if not dates_to_get:
-            warn("*** %s: nothing to get since %s" % (pubid, from_date))
-            continue
-
-        all_dates_to_get = sorted(dates_to_get)
-        dates_to_get = dates_to_get[0:10] + dates_to_get[-10:]
-
-        summary("*** %s: %d puzzles from %s to %s not yet gotten, getting %d of them" % (pubid, len(all_dates_to_get), all_dates_to_get[0], to_date, len(dates_to_get)))
-        # TODO: download_puzzles is returning 0
-        most_recent[pubid] = str(download_puzzles(outf, puzsrc, pubid, dates_to_get))
+        summary("*** %s: getting puzzles for %s" % (pubid, today))
+        dates_to_get = [today]
+        most_recent[pubid] = str(download_puzzles(outf, puzsrc, pubid, list(set(dates_to_get))))
 
     #for k, v in most_recent.items():
     #    new_recents_tsv.append(xd_recent_download(k, v))
