@@ -1,6 +1,6 @@
 crossword
 xword-dl==2023.1.19
-puzpy==0.2.3
+puzpy
 
 # xdfile deps
 lxml            # for ccxml2xd, uxml2xd, xwordinfo2xd
