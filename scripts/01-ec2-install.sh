@@ -20,8 +20,8 @@ echo 'SUMMARY: Start time:'`date +'%Y-%m-%d %H:%M'`
 
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update && \
-    sudo apt-get install --yes language-pack-en-base zip awscli python3-lxml python3-pip git markdown python3-boto3 grub && \
-    sudo pip3 install cssselect botocore
+    sudo apt-get install --yes language-pack-en-base zip awscli python3-pip git markdown grub && \
+    sudo pip3 install -r requirements.txt
 
 # then http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-instance-store-ami.html
 # https://bitbucket.org/dowdandassociates/aws_scripts/raw/da64a2f4babf5f8544fd645e99bd96ebea046190/install_aws_cli/install_ec2-ami-tools.sh
