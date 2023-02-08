@@ -19,27 +19,41 @@ from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sou
 from xword_dl import by_keyword
 
 # For supported outlets, use xword-dl to download a .puz file of the most recent puzzle.
-XWORDDL_OUTLETS = ['lat', 'wsj']
+# this is the xd pubid
+XWORDDL_OUTLETS = ['lat', 'tny', 'up', 'usa', 'nw', 'atl']
+# wsj, wap do not support selection by date
+# wap is not a daily but does have its pub date in the 'copyright'
+# field of the .puz
+# wsj frequency is unknown, .puz does not seem to include a pub date
+# we need to add a check on which date got downloaded
 
 def construct_xdid(pubabbr, dt):
     return pubabbr + dt.strftime("%Y-%m-%d")
 
 # Returns `True` if the puzzle for `date` was successfully downloaded.
-def download_puzzles(outf, puzsrc, pubid, date):
-    xdid = construct_xdid(pubid, dt)
-    url = dt.strftime(puzsrc.urlfmt)
+def download_puzzles(outf, puzsrc, pubid, date, xwordid):
+    xdid = construct_xdid(pubid, date)
+    url = date.strftime(puzsrc.urlfmt)
     fn = "%s.%s" % (xdid, puzsrc.ext)
-    log("downloading '%s' from '%s'" % (fn, url))
 
     if pubid in XWORDDL_OUTLETS:
         try:
             # `content` is always a a puz.Puz object
-            content, filename = by_keyword(pubid, date=dt.strftime("%Y-%m-%d"))
+            log("downloading '%s' using xword-dl" % (fn))
+            content, filename = by_keyword(xwordid, date=date.strftime("%Y-%m-%d"))
         except Exception as e:
-            error('xword-dl: %s' % (xdid))
-            return False
+            try:
+                log("downloading date %s using xword-dl failed; downloading latest" % date.strftime("%Y-%m-%d"))
+                content, filename = by_keyword(xwordid)
+            except Exception as e:
+                error('xword-dl error %s: %s' % (str(e), xdid))
+                return False
     else:
         try:
+            log("downloading '%s' from url %s " % (fn, url))
+            if not url or url.startswith("#"):
+                warn("no source url for '%s', skipping" % pubid)
+                return False
             # Type of `content` depends on the publication
             response = urllib.request.urlopen(url, timeout=10)
             content = response.read()
@@ -79,13 +93,10 @@ def main():
             continue
 
         puzsrc = puzzle_sources[pubid]
-        if not puzsrc.urlfmt or puzsrc.urlfmt.startswith("#"):
-            warn("no source url for '%s', skipping" % pubid)
-            continue
 
         summary("*** %s: getting puzzle for %s" % (pubid, today))
-        if download_puzzles(outf, puzsrc, pubid, today):
-            most_recent[pubid] = today
+        if download_puzzles(outf, puzsrc, pubid, today, puzzle_sources[pubid]['xword-dl_id']):
+            most_recent[pubid] = today.strftime("%Y-%m-%d")
 
         # Might not need this sleep since each iteration is a different url
         time.sleep(2)
