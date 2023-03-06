@@ -15,10 +15,6 @@ with open('README.md') as readme:
 with open('VERSION') as version_file:
     version = version_file.read().strip()
 
-def requirements():
-    with open("requirements.txt") as f:
-        return f.read().split("\n")
-
 setup(
     name='xdfile',
 
@@ -80,7 +76,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=requirements(),
+    install_requires=['crossword', 'puzpy'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
