@@ -7,109 +7,147 @@
 #
 
 import urllib.request, urllib.error, urllib.parse
-import puz
 import datetime
 import time
-import json
+import re
 
 from xdfile import utils, metadatabase as metadb
 from xdfile.utils import get_args, log, error, warn, summary, debug, open_output, datestr_to_datetime, args_parser
 from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sources, xd_recent_download, xd_recents_header
 
-from xword_dl import by_keyword
-
-# For supported outlets, use xword-dl to download a .puz file of the most recent puzzle.
-# this is the xd pubid
-XWORDDL_OUTLETS = ['lat', 'tny', 'up', 'usa', 'nw', 'atl']
-# wsj, wap do not support selection by date
-# wap is not a daily but does have its pub date in the 'copyright'
-# field of the .puz
-# wsj frequency is unknown, .puz does not seem to include a pub date
-# we need to add a check on which date got downloaded
 
 def construct_xdid(pubabbr, dt):
     return pubabbr + dt.strftime("%Y-%m-%d")
 
-# Returns `True` if the puzzle for `date` was successfully downloaded.
-def download_puzzles(outf, puzsrc, pubid, date, xwordid):
-    xdid = construct_xdid(pubid, date)
-    url = date.strftime(puzsrc.urlfmt)
-    fn = "%s.%s" % (xdid, puzsrc.ext)
 
-    if pubid in XWORDDL_OUTLETS:
-        try:
-            # `content` is always a a puz.Puz object
-            log("downloading '%s' using xword-dl" % (fn))
-            content, filename = by_keyword(xwordid, date=date.strftime("%Y-%m-%d"))
-        except Exception as e:
-            try:
-                log("downloading date %s using xword-dl failed; downloading latest" % date.strftime("%Y-%m-%d"))
-                content, filename = by_keyword(xwordid)
-            except Exception as e:
-                error('xword-dl error %s: %s' % (str(e), xdid))
-                return False
+def get_dates_between(before_date, after_date, days_to_advance=1):
+    if before_date > after_date:
+        before_date, after_date = after_date, before_date
+
+    days_diff = (after_date - before_date).days
+    return [before_date + datetime.timedelta(days=x) for x in range(days_to_advance, days_diff, days_to_advance)]
+
+
+def add_days(dt, ndays):
+    return dt + datetime.timedelta(days=ndays)
+
+def get_ungotten_dates(pubid, before_date, after_date, days_to_advance, ret=None):
+    def prev_period(start_date, period=days_to_advance):
+        return add_days(start_date, -period*2)
+
+    if ret is None:
+        ret = []
+
+    newret = []
+    pub_gotten = set()
+    for puzrow in metadb.xd_puzzles(pubid):
+        pub_gotten.add(datestr_to_datetime(puzrow.Date))
+
+    if before_date > after_date:
+        before_date, after_date = after_date, before_date
+
+    before_before_date = prev_period(before_date)
+
+    days_diff = (after_date - before_before_date).days
+
+    for offset in range(days_to_advance, days_diff+1, days_to_advance):
+        dt = add_days(before_before_date, offset)
+        if dt not in pub_gotten:
+            newret.append(dt)
+
+    ret.extend(reversed(newret))
+
+    if newret:
+        return get_ungotten_dates(pubid, prev_period(before_before_date), before_before_date, days_to_advance, ret)
     else:
-        try:
-            log("downloading '%s' from url %s " % (fn, url))
-            if not url or url.startswith("#"):
-                warn("no source url for '%s', skipping" % pubid)
-                return False
-            # Type of `content` depends on the publication
-            response = urllib.request.urlopen(url, timeout=10)
-            content = response.read()
-        except (urllib.error.HTTPError, urllib.error.URLError) as err:
-            error('%s %s: %s' % (xdid, err, url))
-            return False
+        return ret
 
-    if isinstance(content, puz.Puzzle):
-        content = content.tobytes()
-    outf.write_file(fn, content)
-    return True
 
 def main():
-    p = args_parser('download today\'s puzzles')
+    p = args_parser('download recent puzzles')
     args = get_args(parser=p)
+
     outf = open_output()
 
     today = datetime.date.today()
     sources_tsv = ''
+
     puzzle_sources = xd_puzzle_sources()
+
     new_recents_tsv = []
 
-    # Some downloads may fail, track the last successful ones
+    # some downloads may fail, track the last successful ones
     most_recent = {}
 
-    # For each publication, download today's puzzle if we don't already have it
+    # download new puzzles since most recent download
     for row in metadb.xd_recent_downloads().values():
         pubid = row.pubid
+        latest_date = datestr_to_datetime(row.date)
+
+        # by default, keep the previous one
+        most_recent[pubid] = row.date
+
         if pubid not in puzzle_sources:
             warn("unknown puzzle source for '%s', skipping" % pubid)
             continue
 
-        # If download fails, retain the most recent download date
-        latest_date = datestr_to_datetime(row.date)
-        most_recent[pubid] = row.date
-        if latest_date == today:
-            continue
-
         puzsrc = puzzle_sources[pubid]
 
-        summary("*** %s: getting puzzle for %s" % (pubid, today))
-        if download_puzzles(outf, puzsrc, pubid, today, puzzle_sources[pubid]['xword-dl_id']):
-            most_recent[pubid] = today.strftime("%Y-%m-%d")
+        if not puzsrc.urlfmt or puzsrc.urlfmt.startswith("#"):
+            warn("no source url for '%s', skipping" % pubid)
+            continue
 
-        # Might not need this sleep since each iteration is a different url
-        time.sleep(2)
+        from_date = latest_date
+        to_date = today
+#        dates_to_get = get_dates_between(from_date, to_date, int(puzsrc.freq))
+        dates_to_get = get_ungotten_dates(pubid, from_date, to_date, int(puzsrc.freq))
+        if not dates_to_get:
+            warn("*** %s: nothing to get since %s" % (pubid, from_date))
+            continue
+
+        all_dates_to_get = sorted(dates_to_get)
+        dates_to_get = dates_to_get[0:10] + dates_to_get[-10:]
+
+        summary("*** %s: %d puzzles from %s to %s not yet gotten, getting %d of them" % (pubid, len(all_dates_to_get), all_dates_to_get[0], to_date, len(dates_to_get)))
+        most_recent[pubid] = str(download_puzzles(outf, puzsrc, pubid, dates_to_get))
 
     for k, v in most_recent.items():
         new_recents_tsv.append(xd_recent_download(k, v))
 
-    if sources_tsv:
-        outf.write_file("sources.tsv", xd_sources_header + sources_tsv)
+#    if sources_tsv:
+#        outf.write_file("sources.tsv", xd_sources_header + sources_tsv)
 
     if new_recents_tsv:
         # on filesystem
         open(metadb.RECENT_DOWNLOADS_TSV, "w").write(xd_recents_header + "".join(sorted(new_recents_tsv)))
+
+
+# returns most recent date actually gotten
+def download_puzzles(outf, puzsrc, pubid, dates_to_get):
+    actually_gotten = []
+    for dt in sorted(dates_to_get):
+        try:
+            xdid = construct_xdid(pubid, dt)
+            url = dt.strftime(puzsrc.urlfmt)
+            fn = "%s.%s" % (xdid, puzsrc.ext)
+
+            debug("downloading '%s' from '%s'" % (fn, url))
+
+            response = urllib.request.urlopen(url, timeout=10)
+            content = response.read()
+
+            outf.write_file(fn, content)
+            actually_gotten.append(dt)
+        except (urllib.error.HTTPError, urllib.error.URLError) as err:
+            error('%s %s: %s' % (xdid, err, url))
+        except Exception as e:
+            error(str(e))
+
+#        sources_tsv += xd_sources_row(fn, url, todaystr)
+        time.sleep(2)
+
+    return max(actually_gotten) if actually_gotten else 0
+
 
 if __name__ == "__main__":
     main()
