@@ -3,7 +3,6 @@
 #
 
 source scripts/helpers.sh
-pip3 install -r requirements.txt
 
 echo '10-import'
 scripts/10-import.sh
