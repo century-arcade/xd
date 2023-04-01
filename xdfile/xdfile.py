@@ -47,6 +47,9 @@ SECTION_SEP = EOL + EOL
 HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'number', 'date',
                 'relation', 'special', 'rebus', 'cluegroup', 'description', 'notes']
 
+def parse(fn):
+    return xdfile(open(fn).read(), filename=fn)
+
 
 class xdfile:
     def __init__(self, xd_contents=None, filename=None, pubid=None):
