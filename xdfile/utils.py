@@ -253,7 +253,7 @@ def parse_pathname(path):
 
 
 def parse_pubid(fn):
-    m = re.search("(^[A-Za-z]*)", parse_pathname(fn).base)
+    m = re.search("(^[A-Za-z0-9][A-Za-z]*)", parse_pathname(fn).base)
     return m.group(1).lower()
 
 
