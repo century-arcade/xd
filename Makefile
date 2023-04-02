@@ -44,9 +44,10 @@ website: website-static
 	scripts/38-mkwww-redirects.py -o ${WWW_DIR}/ ${GXD_DIR}/redirects.tsv
 
 website-static:
+	mkdir -p ${WWW_DIR}
 	cp scripts/html/* ${WWW_DIR}
-	scripts/wwwify.py <(markdown www/about.md) > ${WWW_DIR}/about.html
-	scripts/wwwify.py <(markdown www/data.md) > ${WWW_DIR}/data.html
+	markdown www/about.md | scripts/wwwify.py 'About' > ${WWW_DIR}/about.html
+	markdown www/data.md | scripts/wwwify.py 'Data' > ${WWW_DIR}/data.html
 
 deploy:
 	aws s3 mv --recursive --region ${S3_REGION} ${WWW_DIR} ${S3_WWW}/ --acl public-read
