@@ -34,6 +34,7 @@ def main(outdb, inputdir):
         author TEXT,
         editor TEXT,
         copyright TEXT,
+        A1_D1 TEXT,
         grid TEXT)
     ''')
 
@@ -54,7 +55,7 @@ def main(outdb, inputdir):
         special = xd.get_header("Special") and "S" or ""
         size = f'{w}x{h}{rebus}{special}'
 
-        cur.execute('INSERT INTO puzzles VALUES (?,?,?,?,?,?,?,?,?)', (
+        cur.execute('INSERT INTO puzzles VALUES (?,?,?,?,?,?,?,?,?,?)', (
             xdfn,
             xd.xdid(),
             xd.get_header("Date"),
@@ -63,6 +64,7 @@ def main(outdb, inputdir):
             xd.get_header("Author") or xd.get_header("Creator"),
             xd.get_header("Editor"),
             xd.get_header("Copyright"),
+            "%s_%s" % (xd.get_answer("A1"), xd.get_answer("D1")),
             '|'.join(xd.grid),
         ))
 
