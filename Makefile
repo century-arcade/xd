@@ -53,10 +53,10 @@ deploy:
 	aws s3 mv --recursive --region ${S3_REGION} ${WWW_DIR} ${S3_WWW}/ --acl public-read
 
 commit:
-	cd ${GXD_DIR}
-	git add .
-	git commit -m "incoming for ${TODAY}"
-	ssh-agent bash -c "ssh-add ${HOME}/.ssh/gxd_rsa; git push"
+	(cd ${GXD_DIR} && \
+	git add . && \
+	git commit -m "incoming for ${TODAY}" && \
+	ssh-agent bash -c "ssh-add ${HOME}/.ssh/gxd_rsa; git push")
 
 gridmatches: gxd.sqlite gridcmp.so
 	cat src/findmatches.sql | time sqlite3 gxd.sqlite
