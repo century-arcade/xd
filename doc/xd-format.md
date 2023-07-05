@@ -1,4 +1,4 @@
-# .xd futureproof crossword format 2.0
+# .xd futureproof crossword format 3.0
 
 .xd is a corpus-oriented format, modeled after the simplicity and intuitiveness of the markdown format.  It supports 99.99% of published crosswords, and is intended to be convenient for bulk analysis of crosswords by both humans and machines, from the present and into the future.
 
@@ -154,13 +154,23 @@ The full answer should be provided, including rebus expansion.  [This makes clue
 
 The backslash ('\\') is used as a line separator in the rare case of a multi-line clue.
 
+If you need to attach metadata to a clue, on a new line after the clue replace the ". "
+with a " ^" - the key for the metadata is determined as being inbetween the hat and 
+colon:
+
+    A1. Gardener's concerns with A2 and D4. ~ BULB
+    A1 ^Refs: A2 D4
+
 ### Notes (Section 4)
 
 The free-format final section can contain any amount of notes.
 
-
 ## CHANGELOG
+
+### 3.0
+
+Includes syntax support for arbitrary clue metadata.
 
 ### 2.0
 
-The 2.0 version of the specification adds support for `## [headers]` for sections of xd content. You can read more in [format specification](https://github.com/century-arcade/xd#format-specification) above.
+The 2.0 version of the specification adds support for `## [headers]` for sections of xd content. You can read more in [format specification](https://github.com/century-arcade/master/doc/xd-format.md#format-specification) above.
