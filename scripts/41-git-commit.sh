@@ -29,7 +29,6 @@ else
     echo "SUMMARY: Commiting into master"
     git add .
     git commit -m "incoming for $TODAY"
-    git pull master
     ssh-agent bash -c "ssh-add ${HOME}/.ssh/id_rsa; git push"
 fi
 

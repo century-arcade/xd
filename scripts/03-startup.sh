@@ -3,7 +3,7 @@
 export SUMLOGFILE=/tmp/`date +"%Y-%m-%d"`-summary.log
 
 cd $HOME/xd/gxd
-ssh-agent bash -c "ssh-add ${HOME}/.ssh/gxd_rsa ; git pull ; git checkout master"
+ssh-agent bash -c "ssh-add ${HOME}/.ssh/xd_rsa ; git pull ; git checkout master"
 
 cd $HOME/xd
 
