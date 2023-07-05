@@ -9,8 +9,6 @@ set -e
 git config --global user.email $ADMIN_EMAIL
 git config --global user.name $ADMIN_NAME
 
-BRANCH=$1
-
 cd $GXD
 
 if [ -n "$BRANCH" ] ; then
@@ -19,10 +17,10 @@ if [ -n "$BRANCH" ] ; then
     git checkout -b $BRANCH || git checkout $BRANCH
     git add .
     git commit -m "incoming for $TODAY"
-    ssh-agent bash -c "ssh-add ${HOME}/.ssh/gxd_rsa; git push --set-upstream origin $BRANCH"
+    ssh-agent bash -c "ssh-add ${HOME}/.ssh/id_rsa; git push --set-upstream origin $BRANCH"
 
     # submit pull request
-    git request-pull master ${GXD_GIT} $BRANCH
+    git pull master ${GXD_GIT} $BRANCH
     git checkout master
 
 #    git merge $BRANCH
@@ -31,7 +29,8 @@ else
     echo "SUMMARY: Commiting into master"
     git add .
     git commit -m "incoming for $TODAY"
-    ssh-agent bash -c "ssh-add ${HOME}/.ssh/gxd_rsa; git push"
+    git pull master
+    ssh-agent bash -c "ssh-add ${HOME}/.ssh/id_rsa; git push"
 fi
 
 
