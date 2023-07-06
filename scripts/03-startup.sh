@@ -3,16 +3,16 @@
 export SUMLOGFILE=/tmp/`date +"%Y-%m-%d"`-summary.log
 
 cd $HOME/xd/gxd
-ssh-agent bash -c "ssh-add ${HOME}/.ssh/xd_rsa ; git pull ; git checkout master"
+ssh-agent bash -c "ssh-add ${HOME}/.ssh/id_rsa ; git pull ; git checkout master"
 
 cd $HOME/xd
 
 source scripts/helpers.sh
 
-if [ ! -f $HOME/.ssh/gxd_rsa ] ; then
+if [ ! -f $HOME/.ssh/id_rsa ] ; then
     mkdir -p $HOME/.ssh
-    aws s3 cp --region=$REGION s3://xd-private/etc/gxd_rsa $HOME/.ssh/
-    chmod 600 $HOME/.ssh/gxd_rsa
+    aws s3 cp --region=$REGION s3://xd-private/etc/id_rsa $HOME/.ssh/
+    chmod 600 $HOME/.ssh/id_rsa
 fi
 
 echo "Run deploy script"
