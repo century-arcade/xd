@@ -11,25 +11,9 @@ git config --global user.name $ADMIN_NAME
 
 cd $GXD
 
-if [ -n "$BRANCH" ] ; then
-    echo "SUMMARY: Commiting into branch: $BRANCH"
-    git checkout master
-    git checkout -b $BRANCH || git checkout $BRANCH
-    git add .
-    git commit -m "incoming for $TODAY"
-    ssh-agent bash -c "ssh-add ${HOME}/.ssh/id_rsa; git push --set-upstream origin $BRANCH"
-
-    # submit pull request
-    git pull master ${GXD_GIT} $BRANCH
-    git checkout master
-
-#    git merge $BRANCH
-#    git branch -d $BRANCH
-else
-    echo "SUMMARY: Commiting into master"
-    git add .
-    git commit -m "incoming for $TODAY"
-    ssh-agent bash -c "ssh-add ${HOME}/.ssh/id_rsa; git push"
-fi
-
-
+echo "SUMMARY: Commiting into master"
+git checkout master
+git pull
+git add .
+git commit -m "incoming for $TODAY"
+ssh-agent bash -c "ssh-add ${HOME}/.ssh/id_rsa; git push"
