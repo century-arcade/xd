@@ -12,8 +12,6 @@ git config --global user.name $ADMIN_NAME
 cd $GXD
 
 echo "SUMMARY: Commiting into master"
-git checkout master
-git pull
 git add .
 git commit -m "incoming for $TODAY"
 ssh-agent bash -c "ssh-add ${HOME}/.ssh/id_rsa; git push"
