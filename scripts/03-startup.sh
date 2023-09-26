@@ -6,7 +6,7 @@ cd $HOME/xd/gxd
 ssh-agent bash -c "ssh-add ${HOME}/.ssh/id_rsa ; git pull ; git checkout master"
 
 cd $HOME/xd
-git pull; git checkout master
+ssh-agent bash -c "ssh-add ${HOME}/.ssh/id_rsa ; git pull ; git checkout master"
 
 source scripts/helpers.sh
 
