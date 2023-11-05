@@ -1,6 +1,6 @@
 # xd
 
-The xd project includes a [text format for crossword puzzles](docs/xd-format.md) and a pipeline for downloading, parsing, analyzing puzzles, and producing the website and released data at [xd.saul.pw](https://xd.saul.pw).
+The xd project includes a [text format for crossword puzzles](doc/xd-format.md) and a pipeline for downloading, parsing, analyzing puzzles, and producing the website and released data at [xd.saul.pw](https://xd.saul.pw).
 
 ## Requirements
 
