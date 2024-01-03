@@ -20,7 +20,7 @@ from xword_dl import by_keyword
 
 # For supported outlets, use xword-dl to download a .puz file of the most recent puzzle.
 # this is the xd pubid
-XWORDDL_OUTLETS = ['lat', 'tny', 'up', 'usa', 'nw', 'atl']
+XWORDDL_OUTLETS = ['lat', 'tny', 'up', 'usa', 'nw', 'atl', 'nyt']
 # wsj, wap do not support selection by date
 # wap is not a daily but does have its pub date in the 'copyright'
 # field of the .puz
