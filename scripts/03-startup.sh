@@ -17,7 +17,7 @@ if [ ! -f $HOME/.ssh/id_rsa ] ; then
 fi
 
 echo "Run deploy script"
-/bin/bash scripts/05-full-pipeline.sh
+/bin/bash scripts/05-full-pipeline.sh | tee -a ${LOGFILE}
 
 echo 'SUMMARY: End time '`date +'%Y-%m-%d %H:%M'`
 # Parse log to get summary to be mailed
