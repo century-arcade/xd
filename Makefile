@@ -16,7 +16,7 @@ all: analyze website
 
 pipeline: setup import analyze commit
 
-netlify: setup website
+netlify: setup analyze website
 
 setup:
 	git clone ${GXD_GIT} ${GXD_DIR}
@@ -26,11 +26,13 @@ import:
 	scripts/18-convert2xd.py -o ${GXD_DIR}/ ${WWWZIP}
 #	${AWS} s3 cp --region ${S3_REGION} ${WWWZIP} ${S3_PRIV}/sources/
 
+checkdups:
+	scripts/25-analyze-puzzle.py -o ${WWW_DIR}/ -c ${GXD_DIR} ${GXD_DIR}
+
 analyze:
 	mkdir -p ${WWW_DIR}
 	mkdir -p ${PUB_DIR}
 	scripts/21-clean-metadata.py ${GXD_DIR}
-	scripts/25-analyze-puzzle.py -o ${WWW_DIR}/ -c ${GXD_DIR} ${GXD_DIR}
 	scripts/27-pubyear-stats.py -c ${GXD_DIR}
 	scripts/26-mkzip-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/xd-clues.zip
 	scripts/29-mkzip-metadata.py -c ${GXD_DIR} -o ${WWW_DIR}/xd-metadata.zip
