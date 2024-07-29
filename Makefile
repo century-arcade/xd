@@ -1,6 +1,6 @@
 PYTHONPATH=.
 
-GXD_GIT=git@gitlab.com:rabidrat/xd.git
+GXD_GIT=https://gitlab.com/rabidrat/gxd.git
 GXD_DIR=gxd
 WWW_DIR=wwwroot
 PUB_DIR=pub
@@ -14,7 +14,9 @@ S3_WWW=s3://xd.saul.pw
 
 all: analyze website
 
-pipeline: setup import analyze website commit deploy
+pipeline: setup import analyze commit
+
+netlify: setup website
 
 setup:
 	git clone ${GXD_GIT} ${GXD_DIR}
@@ -41,16 +43,12 @@ website: website-static
 	scripts/34-mkwww-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/ ${RECENT_XDS} # /pub/clue/<boiledclue>
 	scripts/35-mkwww-diffs.py -c ${GXD_DIR} -o ${WWW_DIR}/ # /pub/<xdid>
 	scripts/36-mkwww-deepclues.py -c ${GXD_DIR} -o ${WWW_DIR}/ ${RECENT_XDS} # /pub/clue/<xdid>
-	scripts/38-mkwww-redirects.py -o ${WWW_DIR}/ ${GXD_DIR}/redirects.tsv
 
 website-static:
 	mkdir -p ${WWW_DIR}
 	cp scripts/html/* ${WWW_DIR}
 	markdown www/about.md | scripts/wwwify.py 'About' > ${WWW_DIR}/about.html
 	markdown www/data.md | scripts/wwwify.py 'Data' > ${WWW_DIR}/data.html
-
-deploy:
-	aws s3 mv --recursive --region ${S3_REGION} ${WWW_DIR} ${S3_WWW}/ --acl public-read
 
 commit:
 	(cd ${GXD_DIR} && \

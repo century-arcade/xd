@@ -330,6 +330,7 @@ class AttrDict(dict):
 #    __setattr__ = dict.__setitem__
 
 def autoconvert(v):
+    return v
     if v is None:
         return ''
     elif v.isdigit():
