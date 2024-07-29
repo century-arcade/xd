@@ -1,4 +1,4 @@
-PYTHONPATH=.
+export PYTHONPATH=.
 
 GXD_GIT=https://gitlab.com/rabidrat/gxd.git
 GXD_DIR=gxd
@@ -33,11 +33,11 @@ analyze:
 	scripts/25-analyze-puzzle.py -o ${WWW_DIR}/ -c ${GXD_DIR} ${GXD_DIR}
 	scripts/27-pubyear-stats.py -c ${GXD_DIR}
 	scripts/26-mkzip-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/xd-clues.zip
-	scripts/28-mkzip-public.py -o ${WWW_DIR}/xd-public.zip ${GXD_DIR}/
 	scripts/29-mkzip-metadata.py -c ${GXD_DIR} -o ${WWW_DIR}/xd-metadata.zip
 
 website: website-static
 	mkdir -p ${WWW_DIR}/pub/gxd
+	zip -r ${WWW_DIR}/xd-puzzles.zip `cat ${GXD_DIR}/pubs.txt`
 	scripts/37-pubyear-svg.py -o ${WWW_DIR}/ # /pub/ index
 	scripts/33-mkwww-words.py -c ${GXD_DIR} -o ${WWW_DIR}/ # /pub/word/<ANSWER>
 	scripts/34-mkwww-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/ ${RECENT_XDS} # /pub/clue/<boiledclue>
@@ -47,8 +47,8 @@ website: website-static
 website-static:
 	mkdir -p ${WWW_DIR}
 	cp scripts/html/* ${WWW_DIR}
-	markdown www/about.md | scripts/wwwify.py 'About' > ${WWW_DIR}/about.html
-	markdown www/data.md | scripts/wwwify.py 'Data' > ${WWW_DIR}/data.html
+	pandoc www/about.md | scripts/wwwify.py 'About' > ${WWW_DIR}/about.html
+	pandoc www/data.md | scripts/wwwify.py 'Data' > ${WWW_DIR}/data.html
 
 commit:
 	(cd ${GXD_DIR} && \

@@ -5,7 +5,7 @@ All public data from xd is available in three .zip archives:
 
 - [xd-metadata.zip](/xd-metadata.zip)  (2MB), metadata and similarity for all puzzles in the corpus, public and private
 
-- [xd-public.zip](/xd-public.zip)  (12MB), over 6000 pre-1965 New York Times crossword puzzles in [.xd format](https://github.com/century-arcade/xd).
+- [xd-puzzles.zip](/xd-puzzles.zip)  (12MB), over 6000 pre-1965 New York Times crossword puzzles in [.xd format](https://github.com/century-arcade/xd).
 
 - [xd-clues.zip](/xd-clues.zip)  (67MB), over 6,000,000 answer/clue usages, grouped by publication-year
 

@@ -279,16 +279,3 @@ def xd_similar_all():
             ret.append(xd_similar_tuple(r.xdid, match_xdid, int(pct)))
 
     return ret
-
-
-@utils.memoize
-def public_patterns():
-    return codecs.open('gxd/public.txt', 'r', encoding='utf-8').read().splitlines()
-
-
-def is_public(xdid):
-    for pattern in public_patterns():
-        if fnmatch.fnmatch(xdid, str(pattern)):
-            return True
-
-    return False
