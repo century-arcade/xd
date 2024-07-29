@@ -19,6 +19,7 @@ pipeline: setup import analyze commit
 netlify: setup analyze website
 
 setup:
+	ls -al ${GXD_DIR} || true
 	git clone ${GXD_GIT} ${GXD_DIR}
 
 import:
