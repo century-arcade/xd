@@ -2,9 +2,12 @@ export PYTHONPATH=.
 
 GXD_GIT=https://gitlab.com/rabidrat/gxd.git
 GXD_DIR=gxd
+SRC_GIT=git@github.com:saulpw/gxd-sources
+SRC_DIR=gxd-sources
 WWW_DIR=wwwroot
 PUB_DIR=pub
 NOW=$(shell date +"%Y%m%d-%H%M%S")
+YEAR=$(shell date +"%Y")
 WWWZIP=/tmp/${NOW}-www.zip
 RECENT_XDS=$(shell git -C ${GXD_DIR} log --pretty="format:" --since="30 days ago" --name-only | sort | uniq)
 TODAY_XDS=$(shell git -C ${GXD_DIR} log --pretty="format:" --since="1 days ago" --name-only | sort | uniq)
@@ -16,15 +19,21 @@ all: analyze website
 
 pipeline: setup import analyze commit
 
-netlify: setup analyze website
+netlify: setup-gxd analyze website
 
-setup:
+setup: setup-gxd setup-src
+
+setup-gxd:
 	[ ! -d ${GXD_DIR} ] && git clone ${GXD_GIT} ${GXD_DIR} || (cd ${GXD_DIR} && git pull)
+
+setup-src:
+	[ ! -d ${SRC_DIR} ] && git clone ${SRC_GIT} ${SRC_DIR} || (cd ${SRC_DIR} && git pull)
 
 import:
 	scripts/11-download-puzzles.py -o ${WWWZIP}
 	scripts/18-convert2xd.py -o ${GXD_DIR}/ ${WWWZIP}
-#	${AWS} s3 cp --region ${S3_REGION} ${WWWZIP} ${S3_PRIV}/sources/
+	mkdir -p ${SRC_DIR}/${YEAR}/
+	cp ${WWWZIP} ${SRC_DIR}/${YEAR}/
 
 checkdups:
 	scripts/25-analyze-puzzle.py -o ${WWW_DIR}/ -c ${GXD_DIR} ${GXD_DIR}
@@ -57,6 +66,10 @@ commit:
 	git add . && \
 	git commit -m "incoming for ${TODAY}" && \
 	ssh-agent bash -c "ssh-add ${HOME}/.ssh/gxd_rsa; git push")
+	(cd ${SRC_DIR} && \
+	git add . && \
+	git commit -m "incoming for ${TODAY}" && \
+	git push)
 
 gridmatches: gxd.sqlite gridcmp.so
 	cat src/findmatches.sql | time sqlite3 gxd.sqlite
