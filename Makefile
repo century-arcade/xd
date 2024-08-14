@@ -71,7 +71,7 @@ commit:
 	git commit -m "incoming for ${TODAY}" && \
 	git push)
 
-gridmatches: gxd.sqlite gridcmp.so
+gridmatches: gxd.sqlite src/gridcmp.so
 	cat src/findmatches.sql | time sqlite3 gxd.sqlite
 
 gxd.sqlite: ${GXD_DIR}
@@ -80,5 +80,5 @@ gxd.sqlite: ${GXD_DIR}
 gxd.zip:
 	find ${GXD_DIR} -name '*.xd' -print | sort | zip $@ -@
 
-gridcmp.so: src/sqlite_gridcmp.c
+src/gridcmp.so: src/sqlite_gridcmp.c
 	gcc -g -fPIC -shared $< -o $@
