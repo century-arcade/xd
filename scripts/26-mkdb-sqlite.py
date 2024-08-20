@@ -8,7 +8,7 @@ Create and populate <gxd.sqlite> database with metadata, grid, and clues.
 
 import os
 import sys
-
+import csv
 import xdfile
 
 def find_files(path, ext=''):
@@ -18,7 +18,7 @@ def find_files(path, ext=''):
                 yield os.path.join(root, fn)
 
 
-def main(outdb, inputdir):
+def main(outdb, inputdir, input_tsv):
     import sqlite3
     con = sqlite3.connect(outdb)
     cur = con.cursor()
@@ -71,6 +71,19 @@ def main(outdb, inputdir):
         for pos, clue, answer in xd.iterclues():
             if pos:
                 cur.execute('INSERT INTO clues VALUES (?, ?, ?, ?)', (xd.xdid(), pos, answer, clue))
+
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS gridmatches (
+        xdid1 TEXT,
+        xdid2 TEXT,
+        matchpct INT
+    );
+    ''')
+    with open(input_tsv, 'r') as gridtsv:
+        reader = csv.DictReader(gridtsv, delimiter='\t')
+        for row in reader:
+            cur.execute('INSERT INTO gridmatches VALUES (?, ?, ?)', (
+                        row['xdid1'], row['xdid2'], row['matchpct']))
 
     con.commit()
 

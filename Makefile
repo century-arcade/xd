@@ -15,9 +15,11 @@ TODAY_XDS=$(shell git -C ${GXD_DIR} log --pretty="format:" --since="1 days ago" 
 S3_REGION=us-west-2
 S3_WWW=s3://xd.saul.pw
 
+.PHONY: gxd.sqlite
+
 all: analyze website
 
-pipeline: setup import analyze commit
+pipeline: setup import analyze gridmatches commit
 
 netlify: setup-gxd analyze website
 
@@ -25,6 +27,7 @@ setup: setup-gxd setup-src
 
 setup-gxd:
 	[ ! -d ${GXD_DIR} ] && git clone ${GXD_GIT} ${GXD_DIR} || (cd ${GXD_DIR} && git pull)
+	pip3 install visidata
 
 setup-src:
 	[ ! -d ${SRC_DIR} ] && git clone ${SRC_GIT} ${SRC_DIR} || (cd ${SRC_DIR} && git pull)
@@ -72,10 +75,12 @@ commit:
 	git push)
 
 gridmatches: gxd.sqlite src/gridcmp.so
-	cat src/findmatches.sql | time sqlite3 gxd.sqlite
+	time python3 src/findmatches.py -N 100
+	vd +:gridmatches:: gxd.sqlite -o ${GXD_DIR}/similar.tsv -b
 
 gxd.sqlite: ${GXD_DIR}
-	time ./scripts/26-mkdb-sqlite.py $@ ${GXD_DIR}
+	rm -f gxd.sqlite
+	time ./scripts/26-mkdb-sqlite.py $@ ${GXD_DIR} ${GXD_DIR}/similar.tsv
 
 gxd.zip:
 	find ${GXD_DIR} -name '*.xd' -print | sort | zip $@ -@

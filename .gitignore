@@ -11,3 +11,5 @@ pub/
 tags
 Session.vim
 *.swp
+src/gridcmp.so
+gxd.sqlite
