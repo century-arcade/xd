@@ -27,7 +27,6 @@ setup: setup-gxd setup-src
 
 setup-gxd:
 	[ ! -d ${GXD_DIR} ] && git clone ${GXD_GIT} ${GXD_DIR} || (cd ${GXD_DIR} && git pull)
-	pip3 install visidata
 
 setup-src:
 	[ ! -d ${SRC_DIR} ] && git clone ${SRC_GIT} ${SRC_DIR} || (cd ${SRC_DIR} && git pull)
@@ -76,11 +75,11 @@ commit:
 
 gridmatches: gxd.sqlite src/gridcmp.so
 	time python3 src/findmatches.py -N 100
-	vd +:gridmatches:: gxd.sqlite -o ${GXD_DIR}/similar.tsv -b
+	sqlite3 -header -separator '	' gxd.sqlite "select * from gridmatches;" > ${GXD_DIR}/similar.tsv
 
 gxd.sqlite: ${GXD_DIR}
-	rm -f gxd.sqlite
-	time ./scripts/26-mkdb-sqlite.py $@ ${GXD_DIR} ${GXD_DIR}/similar.tsv
+	time ./scripts/26-mkdb-sqlite.py $@ ${GXD_DIR}
+	cat src/inputgridmatches.sql | sqlite3 $@
 
 gxd.zip:
 	find ${GXD_DIR} -name '*.xd' -print | sort | zip $@ -@
