@@ -144,16 +144,16 @@ def main():
                 if dt2 < dt1 and not (xd1_A1 and xd1_D1):  # only capture the later one
                     ##deduce_similarity_type
                     if diff_authors(aut1, aut2): # suspicious
-                        if pct >= 50:
+                        if abs(pct) >= 50:
                             copies += 1
-                        elif pct >= 30:
+                        elif abs(pct) >= 30:
                             themecopies += 1
                     else:
-                        if pct == 100:
+                        if abs(pct) == 100:
                             reprints += 1
-                        elif pct >= 50:
+                        elif abs(pct) >= 50:
                             touchups += 1
-                        elif pct >= 30:
+                        elif abs(pct) >= 30:
                             themecopies += 1
 
             metadb.append_row("pub/stats",

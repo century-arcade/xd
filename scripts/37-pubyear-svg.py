@@ -197,16 +197,16 @@ def ret_classes(author1, author2, pct):
     author1 = boil(author1)
     author2 = boil(author2)
     if author1 and author2 and author1 not in author2 and author2 not in author1:# suspicious
-        if pct >= 50:
+        if abs(pct) >= 50:
             classes += ' suspxd'
-        elif pct >= 20:
+        elif abs(pct) >= 20:
             classes += ' themexd'
     else:
-        if pct == 100:
+        if abs(pct) == 100:
             classes += ' pure'
-        elif pct >= 50:
+        elif abs(pct) >= 50:
             classes += ' dupxd'
-        elif pct >= 20:
+        elif abs(pct) >= 20:
             classes += ' themexd'
     return classes
 
