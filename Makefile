@@ -17,7 +17,7 @@ S3_WWW=s3://xd.saul.pw
 
 .PHONY: gxd.sqlite
 
-all: analyze website
+all: analyze gridmatches website
 
 pipeline: setup import analyze gridmatches commit
 
