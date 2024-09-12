@@ -275,6 +275,6 @@ def xd_similar_all():
     ret = []
     for r in utils.parse_tsv_rows('gxd/similar.tsv', 'Similar'):
         if r.matchpct:
-            ret.append(xd_similar_tuple(r.xdid2, r.xdid2, int(r.matchpct)))
+            ret.append(xd_similar_tuple(r.xdid2, r.xdid1, int(r.matchpct)))
 
     return ret
