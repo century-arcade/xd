@@ -137,8 +137,11 @@ def main():
                 dt2 = xd2.get_header('Date')
                 aut1 = xd1.get_header('Author').lower()
                 aut2 = xd2.get_header('Author').lower()
-                pct = int(r.match_pct)
-                if dt2 < dt1:  # only capture the later one
+                pct = abs(int(r.match_pct))
+                # only check for similarity for crosswords that have recorded solutions
+                xd1_A1 = all(c == 'X' for c in xd1.get_answer("A1"))
+                xd1_D1 = all(c == 'X' for c in xd1.get_answer("D1"))
+                if dt2 < dt1 and not (xd1_A1 and xd1_D1):  # only capture the later one
                     ##deduce_similarity_type
                     if diff_authors(aut1, aut2): # suspicious
                         if pct >= 50:

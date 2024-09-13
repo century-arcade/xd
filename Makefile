@@ -15,9 +15,11 @@ TODAY_XDS=$(shell git -C ${GXD_DIR} log --pretty="format:" --since="1 days ago" 
 S3_REGION=us-west-2
 S3_WWW=s3://xd.saul.pw
 
-all: analyze website
+.PHONY: gxd.sqlite
 
-pipeline: setup import analyze commit
+all: analyze gridmatches website
+
+pipeline: setup import analyze gridmatches commit
 
 netlify: setup-gxd analyze website
 
@@ -72,10 +74,12 @@ commit:
 	git push)
 
 gridmatches: gxd.sqlite src/gridcmp.so
-	cat src/findmatches.sql | time sqlite3 gxd.sqlite
+	time python3 src/findmatches.py -N 100
+	sqlite3 -header -separator '	' gxd.sqlite "select * from gridmatches;" > ${GXD_DIR}/similar.tsv
 
 gxd.sqlite: ${GXD_DIR}
 	time ./scripts/26-mkdb-sqlite.py $@ ${GXD_DIR}
+	cat src/inputgridmatches.sql | sqlite3 $@
 
 gxd.zip:
 	find ${GXD_DIR} -name '*.xd' -print | sort | zip $@ -@
