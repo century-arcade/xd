@@ -137,23 +137,23 @@ def main():
                 dt2 = xd2.get_header('Date')
                 aut1 = xd1.get_header('Author').lower()
                 aut2 = xd2.get_header('Author').lower()
-                pct = int(r.match_pct)
+                pct = abs(int(r.match_pct))
                 # only check for similarity for crosswords that have recorded solutions
                 xd1_A1 = all(c == 'X' for c in xd1.get_answer("A1"))
                 xd1_D1 = all(c == 'X' for c in xd1.get_answer("D1"))
                 if dt2 < dt1 and not (xd1_A1 and xd1_D1):  # only capture the later one
                     ##deduce_similarity_type
                     if diff_authors(aut1, aut2): # suspicious
-                        if abs(pct) >= 50:
+                        if pct >= 50:
                             copies += 1
-                        elif abs(pct) >= 30:
+                        elif pct >= 30:
                             themecopies += 1
                     else:
-                        if abs(pct) == 100:
+                        if pct == 100:
                             reprints += 1
-                        elif abs(pct) >= 50:
+                        elif pct >= 50:
                             touchups += 1
-                        elif abs(pct) >= 30:
+                        elif pct >= 30:
                             themecopies += 1
 
             metadb.append_row("pub/stats",
