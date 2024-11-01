@@ -59,7 +59,7 @@ website: website-static
 
 website-static:
 	mkdir -p ${WWW_DIR}
-	cp scripts/html/* ${WWW_DIR}
+	cp -r scripts/html/* ${WWW_DIR}
 	pandoc www/about.md | scripts/wwwify.py 'About' > ${WWW_DIR}/about.html
 	pandoc www/data.md | scripts/wwwify.py 'Data' > ${WWW_DIR}/data.html
 
