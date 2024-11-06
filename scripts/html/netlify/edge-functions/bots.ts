@@ -1,8 +1,8 @@
 export default async (request) => {
   const userAgent = request.headers.get('user-agent') || '';
 
-if (!userAgent.length) {
-    return new Response('Access Denied: User-Agent is required', {
+if (!userAgent.length || userAgent.startsWith("Python-urllib") {
+    return new Response('Access Denied', {
       status: 403,
       headers: {
         'Content-Type': 'text/plain'
