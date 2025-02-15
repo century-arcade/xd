@@ -49,8 +49,8 @@ def split_xdid(xdid):
     """ Split xdid [nyt2015-07-01] into set
     If not matched return None
     """
-    m = re.match('([a-z]+)(\d{4})-(\d{2})-(\d{2})', xdid)
-    return m.groups() if m else [ None, None, None, None ] 
+    m = re.match(r'([a-z]+)(\d{4})-(\d{2})-(\d{2})', xdid)
+    return m.groups() if m else [ None, None, None, None ]
 
 def br_with_n(text):
     """ Replace br with \n """
@@ -297,7 +297,7 @@ def parse_seqnum(s):
 # from original filename
 def parse_date_from_filename(fn):
     base = parse_pathname(fn).base
-    m = re.search("(\d{2,4})-?(\d{2})-?(\d{2})", base)
+    m = re.search(r"(\d{2,4})-?(\d{2})-?(\d{2})", base)
     if m:
         g1, g2, g3 = m.groups()
         # try YYMMDD first, then MMDDYY
@@ -502,7 +502,7 @@ class OutputDirectory:
 
     def write_row(self, fn, headerstr, values):
         write_header = not self.exists(fn)
-            
+
         fp = self.open_file(fn, 'a')
 
         if write_header:

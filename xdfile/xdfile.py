@@ -469,7 +469,7 @@ def year_from_date(dt):
 def dow_from_date(dt):
     # Return day of week out of date
     try:
-        return datetime.datetime.strptime(dt, '%Y-%m-%d').strftime('%a') 
+        return datetime.datetime.strptime(dt, '%Y-%m-%d').strftime('%a')
     except:
         return None
 
@@ -523,5 +523,5 @@ def num_cells(size):
     """
     Return grid size in cells out of Size definition e.g. "15X15R"
     """
-    size_l = re.findall('\d+', size)
+    size_l = re.findall(r'\d+', size)
     return functools.reduce(operator.mul, [int(i) for i in size_l], 1)
