@@ -24,7 +24,7 @@ To execute everything for packaging and testing:
 
 To just run unit tests:
 
-        $ python setup.py test
+        $ python -m pytest
 
 ## code style
 
