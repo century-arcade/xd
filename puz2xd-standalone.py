@@ -3,6 +3,7 @@
 import sys
 import string
 import urllib.parse
+import warnings
 
 # pip install crossword puzpy
 
@@ -283,10 +284,10 @@ def parse_puz(contents, filename):
                         if ch in rebus_shorthands:
                             cellch = ch
                             rebus_shorthands.remove(ch)
-                            warn("%s: unknown grid character '%s', assuming rebus of itself" % (filename, ch))
+                            warnings.warn("%s: unknown grid character '%s', assuming rebus of itself" % (filename, ch))
                         else:
                             cellch = rebus_shorthands.pop()
-                            warn("%s: unknown grid character '%s', assuming rebus (as '%s')" % (filename, ch, cellch))
+                            warnings.warn("%s: unknown grid character '%s', assuming rebus (as '%s')" % (filename, ch, cellch))
 
                         xd.set_header("Rebus", xd.get_header("Rebus") + " %s=%s" % (cellch, ch))
 
