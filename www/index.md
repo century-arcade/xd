@@ -20,7 +20,7 @@ The xd [design](/doc) is intentionally textpunk and therefore platform-agnostic.
 
 ## Contribute
 
-Submit crosswords for analysis or inclusion to submitxd@saul.pw (as attachments: .puz, .ipuz, .xd, .pdf, or .zip of these). [More Info](/submit)
+Submit crosswords for analysis or inclusion to submitxd@saul.pw (as attachments: .puz, .ipuz, .xd, .pdf, or .zip of these).
 
 The basic collection/analysis/presentation pipeline is operational.  This pipeline needs to be thoroughly documented.
 
