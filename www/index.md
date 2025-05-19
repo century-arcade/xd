@@ -20,7 +20,7 @@ The xd [design](/doc) is intentionally textpunk and therefore platform-agnostic.
 
 ## Contribute
 
-Submit crosswords for analysis or inclusion to submit@xd.saul.pw (as attachments: .puz, .ipuz, .xd, .pdf, or .zip of these). [More Info](/submit)
+Submit crosswords for analysis or inclusion to submitxd@saul.pw (as attachments: .puz, .ipuz, .xd, .pdf, or .zip of these).
 
 The basic collection/analysis/presentation pipeline is operational.  This pipeline needs to be thoroughly documented.
 
@@ -34,7 +34,7 @@ Register your crosswords with the .xd project and let us add them to the corpus!
 
 ### Help improve the curation, analysis, or presentation
 
-- View the entire codebase at https://github.com/century-arcade/xd[github.com/century-arcade/xd]
+- View the entire codebase at [github.com/century-arcade/xd](https://github.com/century-arcade/xd).
 
 ### Thanks to
 

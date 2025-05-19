@@ -15,9 +15,7 @@ All public data from xd is available in three .zip archives:
 
 ## Submit puzzles
 
-Email crosswords for comparison or inclusion to [submit@xd.saul.pw](mailto:submit@xd.saul.pw) as attachments of .puz, .ipuz, .xd, or a .zip of any of these.
-In the filename, please include the date (in YYYYMMDD format), or a three digit number (NNN) if they are published sequentially.
+Email crosswords for comparison or inclusion to [submitxd@saul.pw](mailto:submitxd@saul.pw) as attachments of .puz, .ipuz, .xd, or a .zip of any of these.
+Each filename should include the date (in YYYYMMDD format), or a three digit number (NNN) if they are published sequentially.
 
 If you have more than a few puzzles, please email me at [xd@saul.pw](mailto:xd@saul.pw) to discuss the best way to import and organize them.
-
-
