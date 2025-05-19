@@ -4,6 +4,8 @@ import sys
 import string
 import urllib.parse
 import warnings
+import re
+import os
 
 # pip install crossword puzpy
 
@@ -234,6 +236,23 @@ def parse_puz(contents, filename):
     xd.set_header("Preamble", puzobj.preamble)
 
     xd.set_header("Title", puzobj.title)
+
+    # Look for a date from filename
+    base_filename = os.path.basename(filename) # Get just the filename part, e.g., "Publisher - 20250101.puz"
+
+    # Regex to find a YYYYMMDD pattern in the filename.
+    # It looks for:
+    # ([12]\d{3})    - Year: 1xxx or 2xxx (e.g., 1999, 2024)
+    # (0[1-9]|1[0-2]) - Month: 01-09 or 10-12
+    # (0[1-9]|[12]\d|3[01]) - Day: 01-09, 10-29, 30-31 (basic structural check)
+    date_match = re.search(r'([12]\d{3})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])', base_filename)
+
+    if date_match:
+        year = date_match.group(1)
+        month = date_match.group(2)
+        day = date_match.group(3)
+        iso_date = f"{year}-{month}-{day}"
+        xd.set_header("Date", iso_date)
 
     used_rebuses = {}  # [puz_rebus_gridvalue_as_string] -> our_rebus_gridvalue
     rebus = {}  # [our_rebus_gridvalue] -> full_cell
