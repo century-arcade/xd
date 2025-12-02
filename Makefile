@@ -66,11 +66,11 @@ website-static:
 commit:
 	(cd ${GXD_DIR} && \
 	git add . && \
-	git commit -m "incoming for ${TODAY}" && \
-	ssh-agent bash -c "ssh-add ${HOME}/.ssh/gxd_rsa; git push")
+	(git diff-index --quiet HEAD || git commit -m "incoming for ${TODAY}") && \
+	ssh-agent bash -c "ssh-add ${HOME}/.ssh/id_ed25519; git push")
 	(cd ${SRC_DIR} && \
 	git add . && \
-	git commit -m "incoming for ${TODAY}" && \
+	(git diff-index --quiet HEAD || git commit -m "incoming for ${TODAY}") && \
 	git push)
 
 gridmatches: gxd.sqlite src/gridcmp.so
