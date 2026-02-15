@@ -2,6 +2,7 @@
 
 import sys
 import string
+import html
 import urllib.parse
 import warnings
 import re
@@ -41,6 +42,10 @@ def decode(s):
     s = s.replace('\xd3','"')
     s = s.replace('\xd4','"')
     s = urllib.parse.unquote(s)
+    s = html.unescape(s)
+    # Remove spurious semicolons from invalid HTML entity refs
+    # (e.g. html2text converts "B&O" to "B&O;")
+    s = re.sub(r'&([A-Za-z0-9]+);', r'&\1', s)
     return s
 
 
