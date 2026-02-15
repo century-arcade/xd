@@ -190,7 +190,9 @@ class xdfile:
                     r += EOL
                 prevdir = cluedir
 
-                r += "%s%s. %s ~ %s" % (cluedir, cluenum, (clue or "[XXX]").strip(), answer)
+                cluetext = (clue or "[XXX]").strip()
+                cluetext = " ".join(cluetext.splitlines())
+                r += "%s%s. %s ~ %s" % (cluedir, cluenum, cluetext, answer)
                 r += EOL
 
             if self.notes:
