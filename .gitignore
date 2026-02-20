@@ -13,3 +13,5 @@ Session.vim
 *.swp
 src/gridcmp.so
 gxd.sqlite
+.venv
+.meta
