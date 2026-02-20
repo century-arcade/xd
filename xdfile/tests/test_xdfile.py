@@ -2,25 +2,26 @@
 
 import datetime
 
-import xdfile as xdfile
+from xdfile.utils import parse_pathname, parse_date_from_filename, parse_pubid
 from xdfile.xdfile import xdfile as XDFile
 
 test_selection = 'nyt1955-01-01.xd'
 
 
 def test_filename():
-    fname = xdfile.get_base_filename(test_selection)
-    assert fname == 'nyt1955-01-01'
-    # xobject = xdfile.xdfile(xd_contents=testfile, xd_filename='derp')
+    base = parse_pathname(test_selection).base
+    assert base == 'nyt1955-01-01'
 
 
 def test_parse_date():
+    date = parse_date_from_filename(test_selection)
+    assert isinstance(date, datetime.date)
+    assert date.strftime('%a %b %d %Y') == 'Sat Jan 01 1955'
 
-    date = xdfile.parse_date_from_filename(test_selection)
-    assert isinstance(date, tuple)
-    assert date[0] == 'nyt'
-    assert isinstance(date[1], datetime.date)
-    assert date[1].strftime('%a %b %d %Y') == 'Sat Jan 01 1955'
+
+def test_parse_pubid():
+    pubid = parse_pubid(test_selection)
+    assert pubid == 'nyt'
 
 
 SAMPLE_XD = """\
