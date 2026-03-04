@@ -19,9 +19,12 @@ S3_WWW=s3://xd.saul.pw
 
 all: analyze gridmatches website
 
-pipeline: setup import analyze gridmatches commit
+pipeline: setup deps import analyze gridmatches commit
 
 netlify: setup-gxd analyze website
+
+deps:
+	pip install --upgrade -r requirements.txt
 
 setup: setup-gxd setup-src
 
