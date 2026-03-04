@@ -325,6 +325,9 @@ class AttrDict(dict):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
 
+    def __hash__(self):
+        return hash(tuple(sorted(self.items())))
+
 #class AttrDict(dict):
 #    __getattr__ = dict.__getitem__
 #    __setattr__ = dict.__setitem__
