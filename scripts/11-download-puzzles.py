@@ -37,17 +37,21 @@ def download_puzzles(outf, puzsrc, pubid, date, xwordid):
     fn = "%s.%s" % (xdid, puzsrc.ext)
 
     if pubid in XWORDDL_OUTLETS:
+        filename_t = pubid + "%Y-%m-%d"  # wap2026-04-01
         try:
             # `content` is always a a puz.Puz object
             log("downloading '%s' using xword-dl" % (fn))
-            content, filename = by_keyword(xwordid, date=date.strftime("%Y-%m-%d"))
+            content, filename = by_keyword(xwordid, date=date.strftime("%Y-%m-%d"), filename=filename_t)
         except Exception as e:
             try:
                 log("downloading date %s using xword-dl failed; downloading latest" % date.strftime("%Y-%m-%d"))
-                content, filename = by_keyword(xwordid)
+                content, filename = by_keyword(xwordid, filename=filename_t)
             except Exception as e:
                 error('xword-dl error %s: %s' % (str(e), xdid))
                 return False
+        if filename != fn:
+            log("downloaded '%s' using xword-dl" % filename)
+            fn = filename
     else:
         try:
             log("downloading '%s' from url %s " % (fn, url))
