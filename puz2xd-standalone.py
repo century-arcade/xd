@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections import namedtuple
 import sys
 import string
 import html
@@ -281,7 +282,7 @@ def parse_puz(contents, filename):
 
     # check for circles and record them if they exist
     circles = []
-    if b"GEXT" in puzobj.extensions: 
+    if b"GEXT" in puzobj.extensions:
         for i, c in enumerate(puzobj.extensions[b"GEXT"]):
             if c == 0x80: circles.append(i)
     if circles: xd.set_header("Special", "circle")
@@ -347,6 +348,16 @@ def parse_puz(contents, filename):
         raise Exception("Clue doesn't match grid: %s" % e)
 
     return xd
+
+
+def parse_pathname(path):
+    # Fix to proper split names like file.xml.1
+    ext = os.extsep + os.extsep.join(os.path.basename(path).split(os.extsep)[1:])
+    path, fn = os.path.split(path)
+    ext = ext if fn else ''
+    base = os.path.splitext(fn)[0]
+    nt = namedtuple('Pathname', 'path base ext filename')
+    return nt(path=path, base=base, ext=ext, filename=fn)
 
 
 def main(fn):
