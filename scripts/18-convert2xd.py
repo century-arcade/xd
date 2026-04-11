@@ -13,7 +13,7 @@ import zipfile
 
 from xdfile import IncompletePuzzleParse
 
-from xdfile.utils import log, debug, error
+from xdfile.utils import log, debug, warn, error
 from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, strip_toplevel
 from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output, progress
 

@@ -133,8 +133,8 @@ def clean_headers(xd):
                 dt = d.strftime("%Y-%m-%d")
         except Exception as e:
             utils.error(str(e))
-            if args.debug:
-                raise
+            #if args.debug:
+                #raise
 
     ## try getting Date from copyright
     if not dt:
