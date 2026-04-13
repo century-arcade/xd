@@ -1,0 +1,17 @@
+[flake8]
+# These are options specific to the way flake8 runs.
+# http://flake8.readthedocs.org/en/latest/config.html
+# TODO: E501 is long lines. ignore for now...
+ignore = E501
+max-line-length = 10000
+select = E,W,F
+exclude =
+    .tox,
+    .git,
+    __pycache__,
+    *.egg,
+    build,
+    data,
+    tests,
+    # vendored library, ignore
+    crossword,
