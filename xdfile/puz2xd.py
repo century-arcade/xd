@@ -64,11 +64,13 @@ def parse_puz(contents, filename):
 
     xd = xdfile.xdfile('', filename)
 
-    xd.set_header("Author", decode(puzobj.author))
-    xd.set_header("Copyright", decode(puzobj.copyright))
-    xd.set_header("Notes", decode(puzobj.notes))
+    xd.set_header("Author", puzobj.author)
+    xd.set_header("Copyright", puzobj.copyright)
+    xd.set_header("Notes", puzobj.notes)
+    xd.set_header("Postscript", "".join(x for x in puzobj.postscript if ord(x) >= ord(' ')))
+    xd.set_header("Preamble", puzobj.preamble)
 
-    xd.set_header("Title", decode(puzobj.title))
+    xd.set_header("Title", puzobj.title)
 
     used_rebuses = {}  # [puz_rebus_gridvalue_as_string] -> our_rebus_gridvalue
     rebus = {}  # [our_rebus_gridvalue] -> full_cell
@@ -90,7 +92,7 @@ def parse_puz(contents, filename):
 
     # check for circles and record them if they exist
     circles = []
-    if b"GEXT" in puzobj.extensions:
+    if b"GEXT" in puzobj.extensions: 
         for i, c in enumerate(puzobj.extensions[b"GEXT"]):
             if c == 0x80: circles.append(i)
     if circles: xd.set_header("Special", "circle")
