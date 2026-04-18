@@ -24,6 +24,7 @@ def reparse_date(s):
 def decode(s):
     s = s.replace('\x92', "'")
     s = s.replace('\xc2\x92', "'")
+    s = s.replace('\xc2\xa0', ' ')  # UTF-8 NBSP double-decoded as latin-1
     s = s.replace('\xc3\x82',"")
     s = s.replace('\xc3\xa8',"è") # +A5. Crème de la crème ~ ELITE
     s = s.replace('\xe0','à') # -A49. Do the seemingly impossible, à la Jesus ~ WALKONWATER
@@ -41,6 +42,8 @@ def decode(s):
     # Remove spurious semicolons from invalid HTML entity refs
     # (e.g. html2text converts "B&O" to "B&O;")
     s = re.sub(r'&([A-Za-z0-9]+);', r'&\1', s)
+    # Collapse any run of whitespace to a single space (clue text shouldn't have tabs or multi-space runs)
+    s = re.sub(r'\s+', ' ', s)
     return s
 
 
