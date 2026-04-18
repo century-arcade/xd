@@ -100,9 +100,9 @@ def deduce_xdid(xd, mdtext):
     pubid = find_pubid(mdtext)
     if not pubid:
         publication = get_publication(xd)
-        pubid = publication.PublicationAbbr
-        # Return None if no pub data
-        if not pubid:
+        if publication:
+            pubid = publication.PublicationAbbr
+        else:
             return None
 
     num = xd.get_header('Number')
