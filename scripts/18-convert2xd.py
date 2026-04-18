@@ -6,14 +6,12 @@
 #   Appends to receipts.tsv
 #
 
-from collections import namedtuple
-
+import os
 import time
-import zipfile
 
 from xdfile import IncompletePuzzleParse
 
-from xdfile.utils import log, debug, error
+from xdfile.utils import warn, debug, error
 from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, strip_toplevel
 from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output, progress
 
@@ -47,9 +45,16 @@ def main():
     p.add_argument('--extsrc', default=None, help='Value for receipts.ExternalSource')
     p.add_argument('--intsrc', default=None, help='Value for receipts.InternalSource')
     p.add_argument('--pubid', default=None, help='PublicationAbbr (pubid) to use')
+    p.add_argument('--skip-unchanged', action='store_true', help='Skip writing .xd and appending receipt if output is byte-identical to existing file')
+    p.add_argument('--reimport', action='store_true', help='Re-parse and rewrite .xd for sources that have already been received (e.g. to pick up parser or decoder fixes).')
+    p.add_argument('--force', action='store_true', help='With --reimport, overwrite even when a different source owns the xdid.')
     args = get_args(parser=p)
 
     outf = open_output()
+
+    # Track shelf paths written during this run, keyed by path -> (ExternalSource, SourceFilename),
+    # to prevent a second source file in the same run from silently overwriting the first.
+    paths_written_this_run = {}
 
     for input_source in args.inputs:
         try:
@@ -69,8 +74,9 @@ def main():
 
             # enumerate all files in this source, reverse-sorted by time
             #  (so most recent edition gets main slot in case of shelving
-            #  conflict)
-            for fn, contents, dt in sorted(find_files_with_time(input_source, strip_toplevel=False), reverse=True, key=lambda x: x[2]):
+            #  conflict); filename is a tiebreaker so the winner is stable
+            #  across runs even when mtimes are equal.
+            for fn, contents, dt in sorted(find_files_with_time(input_source, strip_toplevel=False), reverse=True, key=lambda x: (x[2], x[0])):
                 if fn.endswith(".tsv") or fn.endswith(".log"):
                     continue
 
@@ -99,10 +105,16 @@ def main():
                 existing_xdids = set(r.xdid for r in already_received)
                 if existing_xdids:
                     if len(existing_xdids) > 1:
-                        warn('previously received this same file under multiple xdids:' + ' '.join(existing_xdids))
+                        warn('previously received this same file under multiple xdids: ' + ' '.join(existing_xdids))
                     else:
                         prev_xdid = existing_xdids.pop()
                         debug('already received as %s' % prev_xdid)
+
+                # Default: previously-received sources are skipped entirely (no parse, no write).
+                # --reimport: reprocess and rewrite the .xd.
+                if already_received and not args.reimport:
+                    debug("already received, skipping: %s:%s" % (ExternalSource, SourceFilename))
+                    continue
 
                 # try each parser by extension
                 ext = parse_pathname(fn).ext.lower()
@@ -116,6 +128,8 @@ def main():
                     rejected = "no parser"
                 else:
                     rejected = ""
+                    unchanged = False
+                    owned_by_other = False
                     for parsefunc in possible_parsers:
                         try:
                             try:
@@ -138,7 +152,53 @@ def main():
                             mdtext = "|".join((ExternalSource,InternalSource,SourceFilename))
                             xdid = prev_xdid or catalog.deduce_xdid(xd, mdtext)
                             path = catalog.get_shelf_path(xd, args.pubid, mdtext)
-                            outf.write_file(path + ".xd", xdstr, dt)
+                            if not path:
+                                raise xdfile.NoShelfError("no shelf path for %s" % xd.filename)
+
+                            # --reimport guard: refuse to overwrite if a different source
+                            # owns this xdid (unless --force).
+                            if args.reimport and not args.force and xdid:
+                                latest = metadb.latest_receipt_for_xdid(xdid)
+                                if latest and latest.ExternalSource != ExternalSource:
+                                    warn("xdid %s last imported from '%s', not overwriting from '%s' (use --force to override)" % (
+                                        xdid, latest.ExternalSource, ExternalSource))
+                                    owned_by_other = True
+                                    rejected = ""
+                                    break
+
+                            # Within-run collision guard: if another source in this run already
+                            # wrote this shelf path, skip rather than silently overwrite. Sort
+                            # order makes this deterministic — the earliest-processed file
+                            # (most recent mtime, filename desc on tie) keeps the slot.
+                            own_key = (ExternalSource, SourceFilename)
+                            run_owner = paths_written_this_run.get(path)
+                            if run_owner and run_owner != own_key:
+                                warn("shelf slot %s already written this run by %s; not overwriting with %s" % (
+                                    path + ".xd", run_owner, SourceFilename))
+                                owned_by_other = True
+                                rejected = ""
+                                break
+
+                            unchanged = False
+                            if args.skip_unchanged:
+                                try:
+                                    full = os.path.join(outf.toplevel, path + ".xd")
+                                    if os.path.exists(full):
+                                        new_bytes = xdstr.encode('utf-8')
+                                        if os.path.getsize(full) == len(new_bytes):
+                                            with open(full, 'rb') as f:
+                                                unchanged = f.read() == new_bytes
+                                except AttributeError:
+                                    pass
+
+                            # Claim the slot regardless of whether we actually write, so a later
+                            # source in the same run can't sneak in behind a --skip-unchanged no-op.
+                            paths_written_this_run[path] = own_key
+
+                            if unchanged:
+                                debug("unchanged, skipping: %s" % (path + ".xd"))
+                            else:
+                                outf.write_file(path + ".xd", xdstr, dt)
 
                             rejected = ""
                             break  # stop after first successful parsing
@@ -153,9 +213,16 @@ def main():
                     if rejected:
                         error("could not convert: %s" % rejected)
 
-                    # only add receipt if first time converting this source
+                    # Receipt policy: append only when this is a newly-received source
+                    # that produced a written .xd. Rewrites of already-received sources
+                    # don't add a new receipt (the prior one already binds SourceFilename
+                    # → xdid). Unchanged writes and ownership-blocked writes skip too.
                     if already_received:
                         debug("already received %s:%s" % (ExternalSource, SourceFilename))
+                    elif owned_by_other:
+                        debug("slot owned, receipt skip %s:%s" % (ExternalSource, SourceFilename))
+                    elif unchanged:
+                        debug("unchanged receipt skip %s:%s" % (ExternalSource, SourceFilename))
                     else:
                         receipts.append([
                             CaptureTime,
