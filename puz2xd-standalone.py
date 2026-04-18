@@ -236,13 +236,13 @@ def parse_puz(contents, filename):
 
     xd = xdfile()
 
-    xd.set_header("Author", puzobj.author)
-    xd.set_header("Copyright", puzobj.copyright)
-    xd.set_header("Notes", puzobj.notes)
-    xd.set_header("Postscript", "".join(x for x in puzobj.postscript if ord(x) >= ord(' ')))
+    xd.set_header("Author", decode(puzobj.author))
+    xd.set_header("Copyright", decode(puzobj.copyright))
+    xd.set_header("Notes", decode(puzobj.notes))
+    #xd.set_header("Postscript", "".join(x for x in puzobj.postscript if ord(x) >= ord(' ')))
     xd.set_header("Preamble", puzobj.preamble)
 
-    xd.set_header("Title", puzobj.title)
+    xd.set_header("Title", decode(puzobj.title))
 
     # Look for a date from filename
     base_filename = os.path.basename(filename) # Get just the filename part, e.g., "Publisher - 20250101.puz"
@@ -281,7 +281,7 @@ def parse_puz(contents, filename):
 
     # check for circles and record them if they exist
     circles = []
-    if b"GEXT" in puzobj.extensions: 
+    if b"GEXT" in puzobj.extensions:
         for i, c in enumerate(puzobj.extensions[b"GEXT"]):
             if c == 0x80: circles.append(i)
     if circles: xd.set_header("Special", "circle")
