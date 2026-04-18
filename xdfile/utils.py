@@ -125,12 +125,19 @@ def get_args(desc="", parser=None):
         parser = args_parser(desc)
 
     parser.add_argument('inputs', nargs='*', help='toplevel input(s)')
+    parser.add_argument('--inputs-from', dest='inputs_from', default=None,
+                        help='read additional input paths from FILE (one per line); bypasses shell ARG_MAX limits')
     parser.add_argument('-o', '--output', dest='output', action='store')
     parser.add_argument('-q', '--quiet', dest='verbose', action='store_const', const=-1, default=0)
     parser.add_argument('-v', '--verbose', dest='verbose', action='count', default=0)
     parser.add_argument('-d', '--debug', dest='debug', action='store_true', default=False, help='abort on exception')
     parser.add_argument('-c', '--corpus', dest='corpusdir', default='crosswords', help='corpus source')
     g_args = parser.parse_args()
+
+    if g_args.inputs_from:
+        with open(g_args.inputs_from) as f:
+            extra = [ln.strip() for ln in f if ln.strip()]
+        g_args.inputs = list(g_args.inputs) + extra
 
     return g_args
 
