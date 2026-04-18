@@ -208,12 +208,17 @@ def xd_receipts_row(CaptureTime="", ReceivedTime="", ExternalSource="", Internal
     ]) + EOL
 
 
-def check_already_received(ExternalSource, SourceFilename):
-    ret = []
+@utils.memoize
+def _receipts_by_source():
+    d = {}
     for r in read_rows('gxd/receipts'):
-        if r.ExternalSource == ExternalSource and r.SourceFilename == SourceFilename:
-            ret.append(r)
-    return ret
+        key = (r.ExternalSource, r.SourceFilename)
+        d.setdefault(key, []).append(r)
+    return d
+
+
+def check_already_received(ExternalSource, SourceFilename):
+    return _receipts_by_source().get((ExternalSource, SourceFilename), [])
 
 
 @utils.memoize

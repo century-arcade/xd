@@ -38,7 +38,7 @@ class httpxd(object):
     @cherrypy.expose
     def style_css(self):
         cherrypy.response.headers['Content-Type'] = 'text/css'
-        return file("src/style.css").read()
+        return open("src/style.css").read()
 
     @staticmethod
     def xd_from_grid(grid):

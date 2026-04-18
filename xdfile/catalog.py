@@ -44,15 +44,21 @@ def get_publication(xd):
     return sorted(matching_pubs)[0][1]
 
 # some regex heuristics for shelving
+_pubregex_cache = None
+
 def find_pubid(rowstr):
     '''rowstr is a concatentation of all metadata fields
     Returns None if file not exist or empty
     '''
-    try:
-        regexes = utils.parse_tsv_data(open(PUBREGEX_TSV, 'r').read())
-    except FileNotFoundError:
-        utils.error("File not exists: %s" % PUBREGEX_TSV, severity='WARNING')
-        return None
+    global _pubregex_cache
+    if _pubregex_cache is None:
+        try:
+            _pubregex_cache = list(utils.parse_tsv_data(open(PUBREGEX_TSV, 'r').read()))
+        except FileNotFoundError:
+            utils.error("File not exists: %s" % PUBREGEX_TSV, severity='WARNING')
+            _pubregex_cache = []
+
+    regexes = _pubregex_cache
 
     matching = set()
     for r in regexes:

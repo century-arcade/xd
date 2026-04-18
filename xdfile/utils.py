@@ -516,7 +516,7 @@ class OutputDirectory:
 
 def open_output(fnout=None):
     assert g_args
-    global g_logfp
+    # global g_logfp
 
     if not fnout:
         fnout = g_args.output

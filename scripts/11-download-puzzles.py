@@ -18,25 +18,15 @@ from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sou
 
 from xword_dl import by_keyword
 
-# For supported outlets, use xword-dl to download a .puz file of the most recent puzzle.
-# this is the xd pubid
-XWORDDL_OUTLETS = ['lat', 'tny', 'up', 'usa', 'nw', 'atl', 'nyt', 'wap']
-# wsj, wap do not support selection by date
-# wap is not a daily but does have its pub date in the 'copyright'
-# field of the .puz
-# wsj frequency is unknown, .puz does not seem to include a pub date
-# we need to add a check on which date got downloaded
-
 def construct_xdid(pubabbr, dt):
     return pubabbr + dt.strftime("%Y-%m-%d")
 
 # Returns `True` if the puzzle for `date` was successfully downloaded.
 def download_puzzles(outf, puzsrc, pubid, date, xwordid):
     xdid = construct_xdid(pubid, date)
-    url = date.strftime(puzsrc.urlfmt)
     fn = "%s.%s" % (xdid, puzsrc.ext)
 
-    if pubid in XWORDDL_OUTLETS:
+    if puzsrc['xword-dl_id']:
         filename_t = pubid + "%Y-%m-%d"  # wap2026-04-01
         try:
             # `content` is always a a puz.Puz object
@@ -53,6 +43,7 @@ def download_puzzles(outf, puzsrc, pubid, date, xwordid):
             log("downloaded '%s' using xword-dl" % filename)
             fn = filename
     else:
+        url = date.strftime(puzsrc.urlfmt) if puzsrc.urlfmt else None
         try:
             log("downloading '%s' from url %s " % (fn, url))
             if not url or url.startswith("#"):
