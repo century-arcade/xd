@@ -221,6 +221,22 @@ def check_already_received(ExternalSource, SourceFilename):
     return _receipts_by_source().get((ExternalSource, SourceFilename), [])
 
 
+@utils.memoize
+def _receipts_by_xdid():
+    d = {}
+    for r in read_rows('gxd/receipts'):
+        d.setdefault(r.xdid, []).append(r)
+    return d
+
+
+def latest_receipt_for_xdid(xdid):
+    """Return the most recent receipt for a given xdid, or None."""
+    rows = _receipts_by_xdid().get(xdid, [])
+    if not rows:
+        return None
+    return max(rows, key=lambda r: r.ReceivedTime)
+
+
 def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):
     return COLSEP.join([
         "",  # ReceiptId

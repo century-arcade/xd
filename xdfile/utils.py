@@ -100,7 +100,7 @@ def progress(rest=None, every=1):
         g_numProgress += 1
         g_currentProgress = rest
         if g_numProgress % every == 0:
-            print("\r% 6d %s " % (g_numProgress, rest), end="")
+            print("\r\033[K% 6d %s" % (g_numProgress, rest), end="")
             sys.stdout.flush()
     else:
         g_currentProgress = ""
@@ -169,6 +169,7 @@ def find_files_with_time(*paths, **kwargs):
         if stat.S_ISDIR(os.stat(path).st_mode):
             # handle directories
             for thisdir, subdirs, files in os.walk(path):
+                subdirs[:] = [d for d in subdirs if not d.startswith('.')]
                 for fn in sorted(files):
                     fullfn = os.path.join(thisdir, fn)
 
