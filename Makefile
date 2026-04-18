@@ -9,8 +9,6 @@ PUB_DIR=pub
 NOW=$(shell date +"%Y%m%d-%H%M%S")
 YEAR=$(shell date +"%Y")
 WWWZIP=/tmp/${NOW}-www.zip
-RECENT_XDS=$(shell git -C ${GXD_DIR} log --pretty="format:" --since="30 days ago" --name-only | sort | uniq)
-TODAY_XDS=$(shell git -C ${GXD_DIR} log --pretty="format:" --since="1 days ago" --name-only | sort | uniq)
 
 S3_REGION=us-west-2
 S3_WWW=s3://xd.saul.pw
@@ -51,14 +49,16 @@ analyze:
 	scripts/26-mkzip-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/xd-clues.zip
 	scripts/29-mkzip-metadata.py -c ${GXD_DIR} -o ${WWW_DIR}/xd-metadata.zip
 
+website: RECENT_XDS_FILE=/tmp/${NOW}-recent-xds.txt
 website: website-static
 	mkdir -p ${WWW_DIR}/pub/gxd
 	zip -q -r ${WWW_DIR}/xd-puzzles.zip `cat ${GXD_DIR}/pubs.txt`
+	git -C ${GXD_DIR} log --pretty="format:" --since="30 days ago" --name-only | sort -u > ${RECENT_XDS_FILE}
 	scripts/37-pubyear-svg.py -o ${WWW_DIR}/ # /pub/ index
 	scripts/33-mkwww-words.py -c ${GXD_DIR} -o ${WWW_DIR}/ # /pub/word/<ANSWER>
-	scripts/34-mkwww-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/ ${RECENT_XDS} # /pub/clue/<boiledclue>
+	scripts/34-mkwww-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/ --inputs-from ${RECENT_XDS_FILE} # /pub/clue/<boiledclue>
 	scripts/35-mkwww-diffs.py -c ${GXD_DIR} -o ${WWW_DIR}/ # /pub/<xdid>
-	scripts/36-mkwww-deepclues.py -c ${GXD_DIR} -o ${WWW_DIR}/ ${RECENT_XDS} # /pub/clue/<xdid>
+	scripts/36-mkwww-deepclues.py -c ${GXD_DIR} -o ${WWW_DIR}/ --inputs-from ${RECENT_XDS_FILE} # /pub/clue/<xdid>
 
 website-static:
 	mkdir -p ${WWW_DIR}
