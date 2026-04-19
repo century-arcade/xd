@@ -5,12 +5,14 @@
 .cache/
 xd*egg*
 *.zip*
+build/
 wwwroot/
 gxd/
 pub/
 tags
 Session.vim
 *.swp
+*.log
 src/gridcmp.so
 gxd.sqlite
 .venv
