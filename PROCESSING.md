@@ -1,6 +1,9 @@
 ## How to process big puzzle archive (like bwh.zip)
 
-        rm -rf bwh-zips/ && mkdir bwh-zips
+        # 90-split-archive.py reads files from the positional input path (bwh/).
+        # --source is only a metadata label written into sources.tsv; it is not an input file path.
+        rm -rf bwh/ bwh-zips/ && mkdir bwh/ bwh-zips/
+        tar -xzf ~/Downloads/bwh-2015.tgz -C bwh/
         ./scripts/90-split-archive.py -o bwh-zips/ --source bwh-2015.tgz bwh/
         ./scripts/18-convert2xd.py -o gxd/ bwh-zips/up.zip
 
@@ -24,6 +27,13 @@
         ../scripts/55-lint.sh
         cd .. && ./scripts/19b-receipts-tsv.sh
         ./scripts/48-stats.sh
+
+## publications.tsv maintenance
+
+`gxd/publications.tsv` is maintained manually (or by a separate curated process).
+Import scripts such as `scripts/18-convert2xd.py` and `scripts/19-reshelve.py` do not automatically add/update publication rows.
+
+When introducing a new publication/pubid, add the row to `gxd/publications.tsv` before running imports for that pubid.
 
 ## How to check receipts.tsv for duplicate values
 

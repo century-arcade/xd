@@ -1,12 +1,13 @@
 #!/bin/bash
 #
-# Usage: <$0> <branch to work on> <zip file to process> <source name>
+# Usage: <$0> <branch to work on> <zip file to process> <external source> [internal source]
 
 source scripts/helpers.sh
 
 BRANCH=$1
 INPUT=$2
 EXTSRC=$3
+INTSRC=$4
 
 set -e
 
@@ -25,7 +26,11 @@ cd $GXD
 git branch -f $BRANCH && git checkout $BRANCH . && git clean -df
 cd ..
 
-$python scripts/18-convert2xd.py ${DEBUG} $INPUT -o $GXD/ --extsrc "$EXTSRC"
+if [ -n "$INTSRC" ]; then
+	$python scripts/18-convert2xd.py ${DEBUG} "$INPUT" -o "$GXD/" --extsrc "$EXTSRC" --intsrc "$INTSRC"
+else
+	$python scripts/18-convert2xd.py ${DEBUG} "$INPUT" -o "$GXD/" --extsrc "$EXTSRC"
+fi
 
 num=$(cat $GXD/receipts.tsv | grep -vi CaptureTime | wc -l)
 echo "amount of receipts after run: $num" | tee > $SUMMARYLOG
