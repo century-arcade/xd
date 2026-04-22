@@ -28,4 +28,4 @@ xml = ["lxml"]
 all = ["puzpy", "crossword", "lxml"]
 
 [tool.setuptools.packages.find]
-include = ["xdfile*", "crossword*"]
+include = ["xdfile*", "crossword*", "queries*"]
