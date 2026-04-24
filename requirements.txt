@@ -3,7 +3,7 @@ xword-dl==2025.10.14
 puzpy==0.2.6
 
 # xdfile deps
-lxml==6.1.0       # for ccxml2xd, uxml2xd, xwordinfo2xd
+lxml==6.0.0       # for ccxml2xd, uxml2xd, xwordinfo2xd
 boto3>=1.26.66    # for cloud.py
 botocore>=1.29.66 # for boto3?
 cssselect==1.2.0  # do not see it imported anywhere
