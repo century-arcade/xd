@@ -75,12 +75,12 @@ def parse_xwordinfo(content, filename):
     try:
         subtitle = root.cssselect(xwiprefix + 'SubTitle')[0].text.strip()
         subtitle = ' [%s]' % subtitle
-    except:
+    except Exception:
         subtitle = ""
 
     author = root.cssselect('.aegrid div')[1].text.strip()
     editor = root.cssselect('.aegrid div')[3].text.strip()
-    
+
     copyright = root.cssselect(xwiprefix + 'Copyright')[0].text.strip()
 
     xd.set_header("Title", '%s%s' % (title, subtitle))
@@ -89,13 +89,13 @@ def parse_xwordinfo(content, filename):
     xd.set_header("Copyright", copyright)
 
     # nyt title normally has date as e.g. January 1, 2020
-    date_re = "(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}"
+    date_re = r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}"
     try:
         m = re.search(date_re, subtitle if subtitle else title)
         date_string = m.group(0)
         date = datetime.strptime(date_string, "%B %d, %Y")
         xd.set_header("Date", date.strftime("%Y-%m-%d"))
-    except:
+    except Exception:
         pass
 
     _process_notes(xd, xwiprefix, root) # add header for notes, if any
@@ -173,7 +173,7 @@ def parse_xwordinfo(content, filename):
         _process_clues(xd, 'D', down_div) # add down clues
     elif across_div: # uniclue puzzle?
         _process_uniclues(xd, across_div)
-    else: 
+    else:
         raise XWordInfoParseError("No clue divs found.")
 
     return xd
@@ -193,15 +193,15 @@ def _process_notes(xd, xwiprefix, root):
         xd.set_header("Notes", note_text)
     elif root.cssselect(xwiprefix + 'UnicluePan'):
         note_text = ("This was published as a uniclue puzzle in print. " +
-        "All the clues appear in a single list, combining Across and Down. " + 
+        "All the clues appear in a single list, combining Across and Down. " +
         "When two answers share a number, they also share a clue.")
-        xd.set_header("Notes", note_text) 
+        xd.set_header("Notes", note_text)
 
 def _process_clues(xd, clueprefix, clues_div):
     error_text = 'Parsing %s clues failed. ' % ('Across' if clueprefix == 'A' else 'Down')
     numclue_divs = clues_div[0].cssselect('.numclue div')
     if len(numclue_divs) % 2 != 0:
-        raise XWordInfoParseError(error_text + 
+        raise XWordInfoParseError(error_text +
             'Either the number of numbers does not match the ' +
             'number of clues, or there are additional unknown divs.')
     for i in range(0, len(numclue_divs), 2):
@@ -209,12 +209,12 @@ def _process_clues(xd, clueprefix, clues_div):
         clue_div = numclue_divs[i + 1]
         clue_end = clue_div.text.rfind(' :')
         if clue_end < 0:
-            raise XWordInfoParseError(error_text + 
+            raise XWordInfoParseError(error_text +
                 'Malformed clue for number %s.' % num)
         clue = clue_div.text[:clue_end]
         anchor = clue_div.cssselect('a')
         if len(anchor) != 1:
-            raise XWordInfoParseError(error_text + 
+            raise XWordInfoParseError(error_text +
                 'Not exactly one anchor in clue div for number %s.' % num)
         else:
             answer = anchor[0].text
@@ -226,7 +226,7 @@ def _process_uniclues(xd, clues_div):
     down_clues = []
     numclue_divs = clues_div[0].cssselect('.numclue div')
     if len(numclue_divs) % 2 != 0:
-        raise XWordInfoParseError(error_text + 
+        raise XWordInfoParseError(error_text +
             'Either the number of numbers does not match the ' +
             'number of clues, or there are additional unknown divs.')
     for i in range(0, len(numclue_divs), 2):
@@ -234,12 +234,12 @@ def _process_uniclues(xd, clues_div):
         clue_div = numclue_divs[i + 1]
         clue_end = clue_div.text.rfind(' :')
         if clue_end < 0:
-            raise XWordInfoParseError(error_text + 
+            raise XWordInfoParseError(error_text +
                 'Malformed clue for number %s.' % num)
         clue = clue_div.text[:clue_end]
         anchor = clue_div.cssselect('a')
         if not anchor or len(anchor) > 2:
-            raise XWordInfoParseError(error_text + 
+            raise XWordInfoParseError(error_text +
                 'Neither 1 nor 2 anchors in clue div for number %s.' % num)
         for a in anchor:
             answer = a.text

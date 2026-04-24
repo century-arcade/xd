@@ -219,7 +219,7 @@ def find_files_with_time(*paths, **kwargs):
 def filetime(fn):
     try:
         return os.path.getmtime(fn)
-    except:
+    except Exception:
         return time.time()
 
 
@@ -356,7 +356,7 @@ def parse_tsv_data(contents, objname=None):
         if not csvreader.fieldnames:
             return
 
-        nt = namedtuple(objname, " ".join(csvreader.fieldnames))
+        # nt = namedtuple(objname, " ".join(csvreader.fieldnames))
 
     for row in csvreader:
         if objname:
@@ -645,11 +645,11 @@ def escape(data, entities={}):
 def consecutive(text):
     """ Remove two consecutive lines if equal """
     ret = []
-    for l in text.splitlines():
+    for line in text.splitlines():
         if not ret:
-            ret.append(l)
-        elif l != ret[-1]:
-            ret.append(l)
+            ret.append(line)
+        elif line != ret[-1]:
+            ret.append(line)
     return EOL.join(ret)
 
 

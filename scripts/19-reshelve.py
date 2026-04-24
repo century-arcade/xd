@@ -10,12 +10,11 @@ from xdfile import utils, metadatabase as metadb, catalog
 
 
 def main():
-    args = utils.get_args()
+    utils.get_args()
 
     all_receipts = metadb.xd_receipts_header
 
     receipts = metadb.xd_receipts_rows()
-    rids = set()  # set of ReceiptId
 
     for r in receipts:
         oldpubid = ""

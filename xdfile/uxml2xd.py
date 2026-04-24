@@ -12,7 +12,7 @@ def udecode(s):
     t = unquote(s)
     try:
         return str(t.decode("utf-8"))
-    except:
+    except Exception:
         return str(t)
 
 
@@ -21,10 +21,10 @@ def parse_uxml(content, filename):
 
     try:
         content = content.decode("utf-8")
-    except:
+    except Exception:
         try:
             content = content.decode("cp1252")
-        except:
+        except Exception:
             pass  # last ditch effort, just try the original string
 
     content = escape(content, xml_escape_table)
@@ -32,7 +32,7 @@ def parse_uxml(content, filename):
 
     try:
         root = etree.fromstring(content.encode("utf-8"))
-    except:
+    except Exception:
         # TODO: catch the specific exception
         xml = re.search(r"<(\w+).*?</\1>", content, flags=re.DOTALL).group()
         root = etree.fromstring(xml)

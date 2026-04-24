@@ -155,7 +155,7 @@ def xd_recent_downloads():
 def delete_stats():
     try:
         os.remove(STATS_TSV)
-    except:
+    except Exception:
         pass
 
 

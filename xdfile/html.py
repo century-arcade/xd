@@ -52,7 +52,7 @@ class GridCalendar(HTMLCalendar):
                     cssclass += ' ' + self.grids[cdate]['class']
                 if 'link' in self.grids[cdate]:
                     htitle = self.grids[cdate]['title'] if self.grids[cdate]['title'] else ''
-                    body = mkhref(str(day), self.grids[cdate]['link'], htitle) 
+                    body = mkhref(str(day), self.grids[cdate]['link'], htitle)
                 else:
                     body = str(day)
                 return self.day_cell(cssclass, '%s' % (body))
@@ -62,7 +62,7 @@ class GridCalendar(HTMLCalendar):
     def formatmonth(self, year, month, withyear=False):
         self.year, self.month = year, month
         return super(GridCalendar, self).formatmonth(year, month, withyear)
-    
+
     def day_cell(self, cssclass, body):
         text = []
         text.append(mktag('td', cssclass))
@@ -82,7 +82,7 @@ class GridCalendar(HTMLCalendar):
         width = max(width, 1)
         a('<table border="0" cellpadding="0" cellspacing="0" class="year">')
         a('\n')
-        
+
         # Align header horizontally
         if not vertical:
             a('<tr><th colspan="%d" class="year" id="%s">%s</th></tr>' % (width, theyear, theyear))
@@ -181,7 +181,7 @@ def redirect_page(url):
 def mktag(tagname, tagclass='', inner=None, tag_params=None):
     """ generates tag:
         <tagname * > or if tag_params dict passed <tagname * >inner</tagname>
-        * tagclass or if tag_params dict passed will be overloaded by tag_params['class'] 
+        * tagclass or if tag_params dict passed will be overloaded by tag_params['class']
         <tagname param1="value1" param2="value2" ...>
     """
     ret = ''
@@ -190,8 +190,8 @@ def mktag(tagname, tagclass='', inner=None, tag_params=None):
         for p, v in tag_params.items():
             _params.append('%s="%s"' % (p, v))
     else:
-        _params = [ 'class="%s"' % tagclass ] 
-    
+        _params = [ 'class="%s"' % tagclass ]
+
     ret += '<%s %s>' % (tagname, " ".join(_params))
 
     if inner is not None:
@@ -315,10 +315,10 @@ def html_select_options_freq(pairs, strmaker=str, force_top="", add_total=True):
 
 def table_row(row, keys, rowclass="row", tag="td", tag_params=None, inner_only=False):
     # row - list or dict
-    # keys - assign as class for each itterable from row 
+    # keys - assign as class for each itterable from row
     # rowclass - class(es) for tr (row)
     # tag - tag to be used for cells in row - default: td
-    # tag_params - 
+    # tag_params -
     if isinstance(row, dict):
         row = [row[k] for k in keys]
 

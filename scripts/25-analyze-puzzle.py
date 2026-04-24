@@ -17,7 +17,7 @@ def main():
     p.add_argument('-a', '--all', default=False, help='analyze all puzzles, even those already in similar.tsv')
     p.add_argument('-l', '--limit', default=100, help='limit amount of puzzles to be analyzed [default=100]')
     args = get_args(parser=p)
-    outf = open_output()
+    open_output()
 
     num_processed = 0
     prev_similar = metadb.read_rows('gxd/similar')
@@ -56,7 +56,7 @@ def main():
             poss_answers = []
             pub_uses = { }  # [pubid] -> set(ClueAnswer)
 
-            mainca = ClueAnswer(mainpubid, maindate, mainanswer, mainclue)
+            ClueAnswer(mainpubid, maindate, mainanswer, mainclue)
 
             # find other uses of this clue, and other answers, in a single pass
             for clueans in find_clue_variants(mainclue):
@@ -74,7 +74,6 @@ def main():
 
             # bclues is all boiled clues for this particular answer: { [bc] -> #uses }
             bclues = load_answers().get(mainanswer, [])
-            stale_answer = False
 
             if bclues:
                 uses = []
@@ -84,7 +83,6 @@ def main():
                                     if ca.answer == mainanswer and ca.date < maindate ]
 
                     if clue_usages:
-                        stale_answer = True
                         if nuses > 1:
                             # only use one (the most recent) ClueAnswer per boiled clue
                             # but use the clue only (no xdid)

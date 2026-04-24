@@ -80,17 +80,17 @@ def pubyear_html(pubyears=[], skip_decades=None):
             if year in similar_d[pubid]:
                 similar_d[pubid][year].append(int(v.similar_grid_pct))
             else:
-                similar_d[pubid][year] = [ int(v.similar_grid_pct) ] 
+                similar_d[pubid][year] = [ int(v.similar_grid_pct) ]
 
     b = [] # Body
-    
+
     # Making collapsed decades depends on args
-    skip_decades = skip_decades if skip_decades else { 'start': 1910, 'end': 1970 } 
+    skip_decades = skip_decades if skip_decades else { 'start': 1910, 'end': 1970 }
     allyears = []
     for i in range(skip_decades['start']//10, skip_decades['end']//10 + 1):
         allyears.append("%s0s" % i)
     allyears.extend([ str(y) for y in range(skip_decades['end'] + 10, date.today().year + 1) ])
-    
+
     pubs = defaultdict(dict)
     # generate widget for each year
     for dowl in g_all_pubyears:
@@ -105,7 +105,7 @@ def pubyear_html(pubyears=[], skip_decades=None):
         # Define fill class based on average similarity
         fill_class = None # default fill class for widget
         if year in similar_d[pubid]:
-            s_avg = sum(similar_d[pubid][year]) / len(similar_d[pubid][year]) 
+            s_avg = sum(similar_d[pubid][year]) / len(similar_d[pubid][year])
             hint += 'Avg similarity: %.2f%%' % (s_avg)
             # Example if average > 10 %
             fill_class = 'similar10' if s_avg >= 10 else None
@@ -156,7 +156,7 @@ def pubyear_html(pubyears=[], skip_decades=None):
                 b.append(mktag('td','this'))
                 # Put link directly to year or to decade
                 href = "/pub/%s%s" % (pubid, yi) if 's' not in yi else "/pub/%s/index.html#%s" % (pubid, yi[:-1])
-                b.append(mkcell(pubs[pubid][yi]['widget'], href=href, 
+                b.append(mkcell(pubs[pubid][yi]['widget'], href=href,
                         title=pubs[pubid][yi]['hint']))
                 b.append(mktag('/td'))
             else:

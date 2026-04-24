@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import string
+import random
+
 from xdfile.utils import get_args, open_output, find_files, debug, info, error, get_log, COLUMN_SEPARATOR, EOL
 from xdfile.utils import parse_tsv, progress, parse_pathname, iso8601
 from xdfile import xdfile, BLOCK_CHAR
@@ -18,8 +21,6 @@ fake_first = "James John Robert Michael William David Richard Charles Joseph Tho
 
 fake_last = "Smith Johnson Williams Brown Jones Miller Davis Garcia Rodriguez Wilson Martinez Anderson Taylor Thomas Hernandez Moore Martin Jackson Thompson White Lopez Lee Gonzalez Harris Clark Lewis Robinson Walker Perez Hall Young Allen Sanchez Wright King Scott Green Baker Adams Nelson Hill Ramirez Campbell Mitchell Roberts Carter Phillips Evans Turner Torres Parker".split()
 
-import string
-import random
 
 # boil a clue down to its letters and numbers only
 def boil(s):
@@ -59,7 +60,7 @@ def each_word_cross(xd):
 
 
 def splice(s, i, repl):
-    a, pivot_char, b = s[:i], s[i], s[i:][1:]
+    a, _pivot_char, b = s[:i], s[i], s[i:][1:]
     return a + repl + b
 
 

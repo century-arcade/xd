@@ -25,6 +25,9 @@ for i in range(N):
     if len(unchecked_puzzles) == 0:
         break
 
-    process = subprocess.run('cat src/findmatches.sql | sqlite3 gxd.sqlite', shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    process = subprocess.run('cat src/findmatches.sql | sqlite3 gxd.sqlite',
+                             shell=True, check=True,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             text=True)
 
 conn.close()

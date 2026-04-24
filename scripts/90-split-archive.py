@@ -2,7 +2,7 @@
 #
 # Usage: $0 [-o <output-xd.zip>] [-s <source_name> ] <input>
 #
-#   Splits complex puzzle repos (like BWH) in <input> into separate zips 
+#   Splits complex puzzle repos (like BWH) in <input> into separate zips
 #   Default for <source_name> is input name
 #
 
@@ -53,7 +53,7 @@ def main():
                    help='minimum number of files for a prefix to get its own zip (default: 2)')
     args = get_args(parser=p)
 
-    outf = open_output()
+    open_output()
 
     os.makedirs(args.output, exist_ok=True)
 

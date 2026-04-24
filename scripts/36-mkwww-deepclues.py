@@ -69,7 +69,7 @@ def main():
     args = utils.get_args('generates .html diffs with deep clues for all puzzles in similar.tsv')
     outf = utils.open_output()
 
-    similars = utils.parse_tsv('gxd/similar.tsv', 'Similar')
+    utils.parse_tsv('gxd/similar.tsv', 'Similar')
 
     xds_todo = []
     for fn, contents in find_files(*args.inputs, ext='.xd'):
@@ -80,11 +80,10 @@ def main():
         mainxdid = mainxd.xdid()
         progress(mainxdid)
 
-        matches = metadb.xd_similar(mainxdid)
+        metadb.xd_similar(mainxdid)
 
         xddates = {}
         xddates[mainxdid] = mainxd.date() # Dict to store XD dates for further sort
-        html_grids = {}
 
         # these are added directly to similar.tsv
         nstaleclues = 0

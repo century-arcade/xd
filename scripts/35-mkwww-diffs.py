@@ -15,10 +15,10 @@ import operator
 
 
 def main():
-    args = utils.get_args('generates .html diffs for all puzzles in similar.tsv')
+    utils.get_args('generates .html diffs for all puzzles in similar.tsv')
     outf = utils.open_output()
 
-    similars = utils.parse_tsv('gxd/similar.tsv', 'Similar')
+    utils.parse_tsv('gxd/similar.tsv', 'Similar')
     xdids_todo = {}
 
     for row in metadb.xd_similar_all():

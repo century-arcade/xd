@@ -144,7 +144,7 @@ class xdfile:
 
     def add_header(self, fieldname, value):
         if fieldname in self.headers:
-            assert type(self.headers[fieldname]) == list
+            assert isinstance(self.headers[fieldname], list)
             self.headers[fieldname].append(value)
         else:
             self.headers[fieldname] = [value]
@@ -320,7 +320,7 @@ class xdfile:
                 try:
                     cluedir = pos[0]
                     cluenum = int(pos[1:])
-                except:
+                except Exception:
                     cluedir = ""
                     cluenum = pos  # fallback to strings for non-numeric clue "numbers"
                 self.clues.append(((cluedir, cluenum), clue.strip(), answer.strip()))
@@ -461,14 +461,14 @@ def corpus_contents():
 def year_from_date(dt):
     try:
         return int(dt.split('-')[0])
-    except:
+    except Exception:
         return 0
 
 def dow_from_date(dt):
     # Return day of week out of date
     try:
         return datetime.datetime.strptime(dt, '%Y-%m-%d').strftime('%a')
-    except:
+    except Exception:
         return None
 
 

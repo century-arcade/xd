@@ -24,8 +24,8 @@ def diff_authors(a1, a2):
 
 
 def main():
-    args = utils.get_args('generate pub-years data')
-    outf = utils.open_output()
+    utils.get_args('generate pub-years data')
+    utils.open_output()
 
     weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
 

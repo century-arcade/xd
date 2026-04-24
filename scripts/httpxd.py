@@ -64,7 +64,8 @@ class httpxd(object):
                 parms = {"left": xdfile.get_base_filename(other.filename), "right": xd}
             else:
                 parms = {"left": xdfile.get_base_filename(other.filename), "right": grid}
-            index_line = '%d%% <a href="/diff/?%s">%s</a> %s' % (pct, urllib.parse.urlencode(parms), xdfile.get_base_filename(other.filename), other.get_header("Author") or "")
+            index_line = '%d%% <a href="/diff/?%s">%s</a> %s' % (
+                pct, urllib.parse.urlencode(parms), xdfile.get_base_filename(other.filename), other.get_header("Author") or "")
 
             index_list.append((pct, index_line))
 
