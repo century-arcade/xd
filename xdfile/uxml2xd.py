@@ -5,7 +5,7 @@ from urllib.parse import unquote
 from lxml import etree
 
 import xdfile
-from xdfile.utils import escape, consecutive, xml_escape_table, rev_xml_escape_table
+from xdfile.utils import escape, xml_escape_table, rev_xml_escape_table
 
 
 def udecode(s):

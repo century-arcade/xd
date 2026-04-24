@@ -4,7 +4,6 @@
 import re
 from lxml import html, etree
 from datetime import datetime
-from xdfile.utils import info, debug, error
 import xdfile
 
 SPLIT_REBUS_TITLES = "CRYPTOCROSSWORD TIC-TAC-TOE".split()

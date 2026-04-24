@@ -8,11 +8,13 @@ import re
 import string
 import puz
 import crossword
-import urllib.request, urllib.parse, urllib.error
+import urllib.request
+import urllib.parse
+import urllib.error
 import time
 
 import xdfile
-from .utils import log, error, warn
+from .utils import warn
 
 
 def reparse_date(s):

@@ -26,7 +26,6 @@ def find_date(s):
 
 
 def boil_copyright(copyright, author):
-    import re
     if author:
         copyright = copyright.replace(author, "")
 

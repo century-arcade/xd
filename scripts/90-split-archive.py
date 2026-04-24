@@ -12,7 +12,6 @@ import sys
 import re
 import time
 from xdfile.utils import progress, log, iso8601, get_args, args_parser, open_output, parse_pathname
-from xdfile.utils import filetime
 import xdfile.utils
 from xdfile.metadatabase import xd_sources_row, xd_sources_header
 

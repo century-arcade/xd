@@ -6,13 +6,12 @@
 #  Searches through the corpus for similar grids.
 
 
-import sys
 import string
 import re
 import random
 
 
-from xdfile.utils import progress, get_args, find_files, open_output, COLUMN_SEPARATOR, EOL, debug
+from xdfile.utils import get_args, find_files, open_output, COLUMN_SEPARATOR, EOL, debug
 from xdfile import xdfile, corpus, clues
 
 

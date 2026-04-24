@@ -4,7 +4,6 @@
 
 # makes .zip of all metadata .tsv
 
-from xdfile import metadatabase as metadb
 from xdfile import utils
 
 

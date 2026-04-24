@@ -6,7 +6,6 @@
 #   git mv all .xd with pubid of <src> to have a pubid of <dest> (simple file rename)
 #
 #
-import re
 from xdfile import utils, metadatabase as metadb, catalog
 
 

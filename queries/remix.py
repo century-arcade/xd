@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-from xdfile.utils import get_args, open_output, find_files, log, debug, info, error, get_log, COLUMN_SEPARATOR, EOL
+from xdfile.utils import get_args, open_output, find_files, debug, info, error, get_log, COLUMN_SEPARATOR, EOL
 from xdfile.utils import parse_tsv, progress, parse_pathname, iso8601
-from xdfile import corpus, xdfile, BLOCK_CHAR
+from xdfile import xdfile, BLOCK_CHAR
 
 
 # for a given grid

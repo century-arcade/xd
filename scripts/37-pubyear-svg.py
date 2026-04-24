@@ -1,18 +1,13 @@
 #!/usr/bin/python3
 
 import re
-import operator
-import datetime
 import string
 
 from datetime import date
-from xdfile.utils import info, debug, error
 from xdfile import utils
 from xdfile import metadatabase as metadb
 from xdfile import html
-from xdfile.utils import space_with_nbsp
-import xdfile
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 
 DECADE_SKIP_START = 1990
 DECADE_SKIP_END = 1980

@@ -7,8 +7,8 @@ import functools
 import re
 import datetime
 
-from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
-from .utils import log, error, warn
+from .utils import parse_pathname, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
+from .utils import error, warn
 
 g_corpus = []  # list of xdfile
 g_all_clues = []  # list of ClueAnswer
@@ -425,7 +425,6 @@ class xdfile:
 # get_args(...) should be called before corpus()
 @memoize
 def corpus():
-    from .utils import log
 
     args = get_args()
 
@@ -513,7 +512,7 @@ def get_xd(xdid):
     """ Try to load xdfile and return None if error """
     try:
         xd = xdfile(corpus_contents()[xdid].decode("utf-8"), xdid)
-    except Exception as e:
+    except Exception:
         # error("get_xd() %s" % str(e))
         return None
     return xd

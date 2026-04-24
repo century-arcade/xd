@@ -1,5 +1,4 @@
 import re
-import cgi
 import time
 from collections import Counter
 import xdfile
@@ -267,7 +266,7 @@ def html_select_options(options, strmaker=str, force_top="", add_total=True):
         groups = {}
         for opt in options:
             s = strmaker(opt)
-            if not s in groups:
+            if s not in groups:
                 groups[s] = [opt]
             else:
                 groups[s].append(opt)

@@ -4,7 +4,6 @@
 
 # outputs clues.tsv with all clues/answers by pubyear
 
-from xdfile import metadatabase as metadb
 from xdfile import utils
 import xdfile
 

@@ -9,9 +9,11 @@ exclude =
     .tox,
     .git,
     __pycache__,
+    .venv,
     *.egg,
     build,
     data,
     tests,
     # vendored library, ignore
     crossword,
+    gxd,

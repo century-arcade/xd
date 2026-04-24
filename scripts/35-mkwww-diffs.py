@@ -3,14 +3,12 @@
 #
 
 import difflib
-import datetime
 from xdfile import utils
-from xdfile.html import mktag, mkhref, grid_diff_html
+from xdfile.html import mktag, grid_diff_html
 from xdfile.utils import info, warn
 
-from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
+from xdfile.utils import debug, progress
 #from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
-from xdfile import BLOCK_CHAR
 from xdfile import metadatabase as metadb
 import xdfile
 import operator

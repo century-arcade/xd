@@ -12,7 +12,6 @@ import codecs
 import datetime
 import time
 import argparse
-import fnmatch
 
 EOL = '\n'
 COLSEP = '\t'
@@ -484,7 +483,7 @@ class OutputDirectory:
         # make parent dirs
         try:
             os.makedirs(parse_pathname(fullfn).path)
-        except Exception as e:
+        except Exception:
             pass  # log("%s: %s" % (type(e), str(e)))
 
         f = codecs.open(fullfn, mode, encoding='utf-8')
@@ -539,7 +538,7 @@ def open_output(fnout=None):
         # make parent dirs
         try:
             os.makedirs(parse_pathname(fnout).path)
-        except Exception as e:
+        except Exception:
             pass  # log("%s: %s" % (type(e), str(e)))
         outf = OutputFile(codecs.open(fnout, 'w', encoding="utf-8"))
 

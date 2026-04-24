@@ -4,7 +4,7 @@
 #   $0 -o wwwroot/ pagebody.html [...]
 
 
-from xdfile import html, utils
+from xdfile import utils
 
 
 def main():
