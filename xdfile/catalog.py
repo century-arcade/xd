@@ -111,7 +111,7 @@ def deduce_xdid(xd, mdtext):
 
     dt = xd.get_header("Date")
     if dt:
-        year = xdfile.year_from_date(dt)
+        # year = xdfile.year_from_date(dt)
         return "%s%s" % (pubid, dt)
 
 

@@ -17,3 +17,5 @@ src/gridcmp.so
 gxd.sqlite
 .venv
 .meta
+uv.lock
+

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 # Usage:
-#   $0 -o wwwroot/ products/ 
-# 
+#   $0 -o wwwroot/ products/
+#
 #  takes all .log files and generates wwwroot/<YYYYMMDD>/index.html
 
 import cgi

@@ -6,13 +6,12 @@
 #  Searches through the corpus for similar grids.
 
 
-import sys
 import string
 import re
 import random
 
 
-from xdfile.utils import progress, get_args, find_files, open_output, COLUMN_SEPARATOR, EOL, debug
+from xdfile.utils import get_args, find_files, open_output, COLUMN_SEPARATOR, EOL, debug
 from xdfile import xdfile, corpus, clues
 
 
@@ -86,11 +85,11 @@ SIMPLE_CHARS = string.ascii_letters + string.digits + '_'
 
 # boil a clue down to its letters and numbers only
 def boil(s):
-    if re.search('\d+[ \-](across|down)', s, re.IGNORECASE):
+    if re.search(r'\d+[ \-](across|down)', s, re.IGNORECASE):
         return None
 
     boiled = "".join(c for c in s if c in SIMPLE_CHARS).lower()
-    boiled = re.sub('[_\-]+','_', boiled)
+    boiled = re.sub(r'[_\-]+','_', boiled)
 
     if boiled == "noclue":
         return None
@@ -126,7 +125,7 @@ def load_answers():
             if ca.answer not in g_answers:
                 ans = dict()
                 g_answers[ca.answer] = ans
-            else: 
+            else:
                 ans = g_answers[ca.answer]
 
             bc = boil(ca.clue)
@@ -154,7 +153,7 @@ def find_answers_for_clue(clue):
         return [ ]
 
     return set(ca.answer for ca in g_boiled_clues.get(bc, []))
-    
+
 
 xd_similar_header = COLUMN_SEPARATOR.join(["needle", "match", "percent"]) + EOL
 

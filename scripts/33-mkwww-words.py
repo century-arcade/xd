@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
-from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers
-from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
+from xdfile.utils import get_args, open_output
 from xdfile.html import th, td, mkhref, html_select_options
-from xdfile import corpus, clues, pubyear, metadatabase as metadb, utils
+from xdfile import clues, metadatabase as metadb, utils
 
-from collections import Counter
-import random
 
 
 def mkwww_wordpage(answer):

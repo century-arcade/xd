@@ -4,13 +4,12 @@
 
 # outputs clues.tsv with all clues/answers by pubyear
 
-from xdfile import metadatabase as metadb
 from xdfile import utils
 import xdfile
 
 
 def main():
-    args = utils.get_args('make clues.tsv files')
+    utils.get_args('make clues.tsv files')
     outf = utils.open_output()  # should be .zip
 
     outf.log = False

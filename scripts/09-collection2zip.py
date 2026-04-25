@@ -5,11 +5,10 @@
 #
 #    zips all files under <toplevel-directory>. includes .log of process and .tsv of contents
 
-import zipfile
 
 from xdfile.metadatabase import xd_sources_row, xd_sources_header
-from xdfile.utils import find_files_with_time, get_log, get_args, filetime, args_parser, parse_pathname
-from xdfile.utils import log, info, iso8601, open_output, strip_toplevel
+from xdfile.utils import find_files_with_time, get_log, get_args, args_parser, parse_pathname
+from xdfile.utils import info, iso8601, open_output, strip_toplevel
 
 
 def main():

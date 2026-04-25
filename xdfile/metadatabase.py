@@ -1,12 +1,9 @@
 
 import os.path
 import codecs
-import fnmatch
-from collections import Counter, namedtuple
+from collections import namedtuple
 
-from .html import mkhref, html_select_options
 from .utils import COLSEP, EOL
-from .xdfile import corpus
 
 from xdfile import utils
 
@@ -158,7 +155,7 @@ def xd_recent_downloads():
 def delete_stats():
     try:
         os.remove(STATS_TSV)
-    except:
+    except Exception:
         pass
 
 

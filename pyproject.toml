@@ -29,3 +29,13 @@ all = ["puzpy", "crossword", "lxml"]
 
 [tool.setuptools.packages.find]
 include = ["xdfile*", "crossword*", "queries*"]
+
+[tool.ruff]
+exclude = ["crossword"]  # exclude vendored package
+
+[tool.ruff.lint]
+select = ["E", "W", "F"]
+ignore = ["E501"]  # line too long :P
+
+[tool.pytest.ini_options]
+norecursedirs = ["xdfile.egg-info", "build", "dist", ".tox", ".venv", "gxd"]

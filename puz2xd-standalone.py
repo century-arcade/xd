@@ -287,8 +287,10 @@ def parse_puz(contents, filename):
     circles = []
     if b"GEXT" in puzobj.extensions:
         for i, c in enumerate(puzobj.extensions[b"GEXT"]):
-            if c == 0x80: circles.append(i)
-    if circles: xd.set_header("Special", "circle")
+            if c == 0x80:
+                circles.append(i)
+    if circles:
+        xd.set_header("Special", "circle")
 
     for r, row in enumerate(puzzle):
         rowstr = ""

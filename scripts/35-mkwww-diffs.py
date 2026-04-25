@@ -3,24 +3,22 @@
 #
 
 import difflib
-import datetime
 from xdfile import utils
-from xdfile.html import mktag, mkhref, grid_diff_html
+from xdfile.html import mktag, grid_diff_html
 from xdfile.utils import info, warn
 
-from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname
+from xdfile.utils import debug, progress
 #from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
-from xdfile import BLOCK_CHAR
 from xdfile import metadatabase as metadb
 import xdfile
 import operator
 
 
 def main():
-    args = utils.get_args('generates .html diffs for all puzzles in similar.tsv')
+    utils.get_args('generates .html diffs for all puzzles in similar.tsv')
     outf = utils.open_output()
 
-    similars = utils.parse_tsv('gxd/similar.tsv', 'Similar')
+    utils.parse_tsv('gxd/similar.tsv', 'Similar')
     xdids_todo = {}
 
     for row in metadb.xd_similar_all():

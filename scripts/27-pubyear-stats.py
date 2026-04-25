@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 
-import json
 import string
-import re
-from collections import defaultdict, Counter
+from collections import Counter
 
-from xdfile.utils import error, debug, info
+from xdfile.utils import debug, info
 from xdfile import utils, metadatabase as metadb
-from xdfile import year_from_date, dow_from_date
+from xdfile import dow_from_date
 import xdfile
 
 def boil(x):
@@ -26,8 +24,8 @@ def diff_authors(a1, a2):
 
 
 def main():
-    args = utils.get_args('generate pub-years data')
-    outf = utils.open_output()
+    utils.get_args('generate pub-years data')
+    utils.open_output()
 
     weekdays = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
 

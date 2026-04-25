@@ -8,11 +8,13 @@ import re
 import string
 import puz
 import crossword
-import urllib.request, urllib.parse, urllib.error
+import urllib.request
+import urllib.parse
+import urllib.error
 import time
 
 import xdfile
-from .utils import log, error, warn
+from .utils import warn
 
 
 def reparse_date(s):
@@ -95,8 +97,10 @@ def parse_puz(contents, filename):
     circles = []
     if b"GEXT" in puzobj.extensions:
         for i, c in enumerate(puzobj.extensions[b"GEXT"]):
-            if c == 0x80: circles.append(i)
-    if circles: xd.set_header("Special", "circle")
+            if c == 0x80:
+                circles.append(i)
+    if circles:
+        xd.set_header("Special", "circle")
 
     for r, row in enumerate(puzzle):
         rowstr = ""

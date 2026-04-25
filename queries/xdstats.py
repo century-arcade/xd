@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import os
-import zipfile
 import itertools
 
 import xdfile

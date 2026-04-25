@@ -6,15 +6,16 @@
 #  Examines <input> filenames for each source and most recent date; downloads more recent puzzles and saves them to <output-zip>.
 #
 
-import urllib.request, urllib.error, urllib.parse
+import urllib.request
+import urllib.error
+import urllib.parse
 import puz
 import datetime
 import time
-import json
 
-from xdfile import utils, metadatabase as metadb
-from xdfile.utils import get_args, log, error, warn, summary, debug, open_output, datestr_to_datetime, args_parser
-from xdfile.metadatabase import xd_sources_header, xd_sources_row, xd_puzzle_sources, xd_recent_download, xd_recents_header
+from xdfile import metadatabase as metadb
+from xdfile.utils import get_args, log, error, warn, summary, open_output, datestr_to_datetime, args_parser
+from xdfile.metadatabase import xd_puzzle_sources, xd_recent_download, xd_recents_header
 
 from xword_dl import by_keyword
 

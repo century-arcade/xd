@@ -1,7 +1,7 @@
 import os
 import boto3
 
-from xdfile.utils import log, info, debug, error
+from xdfile.utils import info, error
 
 
 boto3.set_stream_logger('botocore')

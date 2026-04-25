@@ -4,12 +4,11 @@
 
 # makes .zip of all metadata .tsv
 
-from xdfile import metadatabase as metadb
 from xdfile import utils
 
 
 def main():
-    args = utils.get_args()
+    utils.get_args()
 
     outf = utils.open_output()  # should be .zip
 

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python3
 
 import string
@@ -44,7 +44,7 @@ def parse_ccxml(data, filename):
     # add metadata
     for metadata in root.xpath('//puzzle:metadata', namespaces=ns)[0]:
         text = metadata.text and metadata.text.strip()
-        title = re.sub('\{[^\}]*\}', '', metadata.tag.title())
+        title = re.sub(r'\{[^\}]*\}', '', metadata.tag.title())
         title = escape(title, rev_xml_escape_table)
         if text:
             text = escape(text, rev_xml_escape_table)

@@ -7,8 +7,8 @@ import functools
 import re
 import datetime
 
-from .utils import parse_pathname, parse_tsv, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
-from .utils import log, error, warn
+from .utils import parse_pathname, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
+from .utils import error, warn
 
 g_corpus = []  # list of xdfile
 g_all_clues = []  # list of ClueAnswer
@@ -144,7 +144,7 @@ class xdfile:
 
     def add_header(self, fieldname, value):
         if fieldname in self.headers:
-            assert type(self.headers[fieldname]) == list
+            assert isinstance(self.headers[fieldname], list)
             self.headers[fieldname].append(value)
         else:
             self.headers[fieldname] = [value]
@@ -320,7 +320,7 @@ class xdfile:
                 try:
                     cluedir = pos[0]
                     cluenum = int(pos[1:])
-                except:
+                except Exception:
                     cluedir = ""
                     cluenum = pos  # fallback to strings for non-numeric clue "numbers"
                 self.clues.append(((cluedir, cluenum), clue.strip(), answer.strip()))
@@ -425,7 +425,6 @@ class xdfile:
 # get_args(...) should be called before corpus()
 @memoize
 def corpus():
-    from .utils import log
 
     args = get_args()
 
@@ -462,14 +461,14 @@ def corpus_contents():
 def year_from_date(dt):
     try:
         return int(dt.split('-')[0])
-    except:
+    except Exception:
         return 0
 
 def dow_from_date(dt):
     # Return day of week out of date
     try:
         return datetime.datetime.strptime(dt, '%Y-%m-%d').strftime('%a')
-    except:
+    except Exception:
         return None
 
 
@@ -513,7 +512,7 @@ def get_xd(xdid):
     """ Try to load xdfile and return None if error """
     try:
         xd = xdfile(corpus_contents()[xdid].decode("utf-8"), xdid)
-    except Exception as e:
+    except Exception:
         # error("get_xd() %s" % str(e))
         return None
     return xd

@@ -5,18 +5,15 @@
 # Generate /pub/deep/<xdid> from given xdids or all similarpct > 25 in similar.tsv if if not given.
 # <xdid> may be full pathnames; the base xdid will be parsed out.
 
-from queries.similarity import grid_similarity, find_clue_variants, load_answers, load_clues, boil
-import difflib
-import datetime
+from queries.similarity import find_clue_variants, load_answers, load_clues, boil
 from xdfile import utils
-from xdfile.html import mktag, mkhref, html_select_options, html_select_options_freq, grid_to_html
+from xdfile.html import mktag, html_select_options, html_select_options_freq, grid_to_html
 import cgi
 
-from xdfile.utils import get_args, open_output, find_files, log, debug, get_log, COLUMN_SEPARATOR, EOL, parse_tsv, progress, parse_pathname, info, datestr_to_datetime
-from xdfile import BLOCK_CHAR, ClueAnswer
+from xdfile.utils import find_files, progress, info
+from xdfile import ClueAnswer
 from xdfile import metadatabase as metadb
 import xdfile
-import operator
 
 
 def esc(s):
@@ -72,7 +69,7 @@ def main():
     args = utils.get_args('generates .html diffs with deep clues for all puzzles in similar.tsv')
     outf = utils.open_output()
 
-    similars = utils.parse_tsv('gxd/similar.tsv', 'Similar')
+    utils.parse_tsv('gxd/similar.tsv', 'Similar')
 
     xds_todo = []
     for fn, contents in find_files(*args.inputs, ext='.xd'):
@@ -83,11 +80,10 @@ def main():
         mainxdid = mainxd.xdid()
         progress(mainxdid)
 
-        matches = metadb.xd_similar(mainxdid)
+        metadb.xd_similar(mainxdid)
 
         xddates = {}
         xddates[mainxdid] = mainxd.date() # Dict to store XD dates for further sort
-        html_grids = {}
 
         # these are added directly to similar.tsv
         nstaleclues = 0
