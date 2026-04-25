@@ -46,10 +46,7 @@ def get_publication(xd):
 # some regex heuristics for shelving
 _pubregex_cache = None
 
-def find_pubid(rowstr):
-    '''rowstr is a concatentation of all metadata fields
-    Returns None if file not exist or empty
-    '''
+def _load_pubregex():
     global _pubregex_cache
     if _pubregex_cache is None:
         try:
@@ -57,24 +54,41 @@ def find_pubid(rowstr):
         except FileNotFoundError:
             utils.error("File not exists: %s" % PUBREGEX_TSV, severity='WARNING')
             _pubregex_cache = []
+    return _pubregex_cache
 
-    regexes = _pubregex_cache
 
-    matching = set()
-    for r in regexes:
-        m = re.search(r['regex'], rowstr, flags=re.IGNORECASE)
-        if m:
-            matching.add(r['pubid'])
+def find_pubid(rowstr):
+    '''rowstr is a concatenation of all metadata fields.
 
-    if not matching:
-        utils.warn("%s: no regex matches" % rowstr)
-    else:
-        if len(matching) > 1:
-            utils.warn("%s: too many regex matches (%s)" % (rowstr, " ".join(matching)))
-            return None
-        else:
-            return matching.pop()
+    Two-stage match:
+      1. pubregex.tsv (explicit overrides and aliases) — wins if any row matches
+      2. implicit `<pubid>(\\d|-)` against every PublicationAbbr in publications.tsv
 
+    Returns None if no match, or if the winning stage produces multiple matches.
+    '''
+    explicit = set()
+    for r in _load_pubregex():
+        if re.search(r['regex'], rowstr, flags=re.IGNORECASE):
+            explicit.add(r['pubid'])
+
+    if len(explicit) == 1:
+        return explicit.pop()
+    if len(explicit) > 1:
+        utils.warn("%s: too many pubregex matches (%s)" % (rowstr, " ".join(explicit)))
+        return None
+
+    implicit = set()
+    for pubid in metadb.xd_publications().keys():
+        if re.search(r'%s(\d|-)' % re.escape(pubid), rowstr, flags=re.IGNORECASE):
+            implicit.add(pubid)
+
+    if len(implicit) == 1:
+        return implicit.pop()
+    if len(implicit) > 1:
+        utils.warn("%s: too many implicit pubid matches (%s)" % (rowstr, " ".join(implicit)))
+        return None
+
+    utils.warn("%s: no pubid match" % rowstr)
     return None
 
 
