@@ -402,9 +402,11 @@ def main():
     year_header = gen_year_header(allyears)
     html_out.extend(year_header)
 
+    utils.info("computing puzzle counts for %d publications..." % len(pubyears_idx))
     pubs_total = {}
     for pubid in pubyears_idx:
         pubs_total[pubid] = len(metadb.xd_puzzles(pubid))
+    utils.info("puzzle counts done")
 
     # sort rows by number of puzzles
     sorted_pubs = sorted(pubs_total.keys(), key=lambda pubid: pubs_total[pubid], reverse=True)
@@ -418,6 +420,7 @@ def main():
             pubname = pubobj.PublicationName or pubobj.PublisherName
         else:
             pubname = pub
+        utils.info("rendering %s (%d puzzles)..." % (pub, pubs_total[pub]))
         html_out.append('<tr><td class="header">{}</td>'.format(html.mkhref(pubname, 'pub/' + pub)))
 
         for year in sorted(allyears):
@@ -426,7 +429,9 @@ def main():
             if py_td:
                 html_out.append(py_td)
                 if not args.pubonly:
-                    outf.write_html('pub/{pub}{year}/index.html'.format(**locals()), pubyear_html(pub, year),
+                    outpath = 'pub/{pub}{year}/index.html'.format(**locals())
+                    utils.progress(outpath)
+                    outf.write_html(outpath, pubyear_html(pub, year),
                                     "{pubname}, {year}".format(**locals()))
             else:
                 # otherwise

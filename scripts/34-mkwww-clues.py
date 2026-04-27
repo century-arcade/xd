@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from queries.similarity import load_clues, unboil, boil
-from xdfile.utils import get_args, open_output, find_files, progress
+from xdfile.utils import args_parser, get_args, open_output, find_files, progress
 from xdfile.html import th, td, mkhref, html_select_options
 from xdfile import clues
 import xdfile
@@ -32,7 +32,10 @@ def mkwww_cluepage(bc):
 
 def main():
     global boiled_clues
-    args = get_args('create clue index')
+    p = args_parser(desc='create clue index')
+    p.add_argument('-N', '--top-n', type=int, default=100,
+                   help='generate per-clue pages for top N most-used and top N most-ambiguous clues (default: 100)')
+    args = get_args(parser=p)
     outf = open_output()
 
     boiled_clues = load_clues()
@@ -48,8 +51,9 @@ def main():
 
     # add all boiled clues from all input .xd files
     for fn, contents in find_files(*args.inputs, ext='.xd'):
-        progress(fn)
         xd = xdfile.xdfile(contents.decode('utf-8'), fn)
+        if xd.is_redacted():
+            continue
         for pos, mainclue, mainanswer in xd.iterclues():
             cluepages_to_make.add(boil(mainclue))
 
@@ -59,7 +63,7 @@ def main():
 
     biggest_clues += '<table class="clues most-used-clues">'
     biggest_clues += th("clue", "# uses", "answers used with this clue")
-    for n, bc, ans in sorted(bcs, reverse=True)[:100]:
+    for n, bc, ans in sorted(bcs, reverse=True)[:args.top_n]:
         cluepages_to_make.add(bc)
         biggest_clues += td(mkhref(unboil(bc), bc), n, html_select_options(ans))
 
@@ -70,7 +74,7 @@ def main():
     most_ambig += '<table class="clues most-different-answers">'
     most_ambig += th("Clue", "answers")
 
-    for n, bc, ans in sorted(bcs, reverse=True, key=lambda x: len(set(x[2])))[:100]:
+    for n, bc, ans in sorted(bcs, reverse=True, key=lambda x: len(set(x[2])))[:args.top_n]:
         cluepages_to_make.add(bc)
         clue = mkhref(unboil(bc), bc)
         if 'quip' in bc or 'quote' in bc or 'theme' in bc or 'riddle' in bc:

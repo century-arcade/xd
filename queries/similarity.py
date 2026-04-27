@@ -102,7 +102,11 @@ def unboil(bc):
 
 def load_clues():
     if not g_boiled_clues:
+        # skip clues from redacted contest puzzles (whole puzzle is all X's)
+        redacted = {xd.xdid() for xd in corpus() if xd.is_redacted()}
         for ca in clues():
+            if ca.xdid() in redacted:
+                continue
             boiled_clue = boil(ca.clue)
             if not boiled_clue:
                 continue
@@ -121,7 +125,11 @@ def load_clues():
 # bclues is all boiled clues for this particular answer: { [bc] -> #uses }
 def load_answers():
     if not g_answers:
+        # skip clues from redacted contest puzzles (whole puzzle is all X's)
+        redacted = {xd.xdid() for xd in corpus() if xd.is_redacted()}
         for ca in clues():
+            if ca.xdid() in redacted:
+                continue
             if ca.answer not in g_answers:
                 ans = dict()
                 g_answers[ca.answer] = ans

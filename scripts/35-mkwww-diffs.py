@@ -5,7 +5,7 @@
 import difflib
 from xdfile import utils
 from xdfile.html import mktag, grid_diff_html
-from xdfile.utils import info, warn
+from xdfile.utils import warn
 
 from xdfile.utils import debug, progress
 #from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
@@ -18,7 +18,6 @@ def main():
     utils.get_args('generates .html diffs for all puzzles in similar.tsv')
     outf = utils.open_output()
 
-    utils.parse_tsv('gxd/similar.tsv', 'Similar')
     xdids_todo = {}
 
     for row in metadb.xd_similar_all():
@@ -36,8 +35,11 @@ def main():
             warn('%s not in corpus' % mainxdid)
             continue
 
+        if mainxd.is_redacted():
+            continue  # answers are all 'X' — skip diff rendering
+
         matches = xdids_todo[mainxdid]
-        info('generating diffs for %s (%d matches)' % (mainxdid, len(matches)))
+        debug('generating diffs for %s (%d matches)' % (mainxdid, len(matches)))
 
         xddates = {}
         xddates[mainxdid] = mainxd.date() # Dict to store XD dates for further sort
@@ -64,6 +66,8 @@ def main():
             # Continue if can't load xdid
             if not xd:
                 continue
+            if xd.is_redacted():
+                continue  # answers are all 'X' — skip from diff comparison
             xddates[xdid] = xd.date()
             # output each grid
             html_grids[xdid] = grid_diff_html(xd, compare_with=mainxd)

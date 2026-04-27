@@ -10,7 +10,7 @@ from xdfile import utils
 from xdfile.html import mktag, html_select_options, html_select_options_freq, grid_to_html
 import cgi
 
-from xdfile.utils import find_files, progress, info
+from xdfile.utils import find_files, progress, debug
 from xdfile import ClueAnswer
 from xdfile import metadatabase as metadb
 import xdfile
@@ -69,12 +69,15 @@ def main():
     args = utils.get_args('generates .html diffs with deep clues for all puzzles in similar.tsv')
     outf = utils.open_output()
 
-    utils.parse_tsv('gxd/similar.tsv', 'Similar')
+    if args.inputs:
+        xds = [xdfile.xdfile(contents.decode('utf-8'), fn)
+               for fn, contents in find_files(*args.inputs, ext='.xd')]
+    else:
+        # default: puzzles in similar.tsv with match_pct > 25 (per docstring)
+        xdids = {row.xdid for row in metadb.xd_similar_all() if row.match_pct > 25}
+        xds = [xd for xd in (xdfile.get_xd(x) for x in xdids) if xd is not None]
 
-    xds_todo = []
-    for fn, contents in find_files(*args.inputs, ext='.xd'):
-        xd = xdfile.xdfile(contents.decode('utf-8'), fn)
-        xds_todo.append(xd)
+    xds_todo = [xd for xd in xds if not xd.is_redacted()]
 
     for mainxd in xds_todo:
         mainxdid = mainxd.xdid()
@@ -161,7 +164,7 @@ def main():
         diff_h += mktag('table', 'deepclues') + dcl_html + mktag('/table')
         diff_h += '</div>'
 
-        info('writing deepclues for %s' % mainxdid)
+        debug('writing deepclues for %s' % mainxdid)
         outf.write_html('pub/deep/%s/index.html' % mainxdid, diff_h,
                     title='Deep clue analysis for ' + mainxdid)
 

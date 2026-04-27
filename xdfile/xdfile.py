@@ -7,8 +7,8 @@ import functools
 import re
 import datetime
 
-from .utils import parse_pathname, progress, parse_pubid, find_files, get_args, memoize, parse_xdid
-from .utils import error, warn
+from .utils import parse_pathname, progress, parse_pubid, find_files, get_args, memoize, xdid_from_path
+from .utils import error, warn, info
 
 g_corpus = []  # list of xdfile
 g_all_clues = []  # list of ClueAnswer
@@ -174,6 +174,13 @@ class xdfile:
         if r < 0 or c < 0 or r >= len(self.grid) or c >= len(self.grid[0]):
             return BLOCK_CHAR
         return self.grid[r][c]
+
+    def is_redacted(self):
+        # True when the puzzle's letter cells are all 'X' — typically a contest
+        # puzzle published before answers were released. Useful for excluding
+        # from grid/answer/clue analysis while still counting it in metadata.
+        letters = ''.join(c for row in self.grid for c in row if c not in '#_.')
+        return bool(letters) and all(c == 'X' for c in letters)
 
     def rebus(self):
         """returns rebus dict of only special (non A-Z) characters"""
@@ -428,12 +435,11 @@ def corpus():
 
     args = get_args()
 
+    info("loading corpus from %s..." % args.corpusdir)
     ret = []
 
     for fullfn, contents in find_files(args.corpusdir, ext='.xd'):
         try:
-            progress(fullfn)
-
             xd = xdfile(contents.decode("utf-8"), fullfn)
 
             ret.append(xd)
@@ -443,6 +449,7 @@ def corpus():
                 raise
 
     progress()
+    info("loaded %d puzzles, done" % len(ret))
 
     return ret
 
@@ -453,7 +460,7 @@ def corpus_contents():
     args = get_args()
     ret = {}
     for fullfn, contents in find_files(args.corpusdir, ext='.xd'):
-        xdid = parse_xdid(fullfn)
+        xdid = xdid_from_path(fullfn)
         ret[xdid.lower()] = contents
     return ret
 
@@ -491,15 +498,14 @@ class ClueAnswer:
 
 def clues():
     if not g_all_clues:
-        for xd in corpus():  # r in parse_tsv("clues.tsv", "AnswerClue"):
-            progress(xd.filename)
+        info("extracting clues from %d puzzles..." % len(corpus()))
+        for xd in corpus():
             pubid = xd.publication_id()
             dt = xd.date() or ""
             for pos, clue, answer in xd.iterclues():
                 ca = ClueAnswer(pubid, dt, answer, clue)
                 g_all_clues.append(ca)
-
-        progress()
+        info("extracted %d clues, done" % len(g_all_clues))
 
     return g_all_clues
 

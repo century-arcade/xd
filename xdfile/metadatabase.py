@@ -1,4 +1,5 @@
 
+import atexit
 import os.path
 import codecs
 from collections import namedtuple
@@ -133,8 +134,8 @@ def xd_puzzles(xdid=''):
 
 
 def get_author(xdid=''):
-    r = xd_puzzles(xdid)
-    return str(r[0].Author) if r else "???"
+    p = xd_puzzle(xdid)
+    return str(p.Author) if p else "???"
 
 
 @utils.memoize
@@ -169,16 +170,21 @@ def read_rows(tablename):
     return utils.parse_tsv_rows(tsvpath, basename)
 
 
+_open_tables = {}
+
+atexit.register(lambda: [fp.close() for fp in _open_tables.values()])
+
+
 def append_row(tablename, row):
-    tsvpath = tablename + ".tsv"
-    addhdr = not os.path.exists(tsvpath)
+    if tablename not in _open_tables:
+        tsvpath = tablename + ".tsv"
+        addhdr = not os.path.exists(tsvpath)
+        fp = open(tsvpath, 'a', encoding='utf-8')
+        if addhdr:
+            fp.write(COLSEP.join(xddb_headers[tablename].split()) + EOL)
+        _open_tables[tablename] = fp
 
-    fp = codecs.open(tsvpath, 'a', encoding='utf-8')
-    if addhdr:
-        fp.write(COLSEP.join(xddb_headers[tablename].split()) + EOL)
-
-    fp.write(COLSEP.join([str(x) for x in row]) + EOL)
-    fp.close()
+    _open_tables[tablename].write(COLSEP.join([str(x) for x in row]) + EOL)
 
 
 def get_last_receipt_id():
@@ -249,7 +255,7 @@ def xd_recent_download(pubid, dt):
 
 def update_puzzles_row(xd):
     # INSERT only for now
-    if xd.xdid() in xd_puzzles():
+    if xd.xdid() in xd_puzzles_dict():
         raise Error('record already exists; UPDATE not implemented')
 
     fields = [
