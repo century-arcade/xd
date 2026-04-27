@@ -145,13 +145,11 @@ def clean_headers(xd):
 
 
 def main():
-    args = utils.get_args(desc='outputs cleaned puzzle metadata rows')
+    utils.get_args(desc='outputs cleaned puzzle metadata rows')
 
-    for input_source in args.inputs:
-        for fn, contents in utils.find_files(input_source, ext='.xd'):
-            xd = xdfile.xdfile(contents.decode('utf-8'), fn)
-            clean_headers(xd)
-            metadb.update_puzzles_row(xd)
+    for xd in xdfile.iter_corpus():
+        clean_headers(xd)
+        metadb.update_puzzles_row(xd)
 
 
 if __name__ == "__main__":

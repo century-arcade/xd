@@ -7,8 +7,8 @@
 #
 
 from queries.similarity import find_similar_to, find_clue_variants, load_clues, load_answers
-from xdfile.utils import get_args, open_output, find_files, info
-from xdfile import xdfile, corpus, ClueAnswer
+from xdfile.utils import get_args, open_output, info
+from xdfile import corpus, iter_corpus, ClueAnswer
 from xdfile import utils, metadatabase as metadb
 
 
@@ -21,9 +21,7 @@ def main():
 
     num_processed = 0
     prev_similar = metadb.read_rows('gxd/similar')
-    for fn, contents in find_files(*args.inputs, ext=".xd"):
-        mainxd = xdfile(contents.decode('utf-8'), fn)
-
+    for mainxd in iter_corpus():
         if mainxd.is_redacted():
             continue  # answers are all 'X' — skip grid comparison
 

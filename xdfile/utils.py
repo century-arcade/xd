@@ -135,6 +135,10 @@ def get_args(desc="", parser=None):
     parser.add_argument('-v', '--verbose', dest='verbose', action='count', default=0)
     parser.add_argument('-d', '--debug', dest='debug', action='store_true', default=False, help='abort on exception')
     parser.add_argument('-c', '--corpus', dest='corpusdir', default='crosswords', help='corpus source')
+    parser.add_argument('--corpus-cache', dest='corpus_cache', default=None,
+                        help='cache file path (default: .corpus.<corpus>.jsonl)')
+    parser.add_argument('--no-corpus-cache', dest='corpus_cache_disabled', action='store_true', default=False,
+                        help='disable corpus caching for this run')
     g_args = parser.parse_args()
 
     if g_args.inputs_from:
@@ -214,7 +218,7 @@ def find_files_with_time(*paths, **kwargs):
             yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
 
       except FileNotFoundError as e:
-          error("find_files_with_time(): %s" % str(e))
+          warn("find_files_with_time(): %s" % str(e))
 
     # reset progress indicator after processing all files
     progress()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from queries.similarity import load_clues, unboil, boil
-from xdfile.utils import args_parser, get_args, open_output, find_files
+from xdfile.utils import args_parser, get_args, open_output, find_files, info, progress, warn
 from xdfile.html import th, td, mkhref, html_select_options
 from xdfile import clues
 import xdfile
@@ -55,7 +55,9 @@ def main():
         if xd.is_redacted():
             continue
         for pos, mainclue, mainanswer in xd.iterclues():
-            cluepages_to_make.add(boil(mainclue))
+            bc = boil(mainclue)
+            if bc:  # boil() returns None for clues with cross-references like "5 across"
+                cluepages_to_make.add(bc)
 
 
     # add top 100 most used boiled clues from corpus
@@ -84,12 +86,26 @@ def main():
 
     most_ambig += '</table>'
 
+    info("writing %d per-clue HTML pages..." % len(cluepages_to_make))
+    nwritten = 0
     for bc in cluepages_to_make:
+        # boiled clue is used as a directory name; skip ones that would blow past
+        # Windows MAX_PATH (260 chars) when combined with the wwwroot/pub/clue/.../index.html prefix
+        if len(bc) > 200:
+            warn("skipping clue page (boiled clue too long, %d chars): %s..." % (len(bc), bc[:60]))
+            continue
         contents = mkwww_cluepage(bc)
         if contents:
-            outf.write_html('pub/clue/%s/index.html' % bc, contents, title=bc)
+            outpath = 'pub/clue/%s/index.html' % bc
+            progress(outpath, every=10)
+            outf.write_html(outpath, contents, title=bc)
+            nwritten += 1
+    progress()
+    info("wrote %d per-clue pages, done" % nwritten)
 
+    info("writing clue index page...")
     outf.write_html('pub/clue/index.html', biggest_clues + most_ambig, title="Clues")
+    info("clue index page, done")
 
 
 main()

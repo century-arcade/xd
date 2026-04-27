@@ -4,8 +4,15 @@
 import string
 import operator
 import functools
+import os
 import re
 import datetime
+import time
+
+try:
+    import orjson as _json_lib
+except ImportError:
+    import json as _json_lib
 
 from .utils import parse_pathname, progress, parse_pubid, find_files, get_args, memoize, xdid_from_path
 from .utils import error, warn, info
@@ -429,29 +436,142 @@ class xdfile:
         return flipxd
 
 
-# get_args(...) should be called before corpus()
-@memoize
-def corpus():
+def _xd_to_dict(xd):
+    return {
+        'filename': xd.filename,
+        'headers': dict(xd.headers),
+        'grid': list(xd.grid),
+        'notes': xd.notes,
+        'pubid': xd._publication_id,
+        # JSON has no tuples; lists round-trip back to tuples on load
+        'clues': [[list(pos), clue, answer] for pos, clue, answer in xd.clues],
+    }
 
+
+def _dict_to_xd(d):
+    # bypass __init__ (which would re-parse from .xd source); set fields directly
+    xd = xdfile.__new__(xdfile)
+    xd.filename = d['filename']
+    xd.headers = d['headers']
+    xd.grid = d['grid']
+    xd.notes = d['notes']
+    xd._publication_id = d['pubid']
+    xd.clues = [(tuple(pos), clue, answer) for pos, clue, answer in d['clues']]
+    return xd
+
+
+def _resolve_cache_path():
+    """Decide where the corpus JSONL cache lives, or None to disable."""
     args = get_args()
+    if getattr(args, 'corpus_cache_disabled', False):
+        return None
+    if getattr(args, 'corpus_cache', None):
+        return args.corpus_cache
+    base = os.path.basename(args.corpusdir.rstrip('/\\')) or 'corpus'
+    return '.corpus.%s.jsonl' % base
 
-    info("loading corpus from %s..." % args.corpusdir)
-    ret = []
 
-    for fullfn, contents in find_files(args.corpusdir, ext='.xd'):
-        try:
-            xd = xdfile(contents.decode("utf-8"), fullfn)
+def _jsonl_dumps(d):
+    """Serialize one dict to JSON bytes, regardless of whether orjson or stdlib json is in use."""
+    out = _json_lib.dumps(d)
+    if isinstance(out, str):
+        out = out.encode('utf-8')
+    return out
 
-            ret.append(xd)
-        except Exception as e:
-            error("corpus(): %s" % str(e))
-            if args.debug:
-                raise
+
+def _load_corpus_cache_file(path):
+    info("loading corpus cache from %s..." % path)
+    t0 = time.perf_counter()
+    cache = {}
+    # binary mode: orjson.loads accepts bytes; json.loads also accepts bytes since 3.6
+    with open(path, mode='rb') as f:
+        for line in f:
+            xd = _dict_to_xd(_json_lib.loads(line))
+            cache[xd.xdid()] = xd
+            progress(xd.xdid(), every=1000)
+    progress()
+    elapsed = time.perf_counter() - t0
+    info("loaded %d puzzles from cache in %.2fs, done" % (len(cache), elapsed))
+    return cache
+
+
+def _build_corpus_cache(cache_path):
+    """Walk corpusdir, parse each .xd, optionally stream-write JSONL to cache_path."""
+    args = get_args()
+    info("walking corpus from %s..." % args.corpusdir)
+
+    if cache_path:
+        tmp_path = cache_path + '.tmp'
+        cache_fp = open(tmp_path, mode='wb')
+    else:
+        tmp_path = None
+        cache_fp = None
+
+    cache = {}
+    try:
+        for fullfn, contents in find_files(args.corpusdir, ext='.xd'):
+            try:
+                xd = xdfile(contents.decode("utf-8"), fullfn)
+            except Exception as e:
+                error("corpus(): %s" % str(e))
+                if args.debug:
+                    raise
+                continue
+
+            cache[xd.xdid()] = xd
+            if cache_fp:
+                cache_fp.write(_jsonl_dumps(_xd_to_dict(xd)))
+                cache_fp.write(b'\n')
+    finally:
+        if cache_fp:
+            cache_fp.close()
 
     progress()
-    info("loaded %d puzzles, done" % len(ret))
+    info("loaded %d puzzles, done" % len(cache))
 
-    return ret
+    if cache_path and tmp_path:
+        os.replace(tmp_path, cache_path)
+        info("wrote corpus cache to %s" % cache_path)
+
+    return cache
+
+
+# get_args(...) should be called before corpus_cache()
+@memoize
+def corpus_cache():
+    """dict[xdid -> xdfile] for the whole corpus. Uses a JSONL cache when present."""
+    cache_path = _resolve_cache_path()
+    if cache_path is None:
+        info("corpus cache disabled (--no-corpus-cache); walking corpus")
+        return _build_corpus_cache(None)
+    if os.path.exists(cache_path):
+        info("found corpus cache at %s; loading" % cache_path)
+        try:
+            return _load_corpus_cache_file(cache_path)
+        except Exception as e:
+            warn("corpus cache %s unreadable (%s); rebuilding" % (cache_path, e))
+            return _build_corpus_cache(cache_path)
+    info("no corpus cache at %s; building it" % cache_path)
+    return _build_corpus_cache(cache_path)
+
+
+def corpus():
+    return list(corpus_cache().values())
+
+
+def iter_corpus():
+    """Yield xdfile objects: from args.inputs if given, else the full cached corpus.
+
+    Use this in scripts that want to support both:
+      - `script.py -c gxd`              => iterate the whole corpus (uses cache)
+      - `script.py -c gxd one.xd two.xd` => iterate just the named files
+    """
+    args = get_args()
+    if args.inputs:
+        for fn, contents in find_files(*args.inputs, ext='.xd'):
+            yield xdfile(contents.decode('utf-8'), fn)
+    else:
+        yield from corpus_cache().values()
 
 
 # just xdid -> contents
@@ -513,15 +633,9 @@ def clues():
 def get_shelf(path):
     return parse_pathname(path).base.split('-')[0]
 
-@memoize
 def get_xd(xdid):
-    """ Try to load xdfile and return None if error """
-    try:
-        xd = xdfile(corpus_contents()[xdid].decode("utf-8"), xdid)
-    except Exception:
-        # error("get_xd() %s" % str(e))
-        return None
-    return xd
+    """ Try to load xdfile and return None if not in corpus """
+    return corpus_cache().get(xdid)
 
 def num_cells(size):
     """
