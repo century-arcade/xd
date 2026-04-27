@@ -177,7 +177,7 @@ def append_row(tablename, row):
     if addhdr:
         fp.write(COLSEP.join(xddb_headers[tablename].split()) + EOL)
 
-    fp.write(COLSEP.join([str(x) for x in row]) + EOL)
+    fp.write(COLSEP.join(["" if x is None else str(x) for x in row]) + EOL)
     fp.close()
 
 
