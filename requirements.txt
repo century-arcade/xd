@@ -7,4 +7,3 @@ lxml==6.1.0       # for ccxml2xd, uxml2xd, xwordinfo2xd
 boto3>=1.26.66    # for cloud.py
 botocore>=1.29.66 # for boto3?
 cssselect==1.2.0  # do not see it imported anywhere
-legacy-cgi; python_version >= '3.13'
