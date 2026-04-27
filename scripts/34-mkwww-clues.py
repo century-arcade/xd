@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from queries.similarity import load_clues, unboil, boil
-from xdfile.utils import args_parser, get_args, open_output, find_files, progress
+from xdfile.utils import args_parser, get_args, open_output, find_files
 from xdfile.html import th, td, mkhref, html_select_options
 from xdfile import clues
 import xdfile
