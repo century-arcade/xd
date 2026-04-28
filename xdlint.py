@@ -197,9 +197,26 @@ def parse(text: str) -> ParsedXd:
         elif section == "clues":
             # Clue metadata: "A1 ^Key: value"
             mm = CLUE_META_RE.match(stripped)
-            if mm and last_clue is not None and mm.group(1) == last_clue.pos:
-                _, mkey, mval = mm.groups()
-                last_clue.metadata[mkey.lower()] = mval.strip()
+            if mm:
+                pos_ref = mm.group(1)
+                if last_clue is not None and pos_ref == last_clue.pos:
+                    _, mkey, mval = mm.groups()
+                    last_clue.metadata[mkey.lower()] = mval.strip()
+                    continue
+                # Looks like metadata but isn't anchored to the preceding
+                # clue. Per spec, '^Key:' lines attach to the clue immediately
+                # above. Emit XD021 and skip the line.
+                if last_clue is None:
+                    msg = (f"clue metadata for {pos_ref!r} appears with no "
+                           f"preceding clue")
+                else:
+                    msg = (f"clue metadata for {pos_ref!r} doesn't follow "
+                           f"its referent (preceding clue is "
+                           f"{last_clue.pos!r})")
+                parse_errors.append(Finding(
+                    code="XD021", severity=Severity.ERROR,
+                    line=lineno, message=msg,
+                ))
                 continue
             # Normal clue: "A1. Body ~ ANSWER"
             ans_idx = stripped.rfind("~")
@@ -1051,6 +1068,37 @@ def _(ctx):
         yield finding("XD205", Severity.INFO, ctx.parsed.grid[0].line,
                       f"grid uses only {len(distinct)} distinct letter(s) "
                       f"({sorted(distinct)}) — redacted? imported wrong?")
+
+
+# Spec mentions only 'Refs:'. xd-crossword-tools and other tooling have
+# adopted these as common extensions; we don't enforce them but we know
+# enough not to flag them as surprising.
+RECOGNIZED_CLUE_META_KEYS = {
+    "refs",                 # spec
+    "hint", "revealer",     # xd-crossword-tools
+    "alt",                  # xd-crossword-tools (Schrödinger alternative)
+} | {f"alt{i}" for i in range(1, 10)}
+
+
+@rule("XD206", Severity.INFO, "unrecognized-clue-metadata-key")
+def _(ctx):
+    """Clue carries '^Key:' metadata with a key the linter doesn't
+    recognize. The spec mentions only 'Refs:' as a metadata key but
+    explicitly leaves the namespace open; this is informational, not a
+    violation. Useful for catching typos ('Reffs:', 'Hnt:') and tooling
+    drift."""
+    seen = set()
+    for clue in ctx.parsed.clues:
+        for key in clue.metadata:
+            if key in RECOGNIZED_CLUE_META_KEYS:
+                continue
+            if (clue.line, key) in seen:
+                continue
+            seen.add((clue.line, key))
+            yield finding("XD206", Severity.INFO, clue.line,
+                          f"clue {clue.pos} has unrecognized metadata key "
+                          f"{key!r} (the linter knows: "
+                          f"{sorted(RECOGNIZED_CLUE_META_KEYS)})")
 
 
 # ---------------------------------------------------------------------------
