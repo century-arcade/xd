@@ -7,7 +7,7 @@ from xdfile import utils
 from xdfile.html import mktag, grid_diff_html
 from xdfile.utils import warn
 
-from xdfile.utils import debug, progress
+from xdfile.utils import debug, progress, info
 #from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 from xdfile import metadatabase as metadb
 import xdfile
@@ -27,8 +27,14 @@ def main():
         xdids_todo[row.xdid].append(row)
 
 
-    for mainxdid in xdids_todo:
+    xds_todo = list(xdids_todo)
+    info("generating diffs for %d puzzles..." % len(xds_todo))
+    # ~20 info() lines spread evenly so CI logs stay readable for any list size
+    info_every = max(1, len(xds_todo) // 20)
+    for npuzzle, mainxdid in enumerate(xds_todo):
         progress(mainxdid)
+        if npuzzle and npuzzle % info_every == 0:
+            info("  ... %d/%d (%.0f%%) diffs generated" % (npuzzle, len(xds_todo), 100 * npuzzle / len(xds_todo)))
 
         mainxd = xdfile.get_xd(mainxdid)
         if not mainxd:
@@ -115,6 +121,8 @@ def main():
         diff_h += mktag('/table')
 
         outf.write_html('pub/%s/index.html' % mainxdid, diff_h, title='Comparison for ' + mainxdid)
+    progress()
+    info("generated %d diffs, done" % len(xds_todo))
 
 
 
