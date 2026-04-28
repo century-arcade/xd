@@ -1,11 +1,6 @@
 #!/bin/bash
 #
-#   Checks .xd files for errors
-#   Usage: $0 <DIR>
+# Checks .xd files for errors. Thin shim around xdlint.py.
+# Usage: $0 <DIR-or-FILE...>
 #
-
-DIR=$1
-
-echo "Check for xml entities in puzzles"
-grep -ri '&[a-z]\+;' --exclude-dir .git $DIR
-
+exec python3 "$(dirname "$0")/xdlint.py" "$@"
