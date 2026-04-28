@@ -10,6 +10,8 @@ Usage:
     xdlint.py path [path ...]              lint files / dirs (recursive)
     xdlint.py --base BASE [--head HEAD]    lint files changed in a git diff
     xdlint.py --list-rules                 print the rule catalog
+    xdlint.py --fix path                   apply mechanical fixes in place
+    xdlint.py --fix --diff path            print unified diff, don't write
 
 Severity gate:
     --max-severity {error,warning,info}    default: error
@@ -28,7 +30,9 @@ Add a new rule:
 from __future__ import annotations
 
 import argparse
+import difflib
 import enum
+import html
 import os
 import re
 import subprocess
@@ -1110,6 +1114,268 @@ def _(ctx):
 
 
 # ---------------------------------------------------------------------------
+# Fixers - mechanical corrections for safe rules
+# ---------------------------------------------------------------------------
+# A fixer takes the file text and returns (new_text, n_fixes). Fixers that
+# need structural data re-parse internally so the pipeline can run them in
+# sequence without an external coordinator. Each tier-1 fixer is idempotent;
+# running it twice on its own output makes no further changes.
+
+FixerFn = Callable[[str], Tuple[str, int]]
+FIXERS: Dict[str, Tuple[bool, FixerFn]] = {}  # code -> (unsafe, fn)
+
+# Apply order matters when fixers interact: encoding first (changes which
+# chars later passes see), then whitespace/structural cleanup, then
+# header reordering, then content insertions.
+FIX_ORDER = [
+    "XD010",  # cp1252 mojibake -> intended chars
+    "XD011",  # HTML entities -> unescaped chars
+    "XD110",  # de-indent '## Section' headers
+    "XD203",  # de-indent grid rows
+    "XD204",  # tabs -> spaces
+    "XD201",  # trim trailing whitespace
+    "XD107",  # drop duplicate header lines
+    "XD202",  # reorder canonical headers
+    "XD102",  # collapse 2+ blank lines in clues to 1
+    "XD013",  # synthesize ^Refs from cross-refs in clue bodies
+]
+
+
+def fixer(code: str, unsafe: bool = False):
+    def deco(fn: FixerFn) -> FixerFn:
+        FIXERS[code] = (unsafe, fn)
+        return fn
+    return deco
+
+
+def _detect_nl(text: str) -> str:
+    return "\r\n" if "\r\n" in text else "\n"
+
+
+@fixer("XD010")
+def _(text):
+    """The standard mojibake pattern: a Windows-1252 byte was read as
+    latin-1/iso-8859-1 and stored as its U+0080-U+009F codepoint. Reverse it
+    by routing each such codepoint back through cp1252 (e.g. U+0091 -> U+2018).
+    """
+    count = 0
+    def repl(m):
+        nonlocal count
+        ch = m.group(0)
+        try:
+            replacement = ch.encode("latin-1").decode("cp1252")
+        except UnicodeDecodeError:
+            # cp1252 leaves 5 byte slots undefined; leave those alone.
+            return ch
+        count += 1
+        return replacement
+    return _C1_RE.sub(repl, text), count
+
+
+@fixer("XD011")
+def _(text):
+    count = 0
+    def repl(m):
+        nonlocal count
+        s = m.group(0)
+        out = html.unescape(s)
+        if out != s:
+            count += 1
+        return out
+    return _HTML_ENTITY_RE.sub(repl, text), count
+
+
+@fixer("XD110")
+def _(text):
+    count = 0
+    out = []
+    for line in text.splitlines(keepends=True):
+        if _INDENTED_HEADER_RE.match(line):
+            count += 1
+            out.append(line.lstrip(" \t"))
+        else:
+            out.append(line)
+    return "".join(out), count
+
+
+@fixer("XD203")
+def _(text):
+    parsed = parse(text)
+    if not parsed.grid:
+        return text, 0
+    grid_lines = {row.line for row in parsed.grid}
+    count = 0
+    out = []
+    for i, line in enumerate(text.splitlines(keepends=True), 1):
+        if i in grid_lines and line[:1] in (" ", "\t"):
+            count += 1
+            out.append(line.lstrip(" \t"))
+        else:
+            out.append(line)
+    return "".join(out), count
+
+
+@fixer("XD204")
+def _(text):
+    if "\t" not in text:
+        return text, 0
+    count = sum(1 for line in text.splitlines() if "\t" in line)
+    return text.replace("\t", " "), count
+
+
+@fixer("XD201")
+def _(text):
+    count = 0
+    out = []
+    for line in text.splitlines(keepends=True):
+        if line.endswith("\r\n"):
+            new = line[:-2].rstrip(" \t") + "\r\n"
+        elif line.endswith("\n"):
+            new = line[:-1].rstrip(" \t") + "\n"
+        else:
+            new = line.rstrip(" \t")
+        if new != line:
+            count += 1
+        out.append(new)
+    return "".join(out), count
+
+
+@fixer("XD107")
+def _(text):
+    parsed = parse(text)
+    seen = set()
+    drops = set()
+    for h in parsed.headers:
+        k = h.key.lower()
+        if k in seen:
+            drops.add(h.line)
+        else:
+            seen.add(k)
+    if not drops:
+        return text, 0
+    lines = text.splitlines(keepends=True)
+    out = [line for i, line in enumerate(lines, 1) if i not in drops]
+    return "".join(out), len(drops)
+
+
+@fixer("XD202")
+def _(text):
+    parsed = parse(text)
+    canonical = [h for h in parsed.headers if h.key.lower() in CANONICAL_HEADERS]
+    if not canonical:
+        return text, 0
+    keys_in_order = [h.key.lower() for h in canonical]
+    target = sorted(keys_in_order, key=HEADER_ORDER.index)
+    if keys_in_order == target:
+        return text, 0
+    sorted_headers = sorted(canonical, key=lambda h: HEADER_ORDER.index(h.key.lower()))
+    canonical_slots = sorted(h.line - 1 for h in canonical)
+    lines = text.splitlines(keepends=True)
+    moves = 0
+    for slot, h in zip(canonical_slots, sorted_headers):
+        original = lines[slot]
+        if original.endswith("\r\n"):
+            nl = "\r\n"
+        elif original.endswith("\n"):
+            nl = "\n"
+        else:
+            nl = ""
+        new_line = f"{h.key}: {h.value}{nl}"
+        if new_line != original:
+            moves += 1
+        lines[slot] = new_line
+    return "".join(lines), moves
+
+
+@fixer("XD102")
+def _(text):
+    parsed = parse(text)
+    if not parsed.clues:
+        return text, 0
+    first = parsed.clues[0].line
+    last = parsed.clues[-1].line
+    out = []
+    blank_run = 0
+    fixes = 0
+    counted_run = False
+    for i, line in enumerate(text.splitlines(keepends=True), 1):
+        in_clues = first <= i <= last
+        is_blank = not line.strip()
+        if in_clues and is_blank:
+            blank_run += 1
+            if blank_run == 1:
+                out.append(line)
+                counted_run = False
+            else:
+                # 2+ blanks: keep only the first; XD102 fires once per run.
+                if not counted_run:
+                    fixes += 1
+                    counted_run = True
+        else:
+            blank_run = 0
+            counted_run = False
+            out.append(line)
+    return "".join(out), fixes
+
+
+@fixer("XD013")
+def _(text):
+    parsed = parse(text)
+    if not parsed.clues:
+        return text, 0
+    cross_re = re.compile(r"\b(\d+)[-\s]([Aa]cross|[Dd]own)\b")
+    insertions: List[Tuple[int, str]] = []
+    for clue in parsed.clues:
+        if "refs" in clue.metadata:
+            continue
+        # Skip uniclue (numeric-only pos) — '5 ^Refs:' won't match the
+        # spec metadata regex, which requires a leading letter.
+        if not clue.pos or not clue.pos[0].isalpha():
+            continue
+        seen = set()
+        refs = []
+        for m in cross_re.finditer(clue.body):
+            num = m.group(1)
+            direction = "A" if m.group(2)[0].lower() == "a" else "D"
+            r = f"{direction}{num}"
+            if r not in seen:
+                seen.add(r)
+                refs.append(r)
+        if refs:
+            insertions.append((clue.line, f"{clue.pos} ^Refs: {' '.join(refs)}"))
+    if not insertions:
+        return text, 0
+    nl = _detect_nl(text)
+    lines = text.splitlines(keepends=True)
+    for line_no, content in reversed(insertions):
+        idx = line_no - 1
+        if 0 <= idx < len(lines) and not lines[idx].endswith("\n"):
+            lines[idx] = lines[idx] + nl
+        lines.insert(line_no, content + nl)
+    return "".join(lines), len(insertions)
+
+
+def apply_fixes(text: str, codes: Optional[set],
+                unsafe_ok: bool) -> Tuple[str, Dict[str, int]]:
+    """Apply fixers in canonical order. Each fixer is idempotent and
+    reparses internally if needed, so a single pass is sufficient."""
+    counts: Dict[str, int] = {}
+    for code in FIX_ORDER:
+        if codes is not None and code not in codes:
+            continue
+        if code not in FIXERS:
+            continue
+        unsafe, fn = FIXERS[code]
+        if unsafe and not unsafe_ok:
+            continue
+        new_text, n = fn(text)
+        if new_text != text:
+            counts[code] = counts.get(code, 0) + n
+            text = new_text
+    return text, counts
+
+
+# ---------------------------------------------------------------------------
 # Driver: source of (path, ctx) pairs
 # ---------------------------------------------------------------------------
 
@@ -1230,6 +1496,79 @@ def format_finding(path, f: Finding) -> str:
     return f"{loc}\t{f.severity.value}\t{f.code}\t{f.message}"
 
 
+def _run_fix_mode(args, source, active_codes):
+    """Apply fixers per file, then re-lint and report what's left.
+    With --diff, print diffs to stdout and skip writing."""
+    fix_codes = set(FIXERS.keys())
+    if active_codes is not None:
+        fix_codes &= active_codes
+
+    files_seen = 0
+    files_changed = 0
+    total_fixes = 0
+    findings_total = 0
+    gate_hit = 0
+    gate_rank = Severity(args.max_severity).rank
+
+    for path, ctx in source:
+        files_seen += 1
+
+        # If the file has decode errors, skip — the in-memory text already
+        # has U+FFFD replacements and writing it back would lose bytes.
+        if any(f.code == "XD022" for f in ctx.parsed.parse_errors):
+            print(f"{path}\tinfo\tskip\tnot fixing: file has non-UTF-8 bytes",
+                  file=sys.stderr)
+            _SLOT_CACHE.pop(id(ctx), None)
+            continue
+
+        new_text, counts = apply_fixes(ctx.text, fix_codes, args.unsafe_fixes)
+        changed = new_text != ctx.text
+
+        if changed:
+            files_changed += 1
+            total_fixes += sum(counts.values())
+            if args.diff:
+                diff = "".join(difflib.unified_diff(
+                    ctx.text.splitlines(keepends=True),
+                    new_text.splitlines(keepends=True),
+                    fromfile=path, tofile=path, n=3,
+                ))
+                sys.stdout.write(diff)
+            else:
+                with open(path, "wb") as f:
+                    f.write(new_text.encode("utf-8"))
+            if args.show_fixes:
+                msg = ", ".join(f"{c}x{n}" for c, n in sorted(counts.items()))
+                print(f"{path}: {msg}", file=sys.stderr)
+
+        # In write mode, surface remaining findings (after fixes).
+        # In --diff mode, suppress per ruff's fix-only semantics.
+        if not args.diff:
+            if changed:
+                fixed_parsed = parse(new_text)
+                fixed_ctx = Ctx(filename=path, text=new_text, parsed=fixed_parsed)
+            else:
+                fixed_ctx = ctx
+            for f in run_checks(fixed_ctx, active_codes):
+                print(format_finding(path, f))
+                findings_total += 1
+                if f.severity.rank >= gate_rank:
+                    gate_hit += 1
+            _SLOT_CACHE.pop(id(fixed_ctx), None)
+
+        _SLOT_CACHE.pop(id(ctx), None)
+
+    if args.diff:
+        print(f"\n{files_changed} of {files_seen} file(s) would be modified",
+              file=sys.stderr)
+        return 1 if files_changed > 0 else 0
+
+    print(f"\nfixed {total_fixes} issue(s) in {files_changed} of "
+          f"{files_seen} file(s); {findings_total} remaining finding(s), "
+          f"{gate_hit} at or above '{args.max_severity}'", file=sys.stderr)
+    return 1 if gate_hit > 0 else 0
+
+
 def main():
     # Findings can contain any Unicode (clue text, mojibake bytes, etc).
     # On Windows the default console encoding is cp1252 and will crash on
@@ -1258,16 +1597,35 @@ def main():
     ap.add_argument("--no-experimental", action="store_true",
                     help="skip experimental rules (those interpreting "
                          "spec extensions like quantum/Schrödinger rebus)")
+    ap.add_argument("--fix", action="store_true",
+                    help="apply fixes for fixable rules and write to disk")
+    ap.add_argument("--diff", action="store_true",
+                    help="with --fix, print unified diff instead of writing "
+                         "(implies --fix; exits 0 if there are no diffs)")
+    ap.add_argument("--unsafe-fixes", action="store_true",
+                    help="with --fix, include fixes that may alter semantics")
+    ap.add_argument("--show-fixes", action="store_true",
+                    help="with --fix, enumerate the fixes applied per file")
     args = ap.parse_args()
 
+    # --diff implies --fix (matching ruff)
+    if args.diff:
+        args.fix = True
+
     if args.list_rules:
-        print(f"{'CODE':<8} {'SEVERITY':<8} {'FLAGS':<7} NAME")
-        rows = [(code, sev, name, "exp" if experimental else "")
-                for code, sev, name, experimental, _ in RULES]
-        rows += [(code, sev, name, "parser")
-                 for code, sev, name in PARSER_LEVEL_FINDINGS]
+        print(f"{'CODE':<8} {'SEVERITY':<8} {'FLAGS':<10} NAME")
+        rows = []
+        for code, sev, name, experimental, _ in RULES:
+            flags = []
+            if experimental:
+                flags.append("exp")
+            if code in FIXERS:
+                flags.append("ufix" if FIXERS[code][0] else "fix")
+            rows.append((code, sev, name, ",".join(flags)))
+        for code, sev, name in PARSER_LEVEL_FINDINGS:
+            rows.append((code, sev, name, "parser"))
         for code, sev, name, flags in sorted(rows):
-            print(f"{code:<8} {sev.value:<8} {flags:<7} {name}")
+            print(f"{code:<8} {sev.value:<8} {flags:<10} {name}")
         return 0
 
     experimental_codes = {code for (code, _s, _n, exp, _f) in RULES if exp}
@@ -1287,12 +1645,19 @@ def main():
         else:
             active = active - experimental_codes
 
+    if args.fix and args.base:
+        ap.error("--fix is incompatible with --base "
+                 "(which reads git blobs, not files on disk)")
+
     if args.base:
         source = contexts_from_git(args.base, args.head)
     elif args.paths:
         source = contexts_from_paths(args.paths)
     else:
         ap.error("give --base for git-diff mode, or explicit .xd paths")
+
+    if args.fix:
+        return _run_fix_mode(args, source, active)
 
     gate_rank = Severity(args.max_severity).rank
     checked = 0
