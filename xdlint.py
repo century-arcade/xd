@@ -34,7 +34,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from typing import Callable, Iterator, List, Optional
+from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
 
 # ---------------------------------------------------------------------------
@@ -246,12 +246,18 @@ def parse(text: str) -> ParsedXd:
 # ---------------------------------------------------------------------------
 
 RuleFn = Callable[[Ctx], Iterator[Finding]]
-RULES: List[tuple] = []  # (code, severity, name, fn)
+RULES: List[tuple] = []  # (code, severity, name, experimental, fn)
 
 
-def rule(code: str, severity: Severity, name: str):
+def rule(code: str, severity: Severity, name: str, experimental: bool = False):
+    """Register a check.
+
+    experimental=True marks rules whose validation depends on conventions
+    not formalized in the spec (currently: rules that interpret quantum
+    or Schrödinger rebus syntax). Disabled by --no-experimental.
+    """
     def deco(fn: RuleFn) -> RuleFn:
-        RULES.append((code, severity, name, fn))
+        RULES.append((code, severity, name, experimental, fn))
         return fn
     return deco
 
@@ -270,13 +276,62 @@ BLOCK_CHARS = {"#", "_", "■", "＿"}
 WILDCARD_CHAR = "."
 
 
-def parse_rebus_header(value: str) -> dict:
-    """Parse 'Rebus: 1=ONE 2=TWO' to {'1':'ONE', '2':'TWO'}.
+@dataclass
+class RebusExpansion:
+    """Per-direction list of valid expansions for a rebus key.
 
-    Tolerates the xd-crossword-tools 'A|B/AB' quantum syntax by taking
-    everything before the first '/'. Tolerates whitespace around '='.
+    Conventions (extension to xd-format spec, not yet formalized):
+        '/' separates across vs down readings:  1=IE/EI
+        '|' separates Schrödinger alternates:   1=A|B  (any letter, any direction)
+        Both compose, '|' precedence within '/' halves: 1=SE/S|E
+        Empty halves of '/' mean literal slash: 1=/   (cell is the '/' character)
+
+    For non-quantum rebus, across == down == [single value].
     """
-    out = {}
+    across: List[str]   # acceptable expansions when slot is read across
+    down: List[str]     # acceptable expansions when slot is read down
+
+    @property
+    def is_directional(self) -> bool:
+        return self.across != self.down
+
+    def is_schrodinger(self, direction_idx: int) -> bool:
+        return len((self.across, self.down)[direction_idx]) > 1
+
+
+def _split_alternatives(s: str) -> List[str]:
+    """Split on '|' if it acts as an operator (2+ non-empty parts).
+    Otherwise treat the whole string as a single literal value."""
+    if "|" in s:
+        parts = s.split("|")
+        if len(parts) >= 2 and all(parts):
+            return [p.upper() for p in parts]
+    return [s.upper()]
+
+
+def parse_rebus_value(value: str) -> RebusExpansion:
+    """Parse one rebus value (the part after '=' in 'key=value').
+
+    See RebusExpansion docstring for the convention this implements.
+    """
+    if "/" in value:
+        slash_idx = value.index("/")
+        before = value[:slash_idx]
+        after = value[slash_idx + 1:]
+        if before and after:
+            # Directional split.
+            return RebusExpansion(
+                across=_split_alternatives(before),
+                down=_split_alternatives(after),
+            )
+        # Empty half(s): '/' is the literal cell content, not an operator.
+    alts = _split_alternatives(value)
+    return RebusExpansion(across=alts, down=alts)
+
+
+def parse_rebus_header(value: str) -> Dict[str, RebusExpansion]:
+    """Parse 'Rebus: 1=ONE 2=TWO 3=A/B' into {key: RebusExpansion}."""
+    out: Dict[str, RebusExpansion] = {}
     for part in value.split():
         if "=" not in part:
             continue
@@ -284,10 +339,7 @@ def parse_rebus_header(value: str) -> dict:
         k = k.strip()
         if len(k) != 1:
             continue
-        v = v.split("/")[0].strip()
-        # Drop the '|' split character if present
-        v = v.replace("|", "")
-        out[k] = v.upper()
+        out[k] = parse_rebus_value(v)
     return out
 
 
@@ -311,14 +363,16 @@ def is_boundary(grid: List[GridRow], r: int, c: int) -> bool:
     return grid_get(grid, r, c) in BLOCK_CHARS
 
 
-def enumerate_slots(grid: List[GridRow], rebus_map: dict):
+def enumerate_slots(grid: List[GridRow]):
     """Yield slots from the grid in canonical xd numbering order.
 
-    Returns list of (direction, num, r, c, cells, grid_answer).
+    Returns list of (direction, num, r, c, cells).
         direction: 'A' or 'D'
         cells: list of (r, c) covering the slot
-        grid_answer: rebus-expanded uppercased answer, with wildcard '.'
-                     preserved as '.'
+
+    Answer expansion is intentionally NOT baked in: under the quantum
+    rebus convention each cell may have multiple direction-dependent
+    expansions, so the validator computes them per-clue.
     """
     slots = []
     if not grid:
@@ -339,8 +393,7 @@ def enumerate_slots(grid: List[GridRow], rebus_map: dict):
                     cc += 1
                 if len(cells) > 1:
                     new_clue = True
-                    slots.append(("A", num, r, c, cells,
-                                  _build_answer(cells, grid, rebus_map)))
+                    slots.append(("A", num, r, c, cells))
             # Down slot start
             if is_boundary(grid, r - 1, c):
                 rr = r
@@ -350,24 +403,10 @@ def enumerate_slots(grid: List[GridRow], rebus_map: dict):
                     rr += 1
                 if len(cells) > 1:
                     new_clue = True
-                    slots.append(("D", num, r, c, cells,
-                                  _build_answer(cells, grid, rebus_map)))
+                    slots.append(("D", num, r, c, cells))
             if new_clue:
                 num += 1
     return slots
-
-
-def _build_answer(cells, grid, rebus_map) -> str:
-    out = []
-    for (r, c) in cells:
-        ch = grid_get(grid, r, c)
-        if ch in rebus_map:
-            out.append(rebus_map[ch])
-        elif ch == WILDCARD_CHAR:
-            out.append(".")
-        else:
-            out.append(ch.upper())
-    return "".join(out)
 
 
 # Memoize slot enumeration on the ctx so multiple structural rules don't
@@ -379,10 +418,80 @@ def slots_for(ctx: Ctx):
     key = id(ctx)
     if key in _SLOT_CACHE:
         return _SLOT_CACHE[key]
-    rebus = parse_rebus_header(get_header(ctx.parsed, "Rebus") or "")
-    slots = enumerate_slots(ctx.parsed.grid, rebus)
+    slots = enumerate_slots(ctx.parsed.grid)
     _SLOT_CACHE[key] = slots
     return slots
+
+
+def _validate_answer_against_slot(
+    declared: str,
+    cells: List[Tuple[int, int]],
+    grid: List[GridRow],
+    rebus_map: Dict[str, RebusExpansion],
+    direction_idx: int,
+) -> Optional[Tuple[str, str]]:
+    """Walk the declared answer and slot cells in lockstep.
+
+    Returns None on success. Returns (code, message) on failure where
+    code is 'XD006' for length problems and 'XD007' for letter problems.
+
+    Handles three answer styles per cell:
+      - Plain (single-letter or rebus, no quantum syntax)
+      - Schrödinger '|' alternates: try each
+      - Inline '<across>/<down>' form: when a rebus has exactly one
+        across-alt and one down-alt and they differ, the declared
+        answer may embed both inline (e.g. STOOLEI/IE for 1=EI/IE).
+
+    The xd-crossword-tools '|' word-split convention is stripped from
+    the declared answer first (harmless for plain rebus; for Schrödinger
+    answers we don't expect '|' to appear since each clue picks one
+    alternative).
+    """
+    declared = declared.replace("|", "")
+    di = 0
+    for (r, c) in cells:
+        ch = grid_get(grid, r, c)
+        if ch in rebus_map:
+            rebus = rebus_map[ch]
+            chosen = rebus.across if direction_idx == 0 else rebus.down
+            other = rebus.down if direction_idx == 0 else rebus.across
+            # Try inline '<across>/<down>' first when both directions
+            # have a single distinct expansion.
+            if (len(rebus.across) == 1 and len(rebus.down) == 1
+                    and rebus.across[0] != rebus.down[0]):
+                full = rebus.across[0] + "/" + rebus.down[0]
+                if declared[di:di + len(full)].upper() == full:
+                    di += len(full)
+                    continue
+            # Otherwise match one of the chosen direction's alts.
+            matched = False
+            for alt in chosen:
+                if declared[di:di + len(alt)].upper() == alt:
+                    di += len(alt)
+                    matched = True
+                    break
+            if not matched:
+                if di >= len(declared):
+                    return ("XD006", "answer too short for slot")
+                expected = " or ".join(repr(a) for a in chosen)
+                fragment = declared[di:di + max((len(a) for a in chosen), default=1)]
+                return ("XD007", f"at position {di + 1}: expected {expected}, "
+                                 f"found {fragment!r}")
+        elif ch == WILDCARD_CHAR:
+            if di >= len(declared):
+                return ("XD006", "answer too short for slot")
+            di += 1  # wildcard accepts anything
+        else:
+            if di >= len(declared):
+                return ("XD006", "answer too short for slot")
+            if declared[di].upper() != ch.upper():
+                return ("XD007", f"at position {di + 1}: expected "
+                                 f"{ch.upper()!r}, found {declared[di]!r}")
+            di += 1
+    if di < len(declared):
+        return ("XD006", f"answer has {len(declared) - di} extra char(s) "
+                         f"after position {di}")
+    return None
 
 
 def grid_is_rectangular(parsed: ParsedXd) -> bool:
@@ -444,60 +553,29 @@ def _(ctx):
                           f"rebus key {k!r} declared but never used in grid")
 
 
-@rule("XD005", Severity.ERROR, "clue-count-mismatch")
-def _(ctx):
-    idx = _slot_index_or_none(ctx)
-    if idx is None:
-        return
-    # Uniclue / non-standard direction puzzles use a different
-    # one-clue-per-cell convention; skip them.
-    if any(c.direction not in ("A", "D") for c in ctx.parsed.clues):
-        return
-    n_slots = len(idx)
-    n_clues = len(ctx.parsed.clues)
-    if n_slots != n_clues:
-        line = ctx.parsed.clues[0].line if ctx.parsed.clues else 0
-        yield finding("XD005", Severity.ERROR, line,
-                      f"clue count {n_clues} != grid slot count {n_slots}")
-
-
-@rule("XD008", Severity.ERROR, "duplicate-clue-position")
-def _(ctx):
-    # Quantum puzzles legitimately have two clues at the same position,
-    # one per direction-axis; skip those.
-    if _has_quantum_rebus(ctx.parsed):
-        return
-    seen = {}
-    for clue in ctx.parsed.clues:
-        if not clue.pos:
-            continue
-        if clue.pos in seen:
-            yield finding("XD008", Severity.ERROR, clue.line,
-                          f"clue position {clue.pos} duplicated "
-                          f"(first seen at line {seen[clue.pos]})")
-        else:
-            seen[clue.pos] = clue.line
-
-
-def _has_quantum_rebus(parsed: ParsedXd) -> bool:
-    return "/" in (get_header(parsed, "Rebus") or "")
-
-
 def _slot_index_or_none(ctx):
-    """Build {pos: (cells, grid_answer)} for the rectangular, non-quantum
-    case. Returns None when the answer-grid family of rules can't run.
+    """Build {pos: (direction, cells)} for the rectangular case.
+    Returns None when the answer-grid family of rules can't run.
 
-    The skip path (quantum) is announced by XD108 so a passing file with
-    no findings is meaningfully different from a file that wasn't checked.
+    Quantum/Schrödinger rebuses are *not* a skip path — the validator
+    handles them.
     """
     if not ctx.parsed.grid or not ctx.parsed.clues:
         return None
     if not grid_is_rectangular(ctx.parsed):
         return None  # XD001 covers it; slot enumeration is unreliable
-    if _has_quantum_rebus(ctx.parsed):
-        return None  # XD108 announces it
     slots = slots_for(ctx)
-    return {f"{d}{n}": (cells, ans) for (d, n, _r, _c, cells, ans) in slots}
+    return {f"{d}{n}": (d, cells) for (d, n, _r, _c, cells) in slots}
+
+
+def _rebus_for(ctx) -> Dict[str, RebusExpansion]:
+    """Memoized rebus map per ctx."""
+    cache = getattr(ctx, "_rebus_cache", None)
+    if cache is not None:
+        return cache
+    cache = parse_rebus_header(get_header(ctx.parsed, "Rebus") or "")
+    ctx._rebus_cache = cache
+    return cache
 
 
 @rule("XD004", Severity.ERROR, "missing-slot-for-clue")
@@ -513,47 +591,98 @@ def _(ctx):
                           f"clue {clue.pos} has no corresponding slot in grid")
 
 
-@rule("XD006", Severity.ERROR, "answer-length-mismatch")
+@rule("XD005", Severity.ERROR, "clue-count-mismatch")
+def _(ctx):
+    """Compares distinct clue *positions* (not total clues) to slot count.
+    Schrödinger puzzles legitimately have multiple clues at the same
+    position, so counting positions rather than clues handles that."""
+    idx = _slot_index_or_none(ctx)
+    if idx is None:
+        return
+    if any(c.direction not in ("A", "D") for c in ctx.parsed.clues):
+        return
+    n_slots = len(idx)
+    n_positions = len({c.pos for c in ctx.parsed.clues if c.pos})
+    if n_slots != n_positions:
+        line = ctx.parsed.clues[0].line if ctx.parsed.clues else 0
+        yield finding("XD005", Severity.ERROR, line,
+                      f"distinct clue positions {n_positions} "
+                      f"!= grid slot count {n_slots}")
+
+
+@rule("XD006", Severity.ERROR, "answer-length-mismatch", experimental=True)
 def _(ctx):
     idx = _slot_index_or_none(ctx)
     if idx is None:
         return
+    rebus_map = _rebus_for(ctx)
     for clue in ctx.parsed.clues:
         if not clue.answer or clue.direction not in ("A", "D"):
             continue
         if clue.pos not in idx:
             continue  # XD004 fires
-        _cells, grid_ans = idx[clue.pos]
-        declared = clue.answer.replace("|", "").upper()
-        if len(declared) != len(grid_ans):
+        direction, cells = idx[clue.pos]
+        direction_idx = 0 if direction == "A" else 1
+        result = _validate_answer_against_slot(
+            clue.answer, cells, ctx.parsed.grid, rebus_map, direction_idx,
+        )
+        if result is not None and result[0] == "XD006":
             yield finding("XD006", Severity.ERROR, clue.line,
-                          f"clue {clue.pos} answer length {len(declared)} "
-                          f"!= grid run length {len(grid_ans)} "
-                          f"(declared={declared!r}, grid={grid_ans!r})")
+                          f"clue {clue.pos}: {result[1]} "
+                          f"(declared={clue.answer!r})")
 
 
-@rule("XD007", Severity.ERROR, "answer-grid-letter-mismatch")
+@rule("XD007", Severity.ERROR, "answer-grid-letter-mismatch", experimental=True)
 def _(ctx):
     idx = _slot_index_or_none(ctx)
     if idx is None:
         return
+    rebus_map = _rebus_for(ctx)
     for clue in ctx.parsed.clues:
         if not clue.answer or clue.direction not in ("A", "D"):
             continue
         if clue.pos not in idx:
             continue
-        _cells, grid_ans = idx[clue.pos]
-        declared = clue.answer.replace("|", "").upper()
-        if len(declared) != len(grid_ans):
-            continue  # XD006 fires
-        for a, b in zip(declared, grid_ans):
-            if a == "." or b == ".":
-                continue  # wildcard
-            if a != b:
-                yield finding("XD007", Severity.ERROR, clue.line,
-                              f"clue {clue.pos} answer doesn't match grid: "
-                              f"declared={declared!r}, grid={grid_ans!r}")
-                break
+        direction, cells = idx[clue.pos]
+        direction_idx = 0 if direction == "A" else 1
+        result = _validate_answer_against_slot(
+            clue.answer, cells, ctx.parsed.grid, rebus_map, direction_idx,
+        )
+        if result is not None and result[0] == "XD007":
+            yield finding("XD007", Severity.ERROR, clue.line,
+                          f"clue {clue.pos}: {result[1]} "
+                          f"(declared={clue.answer!r})")
+
+
+@rule("XD008", Severity.ERROR, "duplicate-clue-position", experimental=True)
+def _(ctx):
+    """Two clues at the same position are legal only when the slot
+    contains a Schrödinger cell in that direction (the puzzle author
+    is providing a separate clue for each valid letter-choice reading)."""
+    idx = _slot_index_or_none(ctx)
+    rebus_map = _rebus_for(ctx)
+    seen = {}
+    for clue in ctx.parsed.clues:
+        if not clue.pos:
+            continue
+        if clue.pos not in seen:
+            seen[clue.pos] = clue.line
+            continue
+        # Duplicate. Allow if the slot has any Schrödinger cell for
+        # this direction.
+        allowed = False
+        if idx and clue.pos in idx and clue.direction in ("A", "D"):
+            direction, cells = idx[clue.pos]
+            direction_idx = 0 if direction == "A" else 1
+            for (r, c) in cells:
+                ch = grid_get(ctx.parsed.grid, r, c)
+                if ch in rebus_map and rebus_map[ch].is_schrodinger(direction_idx):
+                    allowed = True
+                    break
+        if not allowed:
+            yield finding("XD008", Severity.ERROR, clue.line,
+                          f"clue position {clue.pos} duplicated "
+                          f"(first seen at line {seen[clue.pos]})")
 
 
 _C1_RE = re.compile(r"[\x80-\x9f]")
@@ -848,25 +977,6 @@ def _(ctx):
 _CROSSREF_RE = re.compile(r"\b(\d+)[-\s](?:[Aa]cross|[Dd]own)\b")
 
 
-@rule("XD108", Severity.WARNING, "answer-check-skipped")
-def _(ctx):
-    """Announce when XD007 was skipped due to a feature we don't yet
-    model. Currently fires only for quantum-letter rebus syntax
-    ('A/B' in a Rebus value)."""
-    if not ctx.parsed.grid or not ctx.parsed.clues:
-        return
-    if not _has_quantum_rebus(ctx.parsed):
-        return
-    line = 0
-    for h in ctx.parsed.headers:
-        if h.key.lower() == "rebus":
-            line = h.line
-            break
-    yield finding("XD108", Severity.WARNING, line,
-                  "answer/grid checks (XD004/XD006/XD007) skipped: "
-                  "quantum-letter rebus syntax 'A/B' not yet supported")
-
-
 @rule("XD013", Severity.INFO, "missing-refs-metadata")
 def _(ctx):
     for clue in ctx.parsed.clues:
@@ -1050,7 +1160,7 @@ def run_checks(ctx: Ctx, active_codes):
     for f in ctx.parsed.parse_errors:
         if active_codes is None or f.code in active_codes:
             yield f
-    for code, severity, _name, fn in RULES:
+    for code, severity, _name, _experimental, fn in RULES:
         if active_codes is not None and code not in active_codes:
             continue
         try:
@@ -1090,23 +1200,34 @@ def main():
                     help="comma-separated rule codes to run (overrides --disable)")
     ap.add_argument("--list-rules", action="store_true",
                     help="print the rule catalog and exit")
+    ap.add_argument("--no-experimental", action="store_true",
+                    help="skip experimental rules (those interpreting "
+                         "spec extensions like quantum/Schrödinger rebus)")
     args = ap.parse_args()
 
     if args.list_rules:
-        print(f"{'CODE':<8} {'SEVERITY':<8} NAME")
-        for code, sev, name, _ in sorted(RULES):
-            print(f"{code:<8} {sev.value:<8} {name}")
+        print(f"{'CODE':<8} {'SEVERITY':<8} {'FLAGS':<7} NAME")
+        for code, sev, name, experimental, _ in sorted(RULES):
+            flags = "exp" if experimental else ""
+            print(f"{code:<8} {sev.value:<8} {flags:<7} {name}")
         return 0
+
+    experimental_codes = {code for (code, _s, _n, exp, _f) in RULES if exp}
 
     if args.enable_only:
         active = {c.strip() for c in args.enable_only.split(",") if c.strip()}
     elif args.disable:
         disabled = {c.strip() for c in args.disable.split(",") if c.strip()}
-        active = {code for (code, _s, _n, _f) in RULES} - disabled
-        # parse_errors codes (XD9xx) stay enabled unless explicitly disabled
-        active |= {"XD901"} - disabled
+        active = {code for (code, _s, _n, _e, _f) in RULES} - disabled
+        active |= {"XD901"} - disabled  # parse_errors stay enabled by default
     else:
         active = None
+
+    if args.no_experimental:
+        if active is None:
+            active = {code for (code, _s, _n, _e, _f) in RULES} - experimental_codes
+        else:
+            active = active - experimental_codes
 
     if args.base:
         source = contexts_from_git(args.base, args.head)
