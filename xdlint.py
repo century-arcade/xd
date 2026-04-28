@@ -454,7 +454,6 @@ def _validate_answer_against_slot(
         if ch in rebus_map:
             rebus = rebus_map[ch]
             chosen = rebus.across if direction_idx == 0 else rebus.down
-            other = rebus.down if direction_idx == 0 else rebus.across
             # Try inline '<across>/<down>' first when both directions
             # have a single distinct expansion.
             if (len(rebus.across) == 1 and len(rebus.down) == 1

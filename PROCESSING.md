@@ -15,7 +15,7 @@
         cd gxd && git checkout <branch_name> && git add .
         [ example: cd gxd && git checkout latime_01 && git add . ]
         # Check for quality before commit
-        ../scripts/55-lint.sh
+        ../xdlint.py .
         git commit -m 'message about source_a'
         cd ..
         ./scripts/18-convert2xd.py -o gxd/ <source_b.zip> --extsrc "<ext_src_b>" --intsrc "<int_src_b>"
@@ -24,7 +24,7 @@
         [ example: cd gxd && ../scripts/git-diff-clues.sh xml bwh latimes/ ]
         # outdir - where output of prev scripts goes - usually named by publisher
         # Check for quality before commit
-        ../scripts/55-lint.sh
+        ../xdlint.py .
         cd .. && ./scripts/19b-receipts-tsv.sh
         ./scripts/48-stats.sh
 
