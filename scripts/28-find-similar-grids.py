@@ -27,72 +27,9 @@ import numpy as np
 try:
     import cupy as xp  # type: ignore[import-not-found]
     USING_GPU = True
-
-    # Fused per-pair kernel: one thread compares one (needle, haystack) pair,
-    # counts matching cells and matching blocks in a single loop, computes
-    # matchpct (and optionally t_pct for 15x15 transpose), and writes the
-    # signed result. Pairs where i >= j (triangular mask) are zeroed out.
-    _GRID_COMPARE_KERNEL = xp.RawKernel(r"""
-extern "C" __global__
-void grid_compare(
-    const unsigned char* needles,
-    const unsigned char* haystacks,
-    int chunk_n, int chunk_h, int cells,
-    int j_start, int h_start,
-    int do_transpose, int rowlen,
-    int* out_pct
-) {
-    int kk = blockIdx.x * blockDim.x + threadIdx.x;
-    int ii = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if (kk >= chunk_n || ii >= chunk_h) return;
-
-    int abs_n = j_start + kk;
-    int abs_h = h_start + ii;
-    int out_idx = kk * chunk_h + ii;
-
-    if (abs_h >= abs_n) {
-        out_pct[out_idx] = 0;
-        return;
-    }
-
-    const unsigned char* needle = needles + kk * cells;
-    const unsigned char* haystack = haystacks + ii * cells;
-
-    int nmatches = 0;
-    int nblocks = 0;
-    for (int c = 0; c < cells; c++) {
-        unsigned char nv = needle[c];
-        unsigned char hv = haystack[c];
-        if (nv == hv) {
-            nmatches++;
-            if (nv == 35) nblocks++;  // '#' = 35
-        }
-    }
-    int denom = cells - nblocks;
-    int pct = (denom > 0) ? ((nmatches - nblocks) * 100 / denom) : 0;
-
-    int final_pct = pct;
-
-    if (do_transpose) {
-        int t_nmatches = 0;
-        for (int c = 0; c < cells; c++) {
-            int r = c / rowlen;
-            int col = c % rowlen;
-            int t_idx = col * rowlen + r;
-            if (needle[c] == haystack[t_idx]) t_nmatches++;
-        }
-        int t_pct = (denom > 0) ? ((t_nmatches - nblocks) * 100 / denom) : 0;
-        if (t_pct > pct) final_pct = -t_pct;
-    }
-
-    out_pct[out_idx] = final_pct;
-}
-""", 'grid_compare')
 except ImportError:
     xp = np
     USING_GPU = False
-    _GRID_COMPARE_KERNEL = None
 
 from xdfile import iter_corpus
 from xdfile.utils import args_parser, get_args, info
@@ -152,123 +89,77 @@ def load_buckets():
     return buckets
 
 
-def find_pairs(xdids, grids, threshold, show_progress,
-               needle_chunk=None, haystack_chunk=None):
+def find_pairs(xdids, grids, threshold, show_progress, chunk_size=None):
     """Yield (earlier_xdid, later_xdid, matchpct) for every pair whose
     |matchpct| > threshold. `grids` must already be sorted by date ascending.
 
-    On GPU, dispatches to a fused CUDA kernel (one thread per pair, single
-    pass over both grids) — no intermediate bool arrays, no chained kernel
-    launches. On CPU, falls back to chained numpy ops with smaller chunks
-    tuned for L3 cache."""
-    if needle_chunk is None:
-        needle_chunk = 512 if USING_GPU else 64
-    if haystack_chunk is None:
-        haystack_chunk = 16384 if USING_GPU else 4096
+    Reframes the per-cell character comparison as an inner product on
+    one-hot encoded grids: for one-hot rows `M[i]` and `M[j]`, the dot
+    product `M[i] @ M[j]` counts the cells where the two grids share a
+    character (since each cell contributes exactly one '1' to its row).
+    The whole bucket then collapses to two matmuls per chunk, which lets
+    cuBLAS or CPU BLAS do the heavy lifting."""
+    if chunk_size is None:
+        chunk_size = 1024 if USING_GPU else 128
 
     n, h, w = grids.shape
     cells = h * w
     flat = xp.asarray(grids.reshape(n, cells))
 
-    do_transpose = (h == 15 and w == 15)
+    # One-hot encode on the alphabet actually present (typically A-Z + '#').
+    # M shape: (n, cells * K) float32, with `cells` ones per row.
+    chars = xp.unique(flat)
+    K = int(chars.size)
+    M = (flat[:, :, None] == chars[None, None, :]).astype(xp.float32) \
+            .reshape(n, cells * K)
+    # Block-mask, used the same way to count shared-block cells.
+    B = (flat == BLOCK).astype(xp.float32)
 
-    # CPU path needs precomputed block masks and a transposed copy.
-    # GPU kernel handles both inline per-pair.
-    if USING_GPU:
-        flat_is_block = None
-        flat_t = None
+    do_transpose = (h == 15 and w == 15)
+    if do_transpose:
+        flat_t = xp.asarray(grids.transpose(0, 2, 1).reshape(n, cells))
+        M_T = (flat_t[:, :, None] == chars[None, None, :]).astype(xp.float32) \
+                .reshape(n, cells * K)
     else:
-        flat_is_block = (flat == BLOCK)
-        flat_t = (xp.asarray(grids.transpose(0, 2, 1).reshape(n, cells))
-                  if do_transpose else None)
+        M_T = None
 
     progress_every = max(1, n // 100)
     t0 = time.time()
     last_progress = 0
 
-    for j_start in range(1, n, needle_chunk):
-        j_end = min(j_start + needle_chunk, n)
-        chunk_size = j_end - j_start
+    for j_start in range(0, n, chunk_size):
+        j_end = min(j_start + chunk_size, n)
+        chunk = j_end - j_start
 
-        needles = flat[j_start:j_end]
-        needles_block = None
-        needles_t = None
-        if not USING_GPU:
-            assert flat_is_block is not None
-            needles_block = flat_is_block[j_start:j_end]
-            if do_transpose:
-                assert flat_t is not None
-                needles_t = flat_t[j_start:j_end]
+        # The whole comparison: two matmuls.
+        nmatches = (M[j_start:j_end] @ M.T).astype(xp.int32)   # (chunk, n)
+        nblocks  = (B[j_start:j_end] @ B.T).astype(xp.int32)   # (chunk, n)
+        denom = cells - nblocks
+        denom_safe = xp.maximum(denom, 1)
+        pct = ((nmatches - nblocks) * 100) // denom_safe
 
-        for h_start in range(0, j_end, haystack_chunk):
-            h_end = min(h_start + haystack_chunk, j_end)
-            h_chunk_size = h_end - h_start
-            haystack = flat[h_start:h_end]
+        if do_transpose:
+            assert M_T is not None
+            t_nmatches = (M_T[j_start:j_end] @ M.T).astype(xp.int32)
+            t_pct = ((t_nmatches - nblocks) * 100) // denom_safe
+            chunk_final = xp.where(t_pct > pct, -t_pct, pct)
+        else:
+            chunk_final = pct
 
-            if USING_GPU:
-                # One kernel launch, one pass over data.
-                assert _GRID_COMPARE_KERNEL is not None
-                chunk_final = xp.empty((chunk_size, h_chunk_size),
-                                       dtype=xp.int32)
-                block_dim = (32, 8, 1)
-                grid_dim = (
-                    (chunk_size + block_dim[0] - 1) // block_dim[0],
-                    (h_chunk_size + block_dim[1] - 1) // block_dim[1],
-                    1,
-                )
-                _GRID_COMPARE_KERNEL(grid_dim, block_dim, (
-                    needles, haystack,
-                    np.int32(chunk_size), np.int32(h_chunk_size),
-                    np.int32(cells),
-                    np.int32(j_start), np.int32(h_start),
-                    np.int32(1 if do_transpose else 0), np.int32(w),
-                    chunk_final,
-                ))
-                # Kernel already zeroed invalid pairs (i >= j); threshold filter
-                # below naturally excludes them since |0| < threshold.
-                above = xp.abs(chunk_final) > threshold
-            else:
-                assert flat_is_block is not None
-                assert needles_block is not None
-                haystack_block = flat_is_block[h_start:h_end]
+        # Triangular mask: only emit pairs where haystack-index < needle-index
+        j_idx = (xp.arange(chunk) + j_start)[:, None]
+        i_idx = xp.arange(n)[None, :]
+        keep = i_idx < j_idx
+        above = (xp.abs(chunk_final) > threshold) & keep
 
-                eq = (haystack[None, :, :] == needles[:, None, :])
-                nmatches = eq.sum(axis=2)
-                both_block = haystack_block[None, :, :] & needles_block[:, None, :]
-                nblocks = both_block.sum(axis=2)
-                denom = cells - nblocks
-                denom_safe = xp.maximum(denom, 1)
-                valid = denom > 0
-
-                chunk_pct = (((nmatches - nblocks) * 100) // denom_safe).astype(xp.int32)
-                chunk_pct = xp.where(valid, chunk_pct, xp.int32(0))
-
-                if do_transpose:
-                    assert needles_t is not None
-                    eq_t = (haystack[None, :, :] == needles_t[:, None, :])
-                    t_nmatches = eq_t.sum(axis=2)
-                    chunk_t_pct = (((t_nmatches - nblocks) * 100) // denom_safe).astype(xp.int32)
-                    chunk_t_pct = xp.where(valid, chunk_t_pct, xp.int32(0))
-                    chunk_final = xp.where(chunk_t_pct > chunk_pct,
-                                           -chunk_t_pct, chunk_pct)
-                else:
-                    chunk_final = chunk_pct
-
-                j_idx = (xp.arange(chunk_size) + j_start)[:, None]
-                i_idx = xp.arange(h_start, h_end)[None, :]
-                keep = i_idx < j_idx
-                above = (xp.abs(chunk_final) > threshold) & keep
-
-            rows, cols = xp.nonzero(above)
-            if int(rows.size) > 0:
-                vals = chunk_final[rows, cols]
-                rows_h = to_host(rows)
-                cols_h = to_host(cols)
-                vals_h = to_host(vals)
-                for k, ci, pct_val in zip(rows_h, cols_h, vals_h):
-                    yield (xdids[h_start + int(ci)],
-                           xdids[j_start + int(k)],
-                           int(pct_val))
+        rows, cols = xp.nonzero(above)
+        if int(rows.size) > 0:
+            vals = chunk_final[rows, cols]
+            rows_h = to_host(rows)
+            cols_h = to_host(cols)
+            vals_h = to_host(vals)
+            for k, i, pct_val in zip(rows_h, cols_h, vals_h):
+                yield (xdids[int(i)], xdids[j_start + int(k)], int(pct_val))
 
         if show_progress and (j_end - last_progress >= progress_every
                               or j_end == n):
