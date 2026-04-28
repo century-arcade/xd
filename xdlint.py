@@ -653,6 +653,36 @@ def _(ctx):
                 break  # one finding per clue
 
 
+_VALID_CLUE_POS_RE = re.compile(r"^[A-Za-z]?\d+$")
+
+
+@rule("XD017", Severity.WARNING, "malformed-clue-position")
+def _(ctx):
+    """Clue position before '.' should be 'A1'/'D27' (normal A/D),
+    a single cluegroup letter + digits (e.g. 'X1.'), or just digits
+    (uniclue). Anything else (stray space, trailing junk, OCR-style
+    typo) lands here. Also surfaces clues that XD004/XD006/XD007
+    silently skip because their position couldn't be parsed."""
+    for clue in ctx.parsed.clues:
+        if not _VALID_CLUE_POS_RE.match(clue.pos):
+            yield finding("XD017", Severity.WARNING, clue.line,
+                          f"clue position {clue.pos!r} doesn't match "
+                          f"expected form (e.g. 'A1', 'D27', or '5' for uniclue)")
+
+
+@rule("XD018", Severity.INFO, "multiple-tilde-separators")
+def _(ctx):
+    """A clue line with more than one ' ~ ' (tilde with spaces both
+    sides — the spec separator). Parsers may disagree on which is the
+    answer divider. A single tilde without surrounding spaces inside
+    clue text is legal and not flagged."""
+    for clue in ctx.parsed.clues:
+        if clue.raw.count(" ~ ") > 1:
+            yield finding("XD018", Severity.INFO, clue.line,
+                          "clue line has multiple ' ~ ' separators "
+                          "(parsers may pick different splits)")
+
+
 @rule("XD016", Severity.ERROR, "no-letters-in-grid")
 def _(ctx):
     if not ctx.parsed.grid:
@@ -931,16 +961,35 @@ def iter_xd_paths(roots):
                     yield os.path.join(dirpath, fn)
 
 
+def _decode_with_findings(data: bytes):
+    """Strict UTF-8 decode first; on failure, emit XD022 and fall back
+    to replacement so the rest of the linter still gets to run."""
+    try:
+        return data.decode("utf-8"), []
+    except UnicodeDecodeError as e:
+        # Convert byte offset to (line, col) using the bad-bytes-replaced
+        # text so the line number is still meaningful.
+        text = data.decode("utf-8", errors="replace")
+        line = data[:e.start].count(b"\n") + 1
+        bad = data[e.start:e.end].hex()
+        msg = (f"non-UTF-8 byte(s) at offset {e.start} (hex {bad}); "
+               f"file decoded with U+FFFD replacement to allow further checks")
+        return text, [Finding(code="XD022", severity=Severity.ERROR,
+                              line=line, message=msg)]
+
+
 def contexts_from_paths(paths):
     for path in iter_xd_paths(paths):
         try:
             with open(path, "rb") as f:
                 data = f.read()
-            text = data.decode("utf-8", errors="replace")
         except OSError as e:
             print(f"{path}\tIO\terror reading: {e}", file=sys.stderr)
             continue
-        yield path, Ctx(filename=path, text=text, parsed=parse(text))
+        text, decode_findings = _decode_with_findings(data)
+        parsed = parse(text)
+        parsed.parse_errors[:0] = decode_findings
+        yield path, Ctx(filename=path, text=text, parsed=parsed)
 
 
 def _git(*args):
@@ -986,8 +1035,10 @@ def contexts_from_git(base, head):
         content = blobs.get(path)
         if content is None:
             continue
-        text = content.decode("utf-8", errors="replace")
-        yield path, Ctx(filename=path, text=text, parsed=parse(text))
+        text, decode_findings = _decode_with_findings(content)
+        parsed = parse(text)
+        parsed.parse_errors[:0] = decode_findings
+        yield path, Ctx(filename=path, text=text, parsed=parsed)
 
 
 # ---------------------------------------------------------------------------
