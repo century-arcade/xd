@@ -480,7 +480,7 @@ def _jsonl_dumps(d):
 
 
 def _load_corpus_cache_file(path):
-    info("loading corpus cache from %s..." % path)
+    info("loading corpus cache from %s (json lib: %s)..." % (path, _json_lib.__name__))
     t0 = time.perf_counter()
     cache = {}
     # binary mode: orjson.loads accepts bytes; json.loads also accepts bytes since 3.6
