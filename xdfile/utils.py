@@ -66,6 +66,10 @@ def log(s, minverbose=0, severity='INFO'):
         if severity.lower() == 'error':
             s = bcolors.FAIL + s + bcolors.ENDC
 
+    if g_currentProgress and sys.stdout.isatty():
+        sys.stdout.write("\r\033[K")
+        sys.stdout.flush()
+
     if g_logfp:
         g_logfp.write("%s: %s\n" % (severity.upper(), s))
     g_logs.append("%s: [%s] %s" % (g_currentProgress or g_scriptname, severity.upper(), s))
@@ -99,7 +103,7 @@ def progress(rest=None, every=1):
         g_numProgress += 1
         g_currentProgress = rest
         if g_numProgress % every == 0:
-            print("\r% 6d %s " % (g_numProgress, rest), end="")
+            print("\r\033[K% 6d %s " % (g_numProgress, rest), end="")
             sys.stdout.flush()
     else:
         g_currentProgress = ""
@@ -131,6 +135,10 @@ def get_args(desc="", parser=None):
     parser.add_argument('-v', '--verbose', dest='verbose', action='count', default=0)
     parser.add_argument('-d', '--debug', dest='debug', action='store_true', default=False, help='abort on exception')
     parser.add_argument('-c', '--corpus', dest='corpusdir', default='crosswords', help='corpus source')
+    parser.add_argument('--corpus-cache', dest='corpus_cache', default=None,
+                        help='cache file path (default: .corpus.<corpus>.jsonl)')
+    parser.add_argument('--no-corpus-cache', dest='corpus_cache_disabled', action='store_true', default=False,
+                        help='disable corpus caching for this run')
     g_args = parser.parse_args()
 
     if g_args.inputs_from:
@@ -210,7 +218,7 @@ def find_files_with_time(*paths, **kwargs):
             yield fullfn, open(fullfn, 'rb').read(), filetime(fullfn)
 
       except FileNotFoundError as e:
-          error("find_files_with_time(): %s" % str(e))
+          warn("find_files_with_time(): %s" % str(e))
 
     # reset progress indicator after processing all files
     progress()
@@ -242,10 +250,8 @@ def datestr_to_datetime(s):
     return dt
 
 
-def parse_xdid(path):
-    a = path.rindex('/')
-    b = path.rindex('.')
-    return path[a+1:b]
+def xdid_from_path(path):
+    return os.path.splitext(os.path.basename(path))[0]
 
 
 def parse_pathname(path):
@@ -371,6 +377,9 @@ def parse_tsv(fn, objname=None):
         fp = codecs.open(fn, encoding='utf-8')
         rows = parse_tsv_data(fp.read(), objname)
         return dict((r[0], r) for r in rows)
+    except FileNotFoundError:
+        info("parse_tsv('%s'): file does not exist yet" % fn)
+        return {}
     except Exception as e:
         error("parse_tsv('%s') %s" % (fn, str(e)))
         if g_args.debug:
@@ -382,6 +391,9 @@ def parse_tsv_rows(fn, objname=None):
     try:
         fp = codecs.open(fn, encoding='utf-8')
         return [r for r in parse_tsv_data(fp.read(), objname)]
+    except FileNotFoundError:
+        info("parse_tsv_rows('%s'): file does not exist yet" % fn)
+        return []
     except Exception as e:
         error("parse_tsv_rows('%s'): %s" % (fn, str(e)))
         if g_args.debug:

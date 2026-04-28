@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-from xdfile.utils import get_args, open_output
+from xdfile.utils import args_parser, get_args, open_output
 from xdfile.html import th, td, mkhref, html_select_options
 from xdfile import clues, metadatabase as metadb, utils
+import xdfile
 
 
 
@@ -34,12 +35,19 @@ def mkwww_wordpage(answer):
 
 def main():
     global all_uses
-    args = get_args('create word pages and index')
+    p = args_parser(desc='create word pages and index')
+    p.add_argument('-N', '--top-n', type=int, default=100,
+                   help='generate per-word pages for the top N most-used answers (default: 100)')
+    args = get_args(parser=p)
     outf = open_output()
 
     all_uses = {}
 
+    # skip clues from redacted contest puzzles (whole puzzle is all X's)
+    redacted = {xd.xdid() for xd in xdfile.corpus() if xd.is_redacted()}
     for ca in clues():
+        if ca.xdid() in redacted:
+            continue
         if ca.answer not in all_uses:
             all_uses[ca.answer] = []
         all_uses[ca.answer].append(ca)
@@ -52,7 +60,7 @@ def main():
 
     wordpages_to_make = set(args.inputs)
 
-    for answer, uses in sorted(all_uses.items(), reverse=True, key=lambda x: len(x[1]))[:100]:
+    for answer, uses in sorted(all_uses.items(), reverse=True, key=lambda x: len(x[1]))[:args.top_n]:
         wordpages_to_make.add(answer)
         h += td(mkhref(answer.upper(), answer.upper()),
                 len(uses),

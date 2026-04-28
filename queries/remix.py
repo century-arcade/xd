@@ -4,7 +4,7 @@ import string
 import random
 
 from xdfile.utils import get_args, open_output, find_files, debug, info, error, get_log, COLUMN_SEPARATOR, EOL
-from xdfile.utils import parse_tsv, progress, parse_pathname, iso8601
+from xdfile.utils import parse_tsv, parse_pathname, iso8601
 from xdfile import xdfile, BLOCK_CHAR
 
 
@@ -69,7 +69,6 @@ def mutate(xd, words, chance=1):
     for hwd, vwd, i, j, r, c in each_word_cross(xd):
         hwd_a, pivot_char, hwd_b = hwd[:i], hwd[i], hwd[i:][1:]
         vwd_a, pivot_char, vwd_b = vwd[:j], vwd[j], vwd[j:][1:]
-        progress("%s[%s]%s/%s[%s]%s" % (hwd_a, pivot_char, hwd_b, vwd_a, pivot_char, vwd_b))
 
         mutations_this_square = []
 
@@ -95,6 +94,8 @@ def mutate(xd, words, chance=1):
 
 def load_clues():
     ret = {} # ["pubid"] = { ["ANSWER"] = { ["simplified clue text"] = set(fullclues) } }
+    info("loading clues from clues.tsv...")
+    nrows = 0
     for r in parse_tsv("clues.tsv", "AnswerClue"):
         try:
             pubid, dt, answer, clue = r
@@ -102,7 +103,7 @@ def load_clues():
             print(str(e), r)
             continue
 
-        progress(dt, every=100000)
+        nrows += 1
 
         if not clue:
             continue
@@ -129,7 +130,7 @@ def load_clues():
             clues[boiled_clue] = set()
         clues[boiled_clue].add(clue)
 
-    progress()
+    info("loaded %d clue rows, done" % nrows)
     return ret
 
 

@@ -3,7 +3,7 @@
 import string
 from collections import Counter
 
-from xdfile.utils import debug, info
+from xdfile.utils import debug
 from xdfile import utils, metadatabase as metadb
 from xdfile import dow_from_date
 import xdfile
@@ -124,11 +124,11 @@ def main():
                 xd1 = xdfile.get_xd(r.xdid)
                 xd2 = xdfile.get_xd(r.match_xdid)
                 if xd1 is None:
-                    info("%s: similar puzzle %s not in corpus" % (r.match_xdid, r.xdid))
+                    debug("%s: similar puzzle %s not in corpus" % (r.match_xdid, r.xdid))
                     continue
 
                 if xd2 is None:
-                    info("%s: similar puzzle %s not in corpus" % (r.xdid, r.match_xdid))
+                    debug("%s: similar puzzle %s not in corpus" % (r.xdid, r.match_xdid))
                     continue
 
                 dt1 = xd1.get_header('Date')

@@ -13,7 +13,7 @@ WWWZIP=/tmp/${NOW}-www.zip
 S3_REGION=us-west-2
 S3_WWW=s3://xd.saul.pw
 
-.PHONY: gxd.sqlite
+.PHONY: gxd.sqlite clean clean-cache
 
 all: analyze gridmatches website
 
@@ -39,12 +39,12 @@ import:
 	cp ${WWWZIP} ${SRC_DIR}/${YEAR}/
 
 checkdups:
-	scripts/25-analyze-puzzle.py -o ${WWW_DIR}/ -c ${GXD_DIR} ${GXD_DIR}
+	scripts/25-analyze-puzzle.py -o ${WWW_DIR}/ -c ${GXD_DIR}
 
 analyze:
 	mkdir -p ${WWW_DIR}
 	mkdir -p ${PUB_DIR}
-	scripts/21-clean-metadata.py ${GXD_DIR}
+	scripts/21-clean-metadata.py -c ${GXD_DIR}
 	scripts/27-pubyear-stats.py -c ${GXD_DIR}
 	scripts/26-mkzip-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/xd-clues.zip
 	scripts/29-mkzip-metadata.py -c ${GXD_DIR} -o ${WWW_DIR}/xd-metadata.zip
@@ -52,8 +52,9 @@ analyze:
 website: RECENT_XDS_FILE=/tmp/${NOW}-recent-xds.txt
 website: website-static
 	mkdir -p ${WWW_DIR}/pub/gxd
-	zip -q -r ${WWW_DIR}/xd-puzzles.zip `cat ${GXD_DIR}/pubs.txt`
-	git -C ${GXD_DIR} log --pretty="format:" --since="30 days ago" --name-only | sort -u > ${RECENT_XDS_FILE}
+	#zip -q -r ${WWW_DIR}/xd-puzzles.zip `cat ${GXD_DIR}/pubs.txt`
+	git -C ${GXD_DIR} log --diff-filter=d --pretty="format:" --since="1 day ago" --name-only | grep '\.xd$$' | sort -u | sed 's,^,${GXD_DIR}/,' > ${RECENT_XDS_FILE}
+	@echo "INFO: found $$(wc -l < ${RECENT_XDS_FILE}) new or modified .xd files in the last day"
 	scripts/37-pubyear-svg.py -o ${WWW_DIR}/ # /pub/ index
 	scripts/33-mkwww-words.py -c ${GXD_DIR} -o ${WWW_DIR}/ # /pub/word/<ANSWER>
 	scripts/34-mkwww-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/ --inputs-from ${RECENT_XDS_FILE} # /pub/clue/<boiledclue>
@@ -81,7 +82,7 @@ gridmatches: gxd.sqlite src/gridcmp.so
 	sqlite3 -header -separator '	' gxd.sqlite "select * from gridmatches;" > ${GXD_DIR}/similar.tsv
 
 gxd.sqlite: ${GXD_DIR}
-	time ./scripts/26-mkdb-sqlite.py $@ ${GXD_DIR}
+	time ./scripts/26-mkdb-sqlite.py -o $@ -c ${GXD_DIR}
 	cat src/inputgridmatches.sql | sqlite3 $@
 
 gxd.zip:
@@ -89,3 +90,13 @@ gxd.zip:
 
 src/gridcmp.so: src/sqlite_gridcmp.c
 	gcc -g -fPIC -shared $< -o $@
+
+# Remove generated artifacts (pub/, wwwroot/, gxd.sqlite). Preserves the
+# corpus cache, which is expensive to rebuild — use clean-cache for that.
+clean:
+	rm -rf ${PUB_DIR} ${WWW_DIR}
+	rm -f gxd.sqlite
+
+# Remove the corpus cache file(s) so the next run rebuilds from gxd/.
+clean-cache:
+	rm -f .corpus.*.jsonl .corpus.*.jsonl.tmp
