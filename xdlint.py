@@ -265,6 +265,17 @@ def parse(text: str) -> ParsedXd:
 RuleFn = Callable[[Ctx], Iterator[Finding]]
 RULES: List[tuple] = []  # (code, severity, name, experimental, fn)
 
+# Findings emitted directly by the parser (not via @rule). Listed here so
+# --list-rules surfaces them. The actual emission sites are inside parse()
+# and the file-decode helpers; severity/message there must match what's
+# documented here.
+PARSER_LEVEL_FINDINGS: List[tuple] = [
+    ("XD012", Severity.ERROR,   "embedded-newline-in-clue"),
+    ("XD019", Severity.WARNING, "missing-section-separator"),
+    ("XD021", Severity.ERROR,   "misplaced-clue-metadata"),
+    ("XD022", Severity.ERROR,   "non-utf8-bytes"),
+]
+
 
 def rule(code: str, severity: Severity, name: str, experimental: bool = False):
     """Register a check.
@@ -1070,23 +1081,20 @@ def _(ctx):
                       f"({sorted(distinct)}) — redacted? imported wrong?")
 
 
-# Spec mentions only 'Refs:'. xd-crossword-tools and other tooling have
-# adopted these as common extensions; we don't enforce them but we know
-# enough not to flag them as surprising.
-RECOGNIZED_CLUE_META_KEYS = {
-    "refs",                 # spec
-    "hint", "revealer",     # xd-crossword-tools
-    "alt",                  # xd-crossword-tools (Schrödinger alternative)
-} | {f"alt{i}" for i in range(1, 10)}
+# The spec mentions only 'Refs:' as a clue-metadata key, while explicitly
+# leaving the namespace open. Other tools (e.g. xd-crossword-tools) have
+# adopted further keys like 'Hint:' and 'Alt:'/'Alt1:'..'Alt9:' for
+# Schrödinger puzzles, but those aren't in the spec; surfacing them as
+# unrecognized is intentional, pending a spec discussion.
+RECOGNIZED_CLUE_META_KEYS = {"refs"}
 
 
 @rule("XD206", Severity.INFO, "unrecognized-clue-metadata-key")
 def _(ctx):
-    """Clue carries '^Key:' metadata with a key the linter doesn't
-    recognize. The spec mentions only 'Refs:' as a metadata key but
-    explicitly leaves the namespace open; this is informational, not a
-    violation. Useful for catching typos ('Reffs:', 'Hnt:') and tooling
-    drift."""
+    """Clue carries '^Key:' metadata with a key not in the spec. The spec
+    mentions only 'Refs:' but leaves the namespace open, so this is
+    informational, not a violation. Useful for catching typos ('Reffs:',
+    'Hnt:') and surfacing tool-specific extensions."""
     seen = set()
     for clue in ctx.parsed.clues:
         for key in clue.metadata:
@@ -1097,7 +1105,7 @@ def _(ctx):
             seen.add((clue.line, key))
             yield finding("XD206", Severity.INFO, clue.line,
                           f"clue {clue.pos} has unrecognized metadata key "
-                          f"{key!r} (the linter knows: "
+                          f"{key!r} (spec recognizes only "
                           f"{sorted(RECOGNIZED_CLUE_META_KEYS)})")
 
 
@@ -1254,8 +1262,11 @@ def main():
 
     if args.list_rules:
         print(f"{'CODE':<8} {'SEVERITY':<8} {'FLAGS':<7} NAME")
-        for code, sev, name, experimental, _ in sorted(RULES):
-            flags = "exp" if experimental else ""
+        rows = [(code, sev, name, "exp" if experimental else "")
+                for code, sev, name, experimental, _ in RULES]
+        rows += [(code, sev, name, "parser")
+                 for code, sev, name in PARSER_LEVEL_FINDINGS]
+        for code, sev, name, flags in sorted(rows):
             print(f"{code:<8} {sev.value:<8} {flags:<7} {name}")
         return 0
 
