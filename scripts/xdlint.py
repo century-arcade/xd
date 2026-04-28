@@ -4,7 +4,7 @@ xdlint.py - authoritative validator for the .xd crossword format.
 
 Stdlib-only. The .xd format is specified in doc/xd-format.md; this script
 enforces that spec and a curated set of style/quality rules derived from
-real-world fixes in the gxd corpus.
+patterns that have repeatedly required hand-fixing in our own xd file corpus.
 
 Usage:
     xdlint.py path [path ...]              lint files / dirs (recursive)
@@ -181,10 +181,14 @@ def parse(text: str) -> ParsedXd:
                 k, _, v = stripped.partition(":")
                 headers.append(Header(line=lineno, key=k.strip(), value=v.strip()))
             else:
-                # Non key:value line in metadata: keep but flag
+                # Non key:value line in metadata: typically caused by a
+                # missing section separator (need 2+ blank lines between
+                # metadata and grid, only 1 was found).
                 parse_errors.append(Finding(
-                    code="XD901", severity=Severity.WARNING, line=lineno,
-                    message=f"non-header line in metadata section: {stripped!r}",
+                    code="XD019", severity=Severity.WARNING, line=lineno,
+                    message=f"non-header line in metadata section "
+                            f"(likely missing 2+ blank lines before grid): "
+                            f"{stripped!r}",
                 ))
 
         elif section == "grid":
@@ -208,8 +212,9 @@ def parse(text: str) -> ParsedXd:
             dot = head_part.find(".")
             if dot <= 0:
                 parse_errors.append(Finding(
-                    code="XD901", severity=Severity.ERROR, line=lineno,
-                    message=f"unrecognized line in clues section (no '.'): {stripped!r}",
+                    code="XD012", severity=Severity.ERROR, line=lineno,
+                    message=f"unrecognized line in clues section "
+                            f"(no '.', likely an embedded newline): {stripped!r}",
                 ))
                 continue
             pos = head_part[:dot].strip()
@@ -402,47 +407,145 @@ def _(ctx):
                           f"row width {len(g.cells)} != first row width {first_w}")
 
 
+@rule("XD002", Severity.ERROR, "unrecognized-grid-char")
+def _(ctx):
+    """Grid cell that isn't a letter, block, wildcard, or declared rebus key."""
+    rebus = parse_rebus_header(get_header(ctx.parsed, "Rebus") or "")
+    seen_pairs = set()  # de-dup to one finding per (line, char)
+    for row in ctx.parsed.grid:
+        for col, ch in enumerate(row.cells, 1):
+            if ch in BLOCK_CHARS or ch == WILDCARD_CHAR or ch.isalpha():
+                continue
+            if ch in rebus:
+                continue
+            key = (row.line, ch)
+            if key in seen_pairs:
+                continue
+            seen_pairs.add(key)
+            yield finding("XD002", Severity.ERROR, row.line,
+                          f"unrecognized grid character {ch!r} at col {col}")
+
+
+@rule("XD003", Severity.ERROR, "rebus-key-not-in-grid")
+def _(ctx):
+    rebus_header = next((h for h in ctx.parsed.headers
+                         if h.key.lower() == "rebus"), None)
+    if rebus_header is None:
+        return
+    rebus = parse_rebus_header(rebus_header.value)
+    if not rebus:
+        return
+    used = set()
+    for row in ctx.parsed.grid:
+        used.update(row.cells)
+    for k in rebus:
+        if k not in used:
+            yield finding("XD003", Severity.ERROR, rebus_header.line,
+                          f"rebus key {k!r} declared but never used in grid")
+
+
+@rule("XD005", Severity.ERROR, "clue-count-mismatch")
+def _(ctx):
+    idx = _slot_index_or_none(ctx)
+    if idx is None:
+        return
+    # Uniclue / non-standard direction puzzles use a different
+    # one-clue-per-cell convention; skip them.
+    if any(c.direction not in ("A", "D") for c in ctx.parsed.clues):
+        return
+    n_slots = len(idx)
+    n_clues = len(ctx.parsed.clues)
+    if n_slots != n_clues:
+        line = ctx.parsed.clues[0].line if ctx.parsed.clues else 0
+        yield finding("XD005", Severity.ERROR, line,
+                      f"clue count {n_clues} != grid slot count {n_slots}")
+
+
+@rule("XD008", Severity.ERROR, "duplicate-clue-position")
+def _(ctx):
+    # Quantum puzzles legitimately have two clues at the same position,
+    # one per direction-axis; skip those.
+    if _has_quantum_rebus(ctx.parsed):
+        return
+    seen = {}
+    for clue in ctx.parsed.clues:
+        if not clue.pos:
+            continue
+        if clue.pos in seen:
+            yield finding("XD008", Severity.ERROR, clue.line,
+                          f"clue position {clue.pos} duplicated "
+                          f"(first seen at line {seen[clue.pos]})")
+        else:
+            seen[clue.pos] = clue.line
+
+
 def _has_quantum_rebus(parsed: ParsedXd) -> bool:
     return "/" in (get_header(parsed, "Rebus") or "")
 
 
-@rule("XD007", Severity.ERROR, "answer-grid-coherence")
-def _(ctx):
-    """Combined: missing slot for clue (XD004), length mismatch (XD006),
-    letter mismatch (XD007). All three are emitted under XD007 in the
-    first pass; we'll split into separate rule codes once we have a
-    granular --disable mechanism that justifies the boilerplate.
+def _slot_index_or_none(ctx):
+    """Build {pos: (cells, grid_answer)} for the rectangular, non-quantum
+    case. Returns None when the answer-grid family of rules can't run.
 
-    Skip path is announced by XD108 when a quantum-rebus puzzle is
-    detected, so silent passes are visible to the user."""
+    The skip path (quantum) is announced by XD108 so a passing file with
+    no findings is meaningfully different from a file that wasn't checked.
+    """
     if not ctx.parsed.grid or not ctx.parsed.clues:
-        return
+        return None
     if not grid_is_rectangular(ctx.parsed):
-        return  # XD001 fires; slot enumeration unreliable
+        return None  # XD001 covers it; slot enumeration is unreliable
     if _has_quantum_rebus(ctx.parsed):
-        return  # XD108 announces the skip
-
+        return None  # XD108 announces it
     slots = slots_for(ctx)
-    by_pos = {f"{d}{n}": (cells, ans) for (d, n, _r, _c, cells, ans) in slots}
+    return {f"{d}{n}": (cells, ans) for (d, n, _r, _c, cells, ans) in slots}
 
+
+@rule("XD004", Severity.ERROR, "missing-slot-for-clue")
+def _(ctx):
+    idx = _slot_index_or_none(ctx)
+    if idx is None:
+        return
     for clue in ctx.parsed.clues:
-        if not clue.answer:
-            continue
         if clue.direction not in ("A", "D"):
-            continue  # uniclue / non-AD: skip in first pass
-        if clue.pos not in by_pos:
-            yield finding("XD007", Severity.ERROR, clue.line,
-                          f"clue {clue.pos} has no corresponding slot in grid")
             continue
-        cells, grid_ans = by_pos[clue.pos]
-        # Strip the xd-tools split character; uppercase
+        if clue.pos not in idx:
+            yield finding("XD004", Severity.ERROR, clue.line,
+                          f"clue {clue.pos} has no corresponding slot in grid")
+
+
+@rule("XD006", Severity.ERROR, "answer-length-mismatch")
+def _(ctx):
+    idx = _slot_index_or_none(ctx)
+    if idx is None:
+        return
+    for clue in ctx.parsed.clues:
+        if not clue.answer or clue.direction not in ("A", "D"):
+            continue
+        if clue.pos not in idx:
+            continue  # XD004 fires
+        _cells, grid_ans = idx[clue.pos]
         declared = clue.answer.replace("|", "").upper()
         if len(declared) != len(grid_ans):
-            yield finding("XD007", Severity.ERROR, clue.line,
+            yield finding("XD006", Severity.ERROR, clue.line,
                           f"clue {clue.pos} answer length {len(declared)} "
                           f"!= grid run length {len(grid_ans)} "
                           f"(declared={declared!r}, grid={grid_ans!r})")
+
+
+@rule("XD007", Severity.ERROR, "answer-grid-letter-mismatch")
+def _(ctx):
+    idx = _slot_index_or_none(ctx)
+    if idx is None:
+        return
+    for clue in ctx.parsed.clues:
+        if not clue.answer or clue.direction not in ("A", "D"):
             continue
+        if clue.pos not in idx:
+            continue
+        _cells, grid_ans = idx[clue.pos]
+        declared = clue.answer.replace("|", "").upper()
+        if len(declared) != len(grid_ans):
+            continue  # XD006 fires
         for a, b in zip(declared, grid_ans):
             if a == "." or b == ".":
                 continue  # wildcard
@@ -491,6 +594,65 @@ def _(ctx):
         yield finding("XD020", Severity.ERROR, 0, "no clues section found")
 
 
+_ISO_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
+
+
+@rule("XD009", Severity.ERROR, "filename-date-mismatch")
+def _(ctx):
+    """Catches files saved under a date the puzzle wasn't published on
+    (e.g. a 2021 file containing a 2018 puzzle). Skips files whose name
+    has no date."""
+    fn = os.path.basename(ctx.filename)
+    fn_match = _ISO_DATE_RE.search(fn)
+    if not fn_match:
+        return
+    hdr_date = get_header(ctx.parsed, "Date") or ""
+    hdr_match = _ISO_DATE_RE.search(hdr_date)
+    if not hdr_match:
+        return  # XD105 covers malformed Date headers
+    if fn_match.group(1) != hdr_match.group(1):
+        line = next((h.line for h in ctx.parsed.headers
+                     if h.key.lower() == "date"), 0)
+        yield finding("XD009", Severity.ERROR, line,
+                      f"filename date {fn_match.group(1)} doesn't match "
+                      f"Date header {hdr_match.group(1)}")
+
+
+@rule("XD014", Severity.ERROR, "broken-ref")
+def _(ctx):
+    """Clue's ^Refs metadata names a position that doesn't exist."""
+    positions = {c.pos for c in ctx.parsed.clues if c.pos}
+    for clue in ctx.parsed.clues:
+        refs = clue.metadata.get("refs")
+        if not refs:
+            continue
+        for token in refs.split():
+            if token not in positions:
+                yield finding("XD014", Severity.ERROR, clue.line,
+                              f"clue {clue.pos} ^Refs points to "
+                              f"non-existent clue {token}")
+
+
+@rule("XD015", Severity.WARNING, "answer-word-in-clue")
+def _(ctx):
+    """xd-crossword-tools' anti-cheat lint: a word of the answer (after
+    '|' splits) appears verbatim in the clue body. Only runs when the
+    answer has explicit '|' word splits, since otherwise we can't tell
+    where the word boundaries are."""
+    for clue in ctx.parsed.clues:
+        if not clue.answer or "|" not in clue.answer:
+            continue
+        body_words = set(re.findall(r"[a-z]{3,}", clue.body.lower()))
+        for word in clue.answer.lower().split("|"):
+            if len(word) < 3 or not word.isalpha():
+                continue
+            if word in body_words:
+                yield finding("XD015", Severity.WARNING, clue.line,
+                              f"clue {clue.pos} answer word {word!r} "
+                              f"appears verbatim in clue body")
+                break  # one finding per clue
+
+
 @rule("XD016", Severity.ERROR, "no-letters-in-grid")
 def _(ctx):
     if not ctx.parsed.grid:
@@ -509,6 +671,146 @@ def _(ctx):
 # ---------------------------------------------------------------------------
 # Rules - warnings
 # ---------------------------------------------------------------------------
+
+@rule("XD101", Severity.WARNING, "backslash-in-clue")
+def _(ctx):
+    """Backslashes in clue bodies are almost always import bugs:
+    '\\--', 'Moore\\Peters', '<\\I>', '¯\\_(tsu)_/¯' are all real
+    historical fixes. The spec sanctions a single trailing '\\' as
+    a multi-line clue continuation, but it's effectively unused in
+    the corpus and the project direction is to drop the special
+    meaning entirely; flagging all backslashes."""
+    for clue in ctx.parsed.clues:
+        if "\\" in clue.body:
+            col = clue.raw.find("\\") + 1
+            yield finding("XD101", Severity.WARNING, clue.line,
+                          f"backslash at col {col} (likely an import artifact)")
+
+
+@rule("XD102", Severity.WARNING, "extra-blank-lines-in-clues")
+def _(ctx):
+    """In the clues section, 2+ consecutive blank lines splits it into
+    separate sections in spec-compliant parsers. The Across/Down boundary
+    is supposed to be a single blank line."""
+    if not ctx.parsed.clues:
+        return
+    first = ctx.parsed.clues[0].line
+    last = ctx.parsed.clues[-1].line
+    blank_run = 0
+    run_start = 0
+    for i in range(first, last + 1):
+        line = ctx.parsed.lines[i - 1] if i - 1 < len(ctx.parsed.lines) else ""
+        if not line.strip():
+            if blank_run == 0:
+                run_start = i
+            blank_run += 1
+        else:
+            if blank_run >= 2:
+                yield finding("XD102", Severity.WARNING, run_start,
+                              f"{blank_run} consecutive blank lines in clues "
+                              f"section (2+ splits the section)")
+            blank_run = 0
+
+
+_AUTHOR_EDITOR_RE = re.compile(r"/\s*Ed(?:itor|\.)?\b|edited by", re.IGNORECASE)
+
+
+@rule("XD103", Severity.WARNING, "editor-folded-into-author")
+def _(ctx):
+    """Catches 'Author: X / Ed. Y' style; split into separate Author and
+    Editor headers."""
+    for h in ctx.parsed.headers:
+        if h.key.lower() != "author":
+            continue
+        if _AUTHOR_EDITOR_RE.search(h.value):
+            yield finding("XD103", Severity.WARNING, h.line,
+                          "Author value looks like it includes the editor; "
+                          "split into separate Author and Editor headers")
+
+
+# Canonical metadata header keys, in conventional ordering. Source of
+# truth: xdfile.HEADER_ORDER.
+HEADER_ORDER = [
+    "title", "author", "editor", "copyright", "number", "date",
+    "relation", "special", "rebus", "cluegroup", "description", "notes",
+]
+CANONICAL_HEADERS = set(HEADER_ORDER)
+
+
+@rule("XD104", Severity.WARNING, "non-standard-special-value")
+def _(ctx):
+    valid = {"shaded", "circle"}
+    for h in ctx.parsed.headers:
+        if h.key.lower() != "special":
+            continue
+        if h.value.lower() not in valid:
+            yield finding("XD104", Severity.WARNING, h.line,
+                          f"Special value {h.value!r} not in {{shaded, circle}}")
+
+
+_FULL_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+@rule("XD105", Severity.WARNING, "non-iso-date-header")
+def _(ctx):
+    for h in ctx.parsed.headers:
+        if h.key.lower() != "date":
+            continue
+        if not _FULL_DATE_RE.match(h.value):
+            yield finding("XD105", Severity.WARNING, h.line,
+                          f"Date header {h.value!r} not in YYYY-MM-DD form")
+
+
+@rule("XD106", Severity.WARNING, "missing-recommended-header")
+def _(ctx):
+    """Title and Date are practically required. Author is recommended
+    but not flagged here, since author can be present but messy
+    ('Author: X / Ed. Y' style — XD103 catches that)."""
+    keys = {h.key.lower() for h in ctx.parsed.headers}
+    for required in ("title", "date"):
+        if required not in keys:
+            yield finding("XD106", Severity.WARNING, 0,
+                          f"missing recommended header {required.title()!r}")
+
+
+@rule("XD107", Severity.WARNING, "duplicate-header-key")
+def _(ctx):
+    seen = {}
+    for h in ctx.parsed.headers:
+        k = h.key.lower()
+        if k in seen:
+            yield finding("XD107", Severity.WARNING, h.line,
+                          f"duplicate header key {h.key!r} "
+                          f"(first at line {seen[k]})")
+        else:
+            seen[k] = h.line
+
+
+_INDENTED_HEADER_RE = re.compile(r"^[ \t]+##\s+")
+
+
+@rule("XD110", Severity.WARNING, "indented-section-header")
+def _(ctx):
+    """A '## Section' line with leading whitespace; per xd-crossword-tools'
+    strict mode, this is likely an accidental indentation."""
+    for i, line in enumerate(ctx.parsed.lines, 1):
+        if _INDENTED_HEADER_RE.match(line):
+            yield finding("XD110", Severity.WARNING, i,
+                          "'## Section' header has leading whitespace")
+
+
+@rule("XD111", Severity.WARNING, "non-canonical-header-key")
+def _(ctx):
+    """Header key isn't one of the spec-canonical ones. Catches typos
+    ('Note' instead of 'Notes') and tool-specific extensions. Spec says
+    additional headers are 'allowed but ignored', so this stays at
+    warning level."""
+    for h in ctx.parsed.headers:
+        if h.key.lower() not in CANONICAL_HEADERS:
+            yield finding("XD111", Severity.WARNING, h.line,
+                          f"non-canonical header key {h.key!r} "
+                          f"(canonical set: {sorted(CANONICAL_HEADERS)})")
+
 
 # A clue body that mentions another clue position. The space variant
 # requires a hyphen-or-space between the number and "Across"/"Down" to
@@ -531,8 +833,8 @@ def _(ctx):
             line = h.line
             break
     yield finding("XD108", Severity.WARNING, line,
-                  "answer/grid check (XD007) skipped: quantum-letter rebus "
-                  "syntax 'A/B' not yet supported by the linter")
+                  "answer/grid checks (XD004/XD006/XD007) skipped: "
+                  "quantum-letter rebus syntax 'A/B' not yet supported")
 
 
 @rule("XD013", Severity.INFO, "missing-refs-metadata")
@@ -543,6 +845,73 @@ def _(ctx):
                 yield finding("XD013", Severity.INFO, clue.line,
                               f"clue {clue.pos} references another clue "
                               f"but has no '^Refs:' metadata")
+
+
+# ---------------------------------------------------------------------------
+# Rules - info
+# ---------------------------------------------------------------------------
+
+@rule("XD201", Severity.INFO, "trailing-whitespace")
+def _(ctx):
+    for i, line in enumerate(ctx.parsed.lines, 1):
+        if line and line != line.rstrip():
+            yield finding("XD201", Severity.INFO, i, "trailing whitespace")
+
+
+@rule("XD202", Severity.INFO, "headers-out-of-order")
+def _(ctx):
+    """Canonical headers appear out of conventional relative order. Doesn't
+    care about non-canonical headers — they can interleave anywhere."""
+    last_idx = -1
+    for h in ctx.parsed.headers:
+        k = h.key.lower()
+        if k not in CANONICAL_HEADERS:
+            continue
+        idx = HEADER_ORDER.index(k)
+        if idx < last_idx:
+            yield finding("XD202", Severity.INFO, h.line,
+                          f"header {h.key!r} appears out of conventional order")
+        else:
+            last_idx = idx
+
+
+@rule("XD203", Severity.INFO, "leading-whitespace-on-grid")
+def _(ctx):
+    for row in ctx.parsed.grid:
+        if row.line - 1 >= len(ctx.parsed.lines):
+            continue
+        raw = ctx.parsed.lines[row.line - 1]
+        if raw and raw[0] in (" ", "\t"):
+            yield finding("XD203", Severity.INFO, row.line,
+                          "grid row has leading whitespace (legal but unnecessary)")
+
+
+@rule("XD204", Severity.INFO, "tab-character")
+def _(ctx):
+    for i, line in enumerate(ctx.parsed.lines, 1):
+        if "\t" in line:
+            col = line.index("\t") + 1
+            yield finding("XD204", Severity.INFO, i,
+                          f"tab character at col {col}")
+
+
+@rule("XD205", Severity.INFO, "limited-charset")
+def _(ctx):
+    """Grid uses 1 or 2 distinct letters. Catches redacted (all-X)
+    contest puzzles and accidentally-corrupted imports."""
+    if not ctx.parsed.grid:
+        return
+    distinct = set()
+    for row in ctx.parsed.grid:
+        for ch in row.cells:
+            if ch in BLOCK_CHARS or ch == WILDCARD_CHAR:
+                continue
+            if ch.isalpha():
+                distinct.add(ch.upper())
+    if 1 <= len(distinct) <= 2:
+        yield finding("XD205", Severity.INFO, ctx.parsed.grid[0].line,
+                      f"grid uses only {len(distinct)} distinct letter(s) "
+                      f"({sorted(distinct)}) — redacted? imported wrong?")
 
 
 # ---------------------------------------------------------------------------
