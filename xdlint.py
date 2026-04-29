@@ -108,13 +108,58 @@ class Ctx:
 
 
 # ---------------------------------------------------------------------------
-# Parser - strict, line-tracking, no silent normalization
+# Parser - line-tracking; permissive about section structure
 # ---------------------------------------------------------------------------
+# Implicit-mode files lack '## Section' markers, so the parser identifies
+# sections by content shape with a fallback to blank-line separators. When
+# the spec separator (2+ blank lines) is missing, the parser recovers by
+# auto-advancing the section and emits XD019 to flag the violation. This
+# avoids a cascade where a single missing blank line turns into hundreds
+# of downstream findings (XD001/XD002/XD004/...) about misclassified rows.
 
 EXPLICIT_HEADER_RE = re.compile(r"^\s*##\s+([A-Za-z][A-Za-z0-9_-]*)")
 EXPLICIT_SECTIONS = {"metadata": "metadata", "grid": "grid", "clues": "clues", "notes": "notes"}
 CLUE_META_RE = re.compile(r"^([A-Za-z][\w-]*)\s+\^([A-Za-z][\w-]*)\s*:\s*(.*)$")
 CLUE_POS_RE = re.compile(r"^([A-Za-z])(\d+)$")
+_AUTO_CLUE_RE = re.compile(r"^[A-Za-z]?\d+\.\s")
+
+
+def _looks_like_grid_row(stripped: str) -> bool:
+    """Heuristic: stripped line whose every char is a letter, digit, block,
+    or wildcard, with no internal whitespace. Used by the implicit-mode
+    parser to detect when a missing blank-line separator has swallowed
+    grid rows into the metadata section."""
+    if not stripped or " " in stripped or "\t" in stripped:
+        return False
+    for c in stripped:
+        if c.isalpha() or c.isdigit():
+            continue
+        if c in BLOCK_CHARS or c == WILDCARD_CHAR:
+            continue
+        return False
+    return True
+
+
+def _looks_like_clue(stripped: str) -> bool:
+    return bool(_AUTO_CLUE_RE.match(stripped))
+
+
+def _classify_line(line: str) -> str:
+    """Coarse shape category used for implicit-mode auto-recovery.
+    Order matters: clue check precedes header check because clue bodies
+    may contain ':' (e.g. 'A1. Greeting: hi ~ HELLO')."""
+    s = line.strip()
+    if not s:
+        return "blank"
+    if EXPLICIT_HEADER_RE.match(line):
+        return "explicit"
+    if _looks_like_clue(s):
+        return "clue"
+    if ":" in s:
+        return "header"
+    if _looks_like_grid_row(s):
+        return "grid"
+    return "other"
 
 
 def parse(text: str) -> ParsedXd:
@@ -128,6 +173,13 @@ def parse(text: str) -> ParsedXd:
         if m and m.group(1).lower() in EXPLICIT_SECTIONS:
             section_mode = "explicit"
             break
+
+    # Pass 2: classify each line for implicit-mode auto-recovery. Skipped
+    # in explicit mode (markers handle section transitions explicitly).
+    line_class = (
+        [_classify_line(raw) for raw in lines]
+        if section_mode == "implicit" else []
+    )
 
     headers: List[Header] = []
     grid: List[GridRow] = []
@@ -179,6 +231,38 @@ def parse(text: str) -> ParsedXd:
 
         started = True
         blank_run = 0
+
+        # Implicit-mode auto-recovery: if the current line's shape doesn't
+        # match the current section, advance the section and let the
+        # dispatch below process the line in the right place. Only fires
+        # in implicit mode (explicit '## Section' markers handle transitions
+        # unambiguously). Emits XD019 to record the structural violation.
+        if section_mode == "implicit":
+            cls = line_class[lineno0]
+            if section == "metadata" and cls == "grid":
+                # Lookahead guards against single-word stray metadata lines:
+                # only advance when the next non-blank line is also content
+                # ('grid' confirms a real grid; 'clue' covers tiny puzzles
+                # whose grid is a single row before clues start).
+                future = [c for c in line_class[lineno0 + 1:] if c != "blank"]
+                if future and future[0] in ("grid", "clue"):
+                    parse_errors.append(Finding(
+                        code="XD019", severity=Severity.WARNING, line=lineno,
+                        message="line looks like a grid row; auto-advanced "
+                                "to grid section (missing 2+ blank lines "
+                                "between metadata and grid?)",
+                    ))
+                    section = "grid"
+                    last_clue = None
+            elif section == "grid" and cls == "clue":
+                parse_errors.append(Finding(
+                    code="XD019", severity=Severity.WARNING, line=lineno,
+                    message="line looks like a clue; auto-advanced to "
+                            "clues section (missing 2+ blank lines "
+                            "between grid and clues?)",
+                ))
+                section = "clues"
+                last_clue = None
 
         if section == "metadata":
             if ":" in stripped:
@@ -951,16 +1035,24 @@ def _(ctx):
                           f"Date header {h.value!r} not in YYYY-MM-DD form")
 
 
-@rule("XD106", Severity.WARNING, "missing-recommended-header")
+@rule("XD106", Severity.WARNING, "missing-date")
 def _(ctx):
-    """Title and Date are practically required. Author is recommended
-    but not flagged here, since author can be present but messy
-    ('Author: X / Ed. Y' style — XD103 catches that)."""
-    keys = {h.key.lower() for h in ctx.parsed.headers}
-    for required in ("title", "date"):
-        if required not in keys:
-            yield finding("XD106", Severity.WARNING, 0,
-                          f"missing recommended header {required.title()!r}")
+    """Date is practically required. Split out from XD108 (missing Title)
+    so that the --fix path (which can sometimes infer Date from the
+    filename) has its own targetable rule code."""
+    if not any(h.key.lower() == "date" for h in ctx.parsed.headers):
+        yield finding("XD106", Severity.WARNING, 0,
+                      "missing recommended header 'Date'")
+
+
+@rule("XD108", Severity.WARNING, "missing-title")
+def _(ctx):
+    """Title is practically required. No fixer — there's no reliable
+    signal to infer a title from. Author is also recommended but is
+    flagged separately (XD103) when present-but-messy."""
+    if not any(h.key.lower() == "title" for h in ctx.parsed.headers):
+        yield finding("XD108", Severity.WARNING, 0,
+                      "missing recommended header 'Title'")
 
 
 @rule("XD107", Severity.WARNING, "duplicate-header-key")
@@ -1126,7 +1218,7 @@ FIXERS: Dict[str, Tuple[bool, FixerFn]] = {}  # code -> (unsafe, fn)
 
 # Apply order matters when fixers interact: encoding first (changes which
 # chars later passes see), then whitespace/structural cleanup, then
-# header reordering, then content insertions.
+# header reordering, then in-section content fixes.
 FIX_ORDER = [
     "XD010",  # cp1252 mojibake -> intended chars
     "XD011",  # HTML entities -> unescaped chars
@@ -1134,8 +1226,11 @@ FIX_ORDER = [
     "XD203",  # de-indent grid rows
     "XD204",  # tabs -> spaces
     "XD201",  # trim trailing whitespace
-    "XD107",  # drop duplicate header lines
-    "XD202",  # reorder canonical headers
+    "XD103",  # split editor out of Author header
+    "XD107",  # drop duplicate header lines (after XD103: lets XD103 pick the
+              # editor-bearing Author even if it isn't the first one, then
+              # cleans up the duplicate it leaves behind)
+    "XD202",  # reorder canonical headers (picks up the new Editor)
     "XD102",  # collapse 2+ blank lines in clues to 1
     "XD013",  # synthesize ^Refs from cross-refs in clue bodies
 ]
@@ -1256,6 +1351,99 @@ def _(text):
     lines = text.splitlines(keepends=True)
     out = [line for i, line in enumerate(lines, 1) if i not in drops]
     return "".join(out), len(drops)
+
+
+# Port of clean_author() from scripts/21-clean-metadata.py. Splits an Author
+# value that looks like "Smith / Ed. Jones" or "Smith; edited by Jones" into
+# (author, editor). Empty-author cases (e.g. "Edited by Smith") get returned
+# as ("", "Smith"); the fixer below treats those as out-of-scope.
+_CLEAN_AUTHOR_RE = re.compile(
+    r"(?i)(?:(?:By )*(.+)(?:[;/,-]|and) *)?"
+    r"(?:edited|Editor|(?<!\w)Ed[.])(?: By)*(.*)"
+)
+
+
+def _clean_author(author: str, editor: str) -> Tuple[str, str]:
+    if author:
+        m = _CLEAN_AUTHOR_RE.search(author)
+        if m:
+            author, editor = m.groups()
+        if author:
+            while author.lower().startswith("by "):
+                author = author[3:]
+            while author and author[-1] in ",.":
+                author = author[:-1]
+        else:
+            author = ""
+        if " / " in author and not editor:
+            author, editor = author.rsplit(" / ", 1)
+    if editor:
+        while editor.lower().startswith("by "):
+            editor = editor[3:]
+        while editor and editor[-1] in ",.":
+            editor = editor[:-1]
+    return (author or "").strip(), (editor or "").strip()
+
+
+@fixer("XD103")
+def _(text):
+    """Split 'Author: X / Ed. Y' style values into separate Author and
+    Editor headers. Conservative: skipped when the cleaned Author would be
+    empty (e.g. 'Edited by Smith' — a content reinterpretation we don't
+    apply silently) or when an Editor header already exists with content
+    that the split would overwrite differently."""
+    parsed = parse(text)
+    # Pick the first Author whose value carries editor info — handles the
+    # rare case where there are duplicate Author lines and the dirty one
+    # isn't first. XD107, scheduled after this, drops the leftover dup.
+    author_h = next((h for h in parsed.headers
+                     if h.key.lower() == "author"
+                     and _AUTHOR_EDITOR_RE.search(h.value)), None)
+    editor_h = next((h for h in parsed.headers
+                     if h.key.lower() == "editor"), None)
+    if author_h is None:
+        return text, 0
+    current_editor = editor_h.value if editor_h else ""
+    new_author, new_editor = _clean_author(author_h.value, current_editor)
+    if not new_author:
+        return text, 0
+    if new_author == author_h.value and new_editor == current_editor:
+        return text, 0
+    # Don't clobber a non-empty existing Editor with a different value.
+    if editor_h and current_editor and new_editor != current_editor:
+        return text, 0
+
+    lines = text.splitlines(keepends=True)
+    nl = _detect_nl(text)
+    fixes = 0
+
+    def _line_nl(s: str) -> str:
+        if s.endswith("\r\n"):
+            return "\r\n"
+        if s.endswith("\n"):
+            return "\n"
+        return ""
+
+    a_idx = author_h.line - 1
+    a_orig = lines[a_idx]
+    new_a_line = f"{author_h.key}: {new_author}{_line_nl(a_orig)}"
+    if new_a_line != a_orig:
+        lines[a_idx] = new_a_line
+        fixes += 1
+
+    if new_editor != current_editor:
+        if editor_h is not None:
+            e_idx = editor_h.line - 1
+            e_orig = lines[e_idx]
+            new_e_line = f"{editor_h.key}: {new_editor}{_line_nl(e_orig)}"
+            if new_e_line != e_orig:
+                lines[e_idx] = new_e_line
+                fixes += 1
+        elif new_editor:
+            lines.insert(a_idx + 1, f"Editor: {new_editor}{nl}")
+            fixes += 1
+
+    return "".join(lines), fixes
 
 
 @fixer("XD202")
