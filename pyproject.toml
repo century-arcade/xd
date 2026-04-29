@@ -38,4 +38,4 @@ select = ["E", "W", "F"]
 ignore = ["E501"]  # line too long :P
 
 [tool.pytest.ini_options]
-norecursedirs = ["xdfile.egg-info", "build", "dist", ".tox", ".venv", "gxd"]
+testpaths = ["tests", "xdfile/tests"]

@@ -98,6 +98,10 @@ class ParsedXd:
     clues: List[Clue]
     notes_text: str
     parse_errors: List[Finding]
+    # Explicit-mode '## Foo' headers whose name isn't in EXPLICIT_SECTIONS.
+    # Spec says ignore the section, but XD207 surfaces them so unexpected
+    # sections (typos, tool-specific extensions) don't go unnoticed.
+    unknown_sections: List[Tuple[int, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -185,6 +189,7 @@ def parse(text: str) -> ParsedXd:
     grid: List[GridRow] = []
     clues: List[Clue] = []
     notes_lines: List[str] = []
+    unknown_sections: List[Tuple[int, str]] = []
 
     section = "metadata"
     blank_run = 0
@@ -206,17 +211,20 @@ def parse(text: str) -> ParsedXd:
         if section_mode == "explicit":
             m = EXPLICIT_HEADER_RE.match(raw)
             if m:
-                name = m.group(1).lower()
+                raw_name = m.group(1)
+                name = raw_name.lower()
                 if name in EXPLICIT_SECTIONS:
                     section = EXPLICIT_SECTIONS[name]
                     started = True
                     blank_run = 0
                     last_clue = None
                 else:
-                    # Per spec: unknown sections are ignored.
+                    # Per spec: unknown sections are ignored. Record the
+                    # header line so XD207 can surface it.
                     section = "_unknown"
                     blank_run = 0
                     last_clue = None
+                    unknown_sections.append((lineno, raw_name))
                 continue
 
         if not stripped:
@@ -306,14 +314,22 @@ def parse(text: str) -> ParsedXd:
                     line=lineno, message=msg,
                 ))
                 continue
-            # Normal clue: "A1. Body ~ ANSWER"
-            ans_idx = stripped.rfind("~")
-            if ans_idx > 0:
-                head_part = stripped[:ans_idx].rstrip()
-                answer = stripped[ans_idx + 1:].strip()
+            # Normal clue: "A1. Body ~ ANSWER". Prefer the spec separator
+            # ' ~ '; fall back to a bare '~' only when no spaced form is
+            # present, so a clue body containing '~' (math, ASCII art) still
+            # parses with the trailing answer correctly identified.
+            spaced_idx = stripped.rfind(" ~ ")
+            if spaced_idx > 0:
+                head_part = stripped[:spaced_idx]
+                answer = stripped[spaced_idx + 3:].strip()
             else:
-                head_part = stripped
-                answer = ""
+                ans_idx = stripped.rfind("~")
+                if ans_idx > 0:
+                    head_part = stripped[:ans_idx].rstrip()
+                    answer = stripped[ans_idx + 1:].strip()
+                else:
+                    head_part = stripped
+                    answer = ""
             dot = head_part.find(".")
             if dot <= 0:
                 parse_errors.append(Finding(
@@ -336,13 +352,15 @@ def parse(text: str) -> ParsedXd:
             clues.append(c)
             last_clue = c
 
-        else:  # notes or _unknown
+        elif section == "notes":
             notes_lines.append(stripped)
+        # else: section == "_unknown" — per spec, ignored entirely.
 
     return ParsedXd(
         text=text, lines=lines, section_mode=section_mode,
         headers=headers, grid=grid, clues=clues,
         notes_text="\n".join(notes_lines), parse_errors=parse_errors,
+        unknown_sections=unknown_sections,
     )
 
 
@@ -578,9 +596,12 @@ def _validate_answer_against_slot(
                 if declared[di:di + len(full)].upper() == full:
                     di += len(full)
                     continue
-            # Otherwise match one of the chosen direction's alts.
+            # Otherwise match one of the chosen direction's alts. Try the
+            # longer alt first: with unequal-length alts (e.g. 1=A|AB), a
+            # greedy short match would consume the wrong number of cells
+            # and force the next cell into a false XD007.
             matched = False
-            for alt in chosen:
+            for alt in sorted(chosen, key=len, reverse=True):
                 if declared[di:di + len(alt)].upper() == alt:
                     di += len(alt)
                     matched = True
@@ -710,14 +731,17 @@ def _(ctx):
 def _(ctx):
     """Compares distinct clue *positions* (not total clues) to slot count.
     Schrödinger puzzles legitimately have multiple clues at the same
-    position, so counting positions rather than clues handles that."""
+    position, so counting positions rather than clues handles that.
+
+    Only counts A/D clues: cluegroup positions ('X1.' etc.) don't map to
+    slots in `idx`, and a single XD017-malformed clue shouldn't suppress
+    the count check for the rest of the file."""
     idx = _slot_index_or_none(ctx)
     if idx is None:
         return
-    if any(c.direction not in ("A", "D") for c in ctx.parsed.clues):
-        return
     n_slots = len(idx)
-    n_positions = len({c.pos for c in ctx.parsed.clues if c.pos})
+    n_positions = len({c.pos for c in ctx.parsed.clues
+                       if c.pos and c.direction in ("A", "D")})
     if n_slots != n_positions:
         line = ctx.parsed.clues[0].line if ctx.parsed.clues else 0
         yield finding("XD005", Severity.ERROR, line,
@@ -841,7 +865,7 @@ def _(ctx):
 _ISO_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 
 
-@rule("XD009", Severity.ERROR, "filename-date-mismatch")
+@rule("XD701", Severity.WARNING, "filename-date-mismatch")
 def _(ctx):
     """Catches files saved under a date the puzzle wasn't published on
     (e.g. a 2021 file containing a 2018 puzzle). Skips files whose name
@@ -857,7 +881,7 @@ def _(ctx):
     if fn_match.group(1) != hdr_match.group(1):
         line = next((h.line for h in ctx.parsed.headers
                      if h.key.lower() == "date"), 0)
-        yield finding("XD009", Severity.ERROR, line,
+        yield finding("XD701", Severity.WARNING, line,
                       f"filename date {fn_match.group(1)} doesn't match "
                       f"Date header {hdr_match.group(1)}")
 
@@ -956,7 +980,10 @@ def _(ctx):
     meaning entirely; flagging all backslashes."""
     for clue in ctx.parsed.clues:
         if "\\" in clue.body:
-            col = clue.raw.find("\\") + 1
+            # clue.raw is the stripped form, so its offsets are wrong if the
+            # source line had any leading whitespace. Use the original line.
+            original = ctx.parsed.lines[clue.line - 1]
+            col = original.find("\\") + 1
             yield finding("XD101", Severity.WARNING, clue.line,
                           f"backslash at col {col} (likely an import artifact)")
 
@@ -1205,6 +1232,18 @@ def _(ctx):
                           f"{sorted(RECOGNIZED_CLUE_META_KEYS)})")
 
 
+@rule("XD207", Severity.INFO, "unknown-section")
+def _(ctx):
+    """Explicit-mode '## Foo' header whose name isn't one of the spec
+    sections (metadata/grid/clues/notes). Spec says ignore the section,
+    but a typo or tool-specific extension shouldn't disappear silently."""
+    known = sorted(EXPLICIT_SECTIONS)
+    for line, name in ctx.parsed.unknown_sections:
+        yield finding("XD207", Severity.INFO, line,
+                      f"unknown section '## {name}' (spec sections: "
+                      f"{known}); content ignored")
+
+
 # ---------------------------------------------------------------------------
 # Fixers - mechanical corrections for safe rules
 # ---------------------------------------------------------------------------
@@ -1395,7 +1434,9 @@ def _(text):
     parsed = parse(text)
     # Pick the first Author whose value carries editor info — handles the
     # rare case where there are duplicate Author lines and the dirty one
-    # isn't first. XD107, scheduled after this, drops the leftover dup.
+    # isn't first. We delete sibling Author lines ourselves rather than
+    # leaving them for XD107: XD107 keeps the *first* duplicate, which
+    # would discard the cleaned Author when the dirty one wasn't first.
     author_h = next((h for h in parsed.headers
                      if h.key.lower() == "author"
                      and _AUTHOR_EDITOR_RE.search(h.value)), None)
@@ -1407,7 +1448,11 @@ def _(text):
     new_author, new_editor = _clean_author(author_h.value, current_editor)
     if not new_author:
         return text, 0
-    if new_author == author_h.value and new_editor == current_editor:
+    sibling_author_lines = {h.line for h in parsed.headers
+                            if h.key.lower() == "author"
+                            and h.line != author_h.line}
+    if (new_author == author_h.value and new_editor == current_editor
+            and not sibling_author_lines):
         return text, 0
     # Don't clobber a non-empty existing Editor with a different value.
     if editor_h and current_editor and new_editor != current_editor:
@@ -1431,6 +1476,7 @@ def _(text):
         lines[a_idx] = new_a_line
         fixes += 1
 
+    inserted_after = None  # 1-indexed line we inserted after, if any
     if new_editor != current_editor:
         if editor_h is not None:
             e_idx = editor_h.line - 1
@@ -1441,13 +1487,30 @@ def _(text):
                 fixes += 1
         elif new_editor:
             lines.insert(a_idx + 1, f"Editor: {new_editor}{nl}")
+            inserted_after = author_h.line
             fixes += 1
+
+    # Drop sibling Author lines now (after the rewrite/insert above) so
+    # XD107 doesn't have a chance to keep the wrong one. Walk highest-first
+    # so earlier deletions don't shift later indices.
+    for sib_line in sorted(sibling_author_lines, reverse=True):
+        sib_idx = sib_line - 1
+        if inserted_after is not None and sib_line > inserted_after:
+            sib_idx += 1
+        del lines[sib_idx]
+        fixes += 1
 
     return "".join(lines), fixes
 
 
 @fixer("XD202")
 def _(text):
+    # Side effect to be aware of: when this fixer runs, every relocated
+    # canonical header line gets rewritten as f"{key}: {value}{nl}", which
+    # silently normalizes any non-canonical spacing (extra spaces after the
+    # colon, etc.) on those lines even though the user's lint trigger was
+    # only about ordering. Acceptable in practice since the normalized form
+    # is the spec form, but worth knowing when reading a fix diff.
     parsed = parse(text)
     canonical = [h for h in parsed.headers if h.key.lower() in CANONICAL_HEADERS]
     if not canonical:
@@ -1591,8 +1654,14 @@ def _decode_with_findings(data: bytes):
         text = data.decode("utf-8", errors="replace")
         line = data[:e.start].count(b"\n") + 1
         bad = data[e.start:e.end].hex()
+        # UnicodeDecodeError carries only the first bad span. Any further
+        # bad bytes were silently turned into U+FFFD by the replace decode
+        # — call that out so users don't trust this finding as the only
+        # encoding issue in the file.
         msg = (f"non-UTF-8 byte(s) at offset {e.start} (hex {bad}); "
-               f"file decoded with U+FFFD replacement to allow further checks")
+               f"file decoded with U+FFFD replacement to allow further "
+               f"checks (additional bad bytes elsewhere may be silently "
+               f"replaced)")
         return text, [Finding(code="XD022", severity=Severity.ERROR,
                               line=line, message=msg)]
 
@@ -1823,13 +1892,20 @@ def main():
     elif args.disable:
         disabled = {c.strip() for c in args.disable.split(",") if c.strip()}
         active = {code for (code, _s, _n, _e, _f) in RULES} - disabled
-        active |= {"XD901"} - disabled  # parse_errors stay enabled by default
+        # Parse-level findings (XD012/XD019/XD021/XD022) are emitted directly
+        # by the parser, not via @rule, so they need to be added to `active`
+        # explicitly or run_checks would filter them out.
+        active |= {c for (c, _s, _n) in PARSER_LEVEL_FINDINGS} - disabled
     else:
         active = None
 
     if args.no_experimental:
         if active is None:
+            # Same wrinkle as the --disable branch: parser-level findings
+            # aren't in RULES, so build active from both sources or
+            # run_checks would silently filter them out.
             active = {code for (code, _s, _n, _e, _f) in RULES} - experimental_codes
+            active |= {c for (c, _s, _n) in PARSER_LEVEL_FINDINGS}
         else:
             active = active - experimental_codes
 
