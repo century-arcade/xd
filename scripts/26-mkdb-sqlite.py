@@ -1,31 +1,29 @@
 #!/usr/bin/env python3
 
 '''
-Usage: $0 <gxd.sqlite> <input_dir>
+Usage: $0 -o <gxd.sqlite> -c <corpus>
 
 Create and populate <gxd.sqlite> database with metadata, grid, and clues.
 '''
 
-import os
+import sqlite3
 import sys
 
-import xdfile
-
-def find_files(path, ext=''):
-    for root, directories, files in os.walk(path):
-        for fn in files:
-            if fn.endswith(ext):
-                yield os.path.join(root, fn)
+from xdfile import iter_corpus
+from xdfile.utils import get_args, info
 
 
-def main(outdb, inputdir):
-    import sqlite3
-    con = sqlite3.connect(outdb)
+def main():
+    args = get_args(desc='create sqlite db with metadata, grid, and clues')
+    if not args.output:
+        sys.exit("usage: %s -o <gxd.sqlite> -c <corpus>" % sys.argv[0])
+
+    # Incremental: previously-imported puzzles are skipped. To force a full
+    # rebuild (e.g. after a parser change), delete the sqlite file first.
+    con = sqlite3.connect(args.output)
     cur = con.cursor()
 
-    # puzzle metadata
-    cur.execute('DROP TABLE IF EXISTS puzzles')
-    cur.execute('''CREATE TABLE puzzles (
+    cur.execute('''CREATE TABLE IF NOT EXISTS puzzles (
         xdfn TEXT PRIMARY KEY,
         xdid TEXT,
         date TEXT,
@@ -38,7 +36,6 @@ def main(outdb, inputdir):
         grid TEXT)
     ''')
 
-    cur.execute('DROP TABLE IF EXISTS clues')
     cur.execute('''CREATE TABLE IF NOT EXISTS clues (
         xdid TEXT,
         position TEXT,
@@ -46,8 +43,11 @@ def main(outdb, inputdir):
         clue TEXT)
     ''')
 
-    for xdfn in find_files(inputdir, ext='.xd'):
-        xd = xdfile.parse(xdfn)
+    existing = set(row[0] for row in cur.execute('SELECT xdfn FROM puzzles'))
+
+    for xd in iter_corpus():
+        if xd.filename in existing:
+            continue
 
         w = xd.width()
         h = xd.height()
@@ -56,7 +56,7 @@ def main(outdb, inputdir):
         size = f'{w}x{h}{rebus}{special}'
 
         cur.execute('INSERT INTO puzzles VALUES (?,?,?,?,?,?,?,?,?,?)', (
-            xdfn,
+            xd.filename,
             xd.xdid(),
             xd.get_header("Date"),
             size,
@@ -72,8 +72,12 @@ def main(outdb, inputdir):
             if pos:
                 cur.execute('INSERT INTO clues VALUES (?, ?, ?, ?)', (xd.xdid(), pos, answer, clue))
 
+    info("creating index...")
+    cur.execute('CREATE INDEX IF NOT EXISTS puzzles_size_date ON puzzles(size, date)')
+
+    info("committing...")
     con.commit()
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:])
+    main()

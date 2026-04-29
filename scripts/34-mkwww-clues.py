@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from queries.similarity import load_clues, unboil, boil
-from xdfile.utils import get_args, open_output, find_files, progress
+from xdfile.utils import args_parser, get_args, open_output, find_files, info, progress, warn
 from xdfile.html import th, td, mkhref, html_select_options
 from xdfile import clues
 import xdfile
@@ -32,7 +32,10 @@ def mkwww_cluepage(bc):
 
 def main():
     global boiled_clues
-    args = get_args('create clue index')
+    p = args_parser(desc='create clue index')
+    p.add_argument('-N', '--top-n', type=int, default=100,
+                   help='generate per-clue pages for top N most-used and top N most-ambiguous clues (default: 100)')
+    args = get_args(parser=p)
     outf = open_output()
 
     boiled_clues = load_clues()
@@ -48,10 +51,13 @@ def main():
 
     # add all boiled clues from all input .xd files
     for fn, contents in find_files(*args.inputs, ext='.xd'):
-        progress(fn)
         xd = xdfile.xdfile(contents.decode('utf-8'), fn)
+        if xd.is_redacted():
+            continue
         for pos, mainclue, mainanswer in xd.iterclues():
-            cluepages_to_make.add(boil(mainclue))
+            bc = boil(mainclue)
+            if bc:  # boil() returns None for clues with cross-references like "5 across"
+                cluepages_to_make.add(bc)
 
 
     # add top 100 most used boiled clues from corpus
@@ -59,7 +65,7 @@ def main():
 
     biggest_clues += '<table class="clues most-used-clues">'
     biggest_clues += th("clue", "# uses", "answers used with this clue")
-    for n, bc, ans in sorted(bcs, reverse=True)[:100]:
+    for n, bc, ans in sorted(bcs, reverse=True)[:args.top_n]:
         cluepages_to_make.add(bc)
         biggest_clues += td(mkhref(unboil(bc), bc), n, html_select_options(ans))
 
@@ -70,7 +76,7 @@ def main():
     most_ambig += '<table class="clues most-different-answers">'
     most_ambig += th("Clue", "answers")
 
-    for n, bc, ans in sorted(bcs, reverse=True, key=lambda x: len(set(x[2])))[:100]:
+    for n, bc, ans in sorted(bcs, reverse=True, key=lambda x: len(set(x[2])))[:args.top_n]:
         cluepages_to_make.add(bc)
         clue = mkhref(unboil(bc), bc)
         if 'quip' in bc or 'quote' in bc or 'theme' in bc or 'riddle' in bc:
@@ -80,12 +86,26 @@ def main():
 
     most_ambig += '</table>'
 
+    info("writing %d per-clue HTML pages..." % len(cluepages_to_make))
+    nwritten = 0
     for bc in cluepages_to_make:
+        # boiled clue is used as a directory name; skip ones that would blow past
+        # Windows MAX_PATH (260 chars) when combined with the wwwroot/pub/clue/.../index.html prefix
+        if len(bc) > 200:
+            warn("skipping clue page (boiled clue too long, %d chars): %s..." % (len(bc), bc[:60]))
+            continue
         contents = mkwww_cluepage(bc)
         if contents:
-            outf.write_html('pub/clue/%s/index.html' % bc, contents, title=bc)
+            outpath = 'pub/clue/%s/index.html' % bc
+            progress(outpath, every=10)
+            outf.write_html(outpath, contents, title=bc)
+            nwritten += 1
+    progress()
+    info("wrote %d per-clue pages, done" % nwritten)
 
+    info("writing clue index page...")
     outf.write_html('pub/clue/index.html', biggest_clues + most_ambig, title="Clues")
+    info("clue index page, done")
 
 
 main()

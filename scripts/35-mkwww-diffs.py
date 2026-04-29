@@ -5,9 +5,9 @@
 import difflib
 from xdfile import utils
 from xdfile.html import mktag, grid_diff_html
-from xdfile.utils import info, warn
+from xdfile.utils import warn
 
-from xdfile.utils import debug, progress
+from xdfile.utils import debug, progress, info
 #from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 from xdfile import metadatabase as metadb
 import xdfile
@@ -18,7 +18,6 @@ def main():
     utils.get_args('generates .html diffs for all puzzles in similar.tsv')
     outf = utils.open_output()
 
-    utils.parse_tsv('gxd/similar.tsv', 'Similar')
     xdids_todo = {}
 
     for row in metadb.xd_similar_all():
@@ -28,16 +27,25 @@ def main():
         xdids_todo[row.xdid].append(row)
 
 
-    for mainxdid in xdids_todo:
+    xds_todo = list(xdids_todo)
+    info("generating diffs for %d puzzles..." % len(xds_todo))
+    # ~20 info() lines spread evenly so CI logs stay readable for any list size
+    info_every = max(1, len(xds_todo) // 20)
+    for npuzzle, mainxdid in enumerate(xds_todo):
         progress(mainxdid)
+        if npuzzle and npuzzle % info_every == 0:
+            info("  ... %d/%d (%.0f%%) diffs generated" % (npuzzle, len(xds_todo), 100 * npuzzle / len(xds_todo)))
 
         mainxd = xdfile.get_xd(mainxdid)
         if not mainxd:
             warn('%s not in corpus' % mainxdid)
             continue
 
+        if mainxd.is_redacted():
+            continue  # answers are all 'X' — skip diff rendering
+
         matches = xdids_todo[mainxdid]
-        info('generating diffs for %s (%d matches)' % (mainxdid, len(matches)))
+        debug('generating diffs for %s (%d matches)' % (mainxdid, len(matches)))
 
         xddates = {}
         xddates[mainxdid] = mainxd.date() # Dict to store XD dates for further sort
@@ -64,6 +72,8 @@ def main():
             # Continue if can't load xdid
             if not xd:
                 continue
+            if xd.is_redacted():
+                continue  # answers are all 'X' — skip from diff comparison
             xddates[xdid] = xd.date()
             # output each grid
             html_grids[xdid] = grid_diff_html(xd, compare_with=mainxd)
@@ -111,6 +121,8 @@ def main():
         diff_h += mktag('/table')
 
         outf.write_html('pub/%s/index.html' % mainxdid, diff_h, title='Comparison for ' + mainxdid)
+    progress()
+    info("generated %d diffs, done" % len(xds_todo))
 
 
 
