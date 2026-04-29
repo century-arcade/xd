@@ -67,7 +67,7 @@ jobs:
         run: make analyze
 
       - name: Upload artifacts
-        if: always()
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: analyze-output
@@ -75,3 +75,4 @@ jobs:
             wwwroot/xd-clues.zip
             wwwroot/xd-metadata.zip
           if-no-files-found: warn
+          retention-days: 7
