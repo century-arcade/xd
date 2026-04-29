@@ -184,7 +184,7 @@ def append_row(tablename, row):
             fp.write(COLSEP.join(xddb_headers[tablename].split()) + EOL)
         _open_tables[tablename] = fp
 
-    _open_tables[tablename].write(COLSEP.join([str(x) for x in row]) + EOL)
+    _open_tables[tablename].write(COLSEP.join(["" if x is None else str(x) for x in row]) + EOL)
 
 
 def get_last_receipt_id():

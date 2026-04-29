@@ -8,7 +8,7 @@
 from queries.similarity import find_clue_variants, load_answers, load_clues, boil
 from xdfile import utils
 from xdfile.html import mktag, html_select_options, html_select_options_freq, grid_to_html
-import cgi
+import html
 
 from xdfile.utils import find_files, progress, debug, info
 from xdfile import ClueAnswer
@@ -17,7 +17,7 @@ import xdfile
 
 
 def esc(s):
-    return cgi.escape(s)
+    return html.escape(s)
 
 
 def prev_uses(pub_uses, mainxd, mainclue):

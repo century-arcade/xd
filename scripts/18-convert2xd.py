@@ -66,7 +66,7 @@ def main():
             for fn, contents, dt in find_files_with_time(input_source, ext='.tsv'):
                 progress(fn)
                 for row in parse_tsv_data(contents.decode('utf-8'), "Source"):
-                    innerfn = strip_toplevel(row.SourceFilename)
+                    innerfn = strip_toplevel(row.SourceFilename).replace('\\', '/')
                     if innerfn in source_files:
                         warn("%s: already in source_files!" % innerfn)
                         continue
@@ -83,7 +83,7 @@ def main():
                 if not contents:  # 0-length files
                     continue
 
-                innerfn = strip_toplevel(fn)
+                innerfn = strip_toplevel(fn).replace('\\', '/')
                 if innerfn in source_files:
                     srcrow = source_files[innerfn]
                     CaptureTime = srcrow.DownloadTime
