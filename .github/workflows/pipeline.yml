@@ -1,0 +1,62 @@
+name: Pipeline (analyze)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Compute weekly cache key
+        id: week
+        run: echo "key=$(date -u +%Y-%U)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore gxd cache
+        id: gxd-cache
+        uses: actions/cache@v4
+        with:
+          path: gxd
+          key: gxd-${{ steps.week.outputs.key }}
+          restore-keys: |
+            gxd-
+
+      - name: Clone or update gxd
+        run: make setup-gxd
+
+      - name: Compute gxd HEAD sha for corpus cache key
+        id: gxd-head
+        run: echo "sha=$(git -C gxd rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache corpus jsonl
+        uses: actions/cache@v4
+        with:
+          path: .corpus.*.jsonl
+          key: corpus-${{ steps.gxd-head.outputs.sha }}
+          restore-keys: |
+            corpus-
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Run make analyze
+        run: make analyze
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyze-output
+          path: |
+            wwwroot/xd-clues.zip
+            wwwroot/xd-metadata.zip
+          if-no-files-found: warn
