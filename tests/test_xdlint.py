@@ -651,6 +651,115 @@ class TestInfoRules:
         assert any("Mystery" in x.message for x in f)
 
 
+class TestFeatureDetectionRules:
+    """XD3xx rules: announce feature usage so the corpus can be searched.
+    Each rule fires once per file when the feature is present, never on
+    SIMPLE (which uses no special features)."""
+
+    def test_simple_emits_no_feature_findings(self):
+        for code in ("XD301", "XD302", "XD303", "XD304", "XD305",
+                     "XD306", "XD307"):
+            assert run_rule(code, SIMPLE) == [], f"{code} fired on SIMPLE"
+
+    def test_xd301_uses_rebus(self):
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=ONE\n\n\n"
+            "1B\n\n\n"
+            "A1. x ~ ONEB\n"
+        )
+        f = run_rule("XD301", text)
+        assert len(f) == 1 and "Rebus" in f[0].message
+
+    def test_xd302_uses_special(self):
+        text = SIMPLE.replace("Author: A\n", "Author: A\nSpecial: shaded\n")
+        f = run_rule("XD302", text)
+        assert len(f) == 1 and "Special" in f[0].message
+
+    def test_xd303_uses_clue_metadata(self):
+        text = SIMPLE.replace(
+            "A1. First ~ ABC\n",
+            "A1. First ~ ABC\nA1 ^Refs: A3\n",
+        )
+        f = run_rule("XD303", text)
+        assert len(f) == 1 and "clue-metadata" in f[0].message
+
+    def test_xd304_uses_clue_markup(self):
+        text = SIMPLE.replace(
+            "A1. First ~ ABC",
+            "A1. {/italic/} clue ~ ABC",
+        )
+        f = run_rule("XD304", text)
+        assert len(f) == 1 and "{/italic/}" in f[0].message
+
+    def test_xd305_uses_cluegroup_via_header(self):
+        text = SIMPLE.replace(
+            "Author: A\n",
+            "Author: A\nCluegroup: X=Theme\n",
+        )
+        f = run_rule("XD305", text)
+        assert len(f) == 1 and "Cluegroup" in f[0].message
+
+    def test_xd306_uses_quantum_rebus_directional(self):
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=IE/EI\n\n\n"
+            "1B\n\n\n"
+            "A1. x ~ IEB\n"
+        )
+        f = run_rule("XD306", text)
+        assert len(f) == 1 and "directional" in f[0].message
+
+    def test_xd306_uses_quantum_rebus_schrodinger(self):
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=A|B\n\n\n"
+            "1XY\n\n\n"
+            "A1. r1 ~ AXY\n"
+        )
+        f = run_rule("XD306", text)
+        assert len(f) == 1 and "Schr" in f[0].message
+
+    def test_xd307_uses_notes(self):
+        text = (
+            "## Metadata\nTitle: T\n## Grid\nAB\n## Clues\nA1. x ~ AB\n"
+            "## Notes\nsome notes content\n"
+        )
+        f = run_rule("XD307", text)
+        assert len(f) == 1
+
+
+class TestSeverityChanges:
+    """Lock in the severity changes from this round so they can't drift."""
+
+    def test_xd101_is_debug(self):
+        sev = next(s for (c, s, _, _, _) in xdlint.RULES if c == "XD101")
+        assert sev == xdlint.Severity.DEBUG
+
+    def test_xd018_is_debug(self):
+        sev = next(s for (c, s, _, _, _) in xdlint.RULES if c == "XD018")
+        assert sev == xdlint.Severity.DEBUG
+
+    def test_xd103_is_info(self):
+        sev = next(s for (c, s, _, _, _) in xdlint.RULES if c == "XD103")
+        assert sev == xdlint.Severity.INFO
+
+    def test_xd111_is_info(self):
+        sev = next(s for (c, s, _, _, _) in xdlint.RULES if c == "XD111")
+        assert sev == xdlint.Severity.INFO
+
+    def test_xd204_is_warning(self):
+        sev = next(s for (c, s, _, _, _) in xdlint.RULES if c == "XD204")
+        assert sev == xdlint.Severity.WARNING
+
+    def test_xd205_is_warning(self):
+        sev = next(s for (c, s, _, _, _) in xdlint.RULES if c == "XD205")
+        assert sev == xdlint.Severity.WARNING
+
+    def test_debug_rank_below_info(self):
+        assert (xdlint.Severity.DEBUG.rank
+                < xdlint.Severity.INFO.rank
+                < xdlint.Severity.WARNING.rank
+                < xdlint.Severity.ERROR.rank)
+
+
 # ---------------------------------------------------------------------------
 # Fixers
 # ---------------------------------------------------------------------------
@@ -882,12 +991,12 @@ class TestCLI:
         text = SIMPLE.replace("Date: 2024-01-01", "Date: 1/1/2024")
         p = tmp_path / "src2024-01-01.xd"
         p.write_text(text, encoding="utf-8")
-        # Default gate (error): warning shouldn't trip it.
+        # Default gate (warning): a warning trips it.
         code, _, _ = run_main([str(p)])
-        assert code == 0
-        # Bumped to warning gate: now it should.
-        code, _, _ = run_main([str(p), "--max-severity", "warning"])
         assert code == 1
+        # Loosened to error gate: warnings stop tripping it.
+        code, _, _ = run_main([str(p), "--max-severity", "error"])
+        assert code == 0
 
     def test_disable_preserves_parser_findings(self, tmp_path):
         """Regression: --disable used to silence parser-level findings
@@ -927,8 +1036,11 @@ class TestCLI:
         p = tmp_path / "src2024-01-01.xd"
         p.write_text(text, encoding="utf-8")
         # --enable-only XD201: only trailing whitespace should fire.
+        # XD201 is INFO so we also need to lower the gate from the
+        # default (warning) to surface it in output.
         # (Other rules might want to fire but should be filtered.)
-        code, out, _ = run_main([str(p), "--enable-only", "XD201"])
+        code, out, _ = run_main([str(p), "--enable-only", "XD201",
+                                 "--max-severity", "info"])
         assert "XD201" in out
         # Pick a rule that *would* fire if active (XD202 would fire only
         # if headers were out of order; it shouldn't matter here either way).
@@ -946,6 +1058,31 @@ class TestCLI:
         assert code == 0
         assert "XD019" in out  # parser-level
         assert "XD001" in out  # rule-level
+
+    def test_default_gate_suppresses_info_in_output(self, tmp_path):
+        """With the default --max-severity=warning, INFO-level findings
+        should be filtered from stdout (in addition to not tripping the
+        exit gate)."""
+        text = SIMPLE.replace("Author: A\n", "Author: A\nSpecial: shaded\n")
+        p = tmp_path / "src2024-01-01.xd"
+        p.write_text(text, encoding="utf-8")
+        code, out, _ = run_main([str(p)])
+        # XD302 (uses-special) is INFO; should not print at default gate.
+        assert "XD302" not in out
+        # ...but should appear at info gate.
+        code, out, _ = run_main([str(p), "--max-severity", "info"])
+        assert "XD302" in out
+
+    def test_debug_gate_surfaces_debug_findings(self, tmp_path):
+        text = SIMPLE.replace("A1. First ~ ABC", "A1. body ~ extra ~ ABC")
+        p = tmp_path / "src2024-01-01.xd"
+        p.write_text(text, encoding="utf-8")
+        # XD018 is DEBUG; not visible at default warning gate.
+        code, out, _ = run_main([str(p)])
+        assert "XD018" not in out
+        # Surfaces at debug gate.
+        code, out, _ = run_main([str(p), "--max-severity", "debug"])
+        assert "XD018" in out
 
     def test_decode_findings_for_non_utf8(self, tmp_path):
         p = tmp_path / "src2024-01-01.xd"

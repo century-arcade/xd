@@ -14,8 +14,10 @@ Usage:
     xdlint.py --fix --diff path            print unified diff, don't write
 
 Severity gate:
-    --max-severity {error,warning,info}    default: error
-    Exit 1 if any finding meets or exceeds the gate; else exit 0.
+    --max-severity {error,warning,info,debug}    default: warning
+    Acts as both a print filter (findings below this level are suppressed)
+    and an exit gate (exit 1 if any finding meets or exceeds the level).
+    Use --max-severity info to surface feature-detection findings (XD3xx).
 
 Rule selection:
     --disable XD###[,XD###...]
@@ -49,10 +51,11 @@ class Severity(enum.Enum):
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"
+    DEBUG = "debug"
 
     @property
     def rank(self) -> int:
-        return {"error": 3, "warning": 2, "info": 1}[self.value]
+        return {"error": 4, "warning": 3, "info": 2, "debug": 1}[self.value]
 
 
 @dataclass
@@ -938,7 +941,7 @@ def _(ctx):
                           f"expected form (e.g. 'A1', 'D27', or '5' for uniclue)")
 
 
-@rule("XD018", Severity.INFO, "multiple-tilde-separators")
+@rule("XD018", Severity.DEBUG, "multiple-tilde-separators")
 def _(ctx):
     """A clue line with more than one ' ~ ' (tilde with spaces both
     sides — the spec separator). Parsers may disagree on which is the
@@ -946,7 +949,7 @@ def _(ctx):
     clue text is legal and not flagged."""
     for clue in ctx.parsed.clues:
         if clue.raw.count(" ~ ") > 1:
-            yield finding("XD018", Severity.INFO, clue.line,
+            yield finding("XD018", Severity.DEBUG, clue.line,
                           "clue line has multiple ' ~ ' separators "
                           "(parsers may pick different splits)")
 
@@ -970,22 +973,21 @@ def _(ctx):
 # Rules - warnings
 # ---------------------------------------------------------------------------
 
-@rule("XD101", Severity.WARNING, "backslash-in-clue")
+@rule("XD101", Severity.DEBUG, "backslash-in-clue")
 def _(ctx):
-    """Backslashes in clue bodies are almost always import bugs:
-    '\\--', 'Moore\\Peters', '<\\I>', '¯\\_(tsu)_/¯' are all real
-    historical fixes. The spec sanctions a single trailing '\\' as
-    a multi-line clue continuation, but it's effectively unused in
-    the corpus and the project direction is to drop the special
-    meaning entirely; flagging all backslashes."""
+    """Backslashes in clue bodies were sometimes import bugs in the
+    early corpus, but in practice flagging them produces too many
+    false positives (legitimate uses include emoticons, file paths,
+    LaTeX-ish notation). Kept as DEBUG so it can still be surfaced
+    on demand."""
     for clue in ctx.parsed.clues:
         if "\\" in clue.body:
             # clue.raw is the stripped form, so its offsets are wrong if the
             # source line had any leading whitespace. Use the original line.
             original = ctx.parsed.lines[clue.line - 1]
             col = original.find("\\") + 1
-            yield finding("XD101", Severity.WARNING, clue.line,
-                          f"backslash at col {col} (likely an import artifact)")
+            yield finding("XD101", Severity.DEBUG, clue.line,
+                          f"backslash at col {col} (possible import artifact)")
 
 
 @rule("XD102", Severity.WARNING, "extra-blank-lines-in-clues")
@@ -1016,17 +1018,18 @@ def _(ctx):
 _AUTHOR_EDITOR_RE = re.compile(r"/\s*Ed(?:itor|\.)?\b|edited by", re.IGNORECASE)
 
 
-@rule("XD103", Severity.WARNING, "editor-folded-into-author")
+@rule("XD103", Severity.INFO, "editor-folded-into-author")
 def _(ctx):
-    """Catches 'Author: X / Ed. Y' style; split into separate Author and
-    Editor headers."""
+    """Author header value carries editor info ('Smith / Ed. Jones',
+    'Smith; edited by Jones'). Split-out via --fix is available but
+    optional — the spec does not require a separate Editor header."""
     for h in ctx.parsed.headers:
         if h.key.lower() != "author":
             continue
         if _AUTHOR_EDITOR_RE.search(h.value):
-            yield finding("XD103", Severity.WARNING, h.line,
-                          "Author value looks like it includes the editor; "
-                          "split into separate Author and Editor headers")
+            yield finding("XD103", Severity.INFO, h.line,
+                          "Author value contains editor info; "
+                          "--fix can split into separate Author and Editor headers")
 
 
 # Canonical metadata header keys, in conventional ordering. Source of
@@ -1040,11 +1043,20 @@ CANONICAL_HEADERS = set(HEADER_ORDER)
 
 @rule("XD104", Severity.WARNING, "non-standard-special-value")
 def _(ctx):
+    """Spec defines exactly two Special values: 'shaded' or 'circle'.
+    Empty values, typos ('cirlce'), and tool-specific extensions all land
+    here; empty is special-cased in the message because that's the most
+    common form."""
     valid = {"shaded", "circle"}
     for h in ctx.parsed.headers:
         if h.key.lower() != "special":
             continue
-        if h.value.lower() not in valid:
+        v = h.value.strip()
+        if not v:
+            yield finding("XD104", Severity.WARNING, h.line,
+                          "Special header is empty (spec values: "
+                          "'shaded' or 'circle')")
+        elif v.lower() not in valid:
             yield finding("XD104", Severity.WARNING, h.line,
                           f"Special value {h.value!r} not in {{shaded, circle}}")
 
@@ -1108,15 +1120,16 @@ def _(ctx):
                           "'## Section' header has leading whitespace")
 
 
-@rule("XD111", Severity.WARNING, "non-canonical-header-key")
+@rule("XD111", Severity.INFO, "non-canonical-header-key")
 def _(ctx):
     """Header key isn't one of the spec-canonical ones. Catches typos
     ('Note' instead of 'Notes') and tool-specific extensions. Spec says
-    additional headers are 'allowed but ignored', so this stays at
-    warning level."""
+    additional headers are 'allowed but ignored', so this is informational
+    only — surfacing the keys lets the corpus-wide audit see what
+    extensions are in use without forcing a fix."""
     for h in ctx.parsed.headers:
         if h.key.lower() not in CANONICAL_HEADERS:
-            yield finding("XD111", Severity.WARNING, h.line,
+            yield finding("XD111", Severity.INFO, h.line,
                           f"non-canonical header key {h.key!r} "
                           f"(canonical set: {sorted(CANONICAL_HEADERS)})")
 
@@ -1135,6 +1148,106 @@ def _(ctx):
                 yield finding("XD013", Severity.INFO, clue.line,
                               f"clue {clue.pos} references another clue "
                               f"but has no '^Refs:' metadata")
+
+
+# ---------------------------------------------------------------------------
+# Rules - feature detection (informational; one finding per file per feature)
+# ---------------------------------------------------------------------------
+# These announce that a file uses a particular spec feature so the corpus
+# can be searched for examples (`xdlint.py --max-severity info corpus/ |
+# grep XD3xx`). They never indicate a problem; they're just signals.
+
+@rule("XD301", Severity.INFO, "uses-rebus")
+def _(ctx):
+    """File declares a Rebus header with at least one valid expansion."""
+    rebus = parse_rebus_header(get_header(ctx.parsed, "Rebus") or "")
+    if not rebus:
+        return
+    line = next((h.line for h in ctx.parsed.headers
+                 if h.key.lower() == "rebus"), 0)
+    yield finding("XD301", Severity.INFO, line,
+                  f"uses Rebus feature ({len(rebus)} key(s): "
+                  f"{sorted(rebus)})")
+
+
+@rule("XD302", Severity.INFO, "uses-special")
+def _(ctx):
+    """File declares a Special header (shaded/circle cells)."""
+    for h in ctx.parsed.headers:
+        if h.key.lower() == "special":
+            yield finding("XD302", Severity.INFO, h.line,
+                          f"uses Special feature (value={h.value!r})")
+            break
+
+
+@rule("XD303", Severity.INFO, "uses-clue-metadata")
+def _(ctx):
+    """At least one clue carries '^Key: value' metadata."""
+    for clue in ctx.parsed.clues:
+        if clue.metadata:
+            keys = sorted(clue.metadata)
+            yield finding("XD303", Severity.INFO, clue.line,
+                          f"uses clue-metadata feature "
+                          f"(first at {clue.pos}, keys: {keys})")
+            break
+
+
+# Spec markup forms: {/italic/}, {*bold*}, {_underscore_}, {-strike-}.
+_CLUE_MARKUP_RE = re.compile(r"\{[/*_-][^/*_\-{}]+[/*_-]\}")
+
+
+@rule("XD304", Severity.INFO, "uses-clue-markup")
+def _(ctx):
+    """At least one clue body uses the spec's inline markup syntax."""
+    for clue in ctx.parsed.clues:
+        m = _CLUE_MARKUP_RE.search(clue.body)
+        if m:
+            yield finding("XD304", Severity.INFO, clue.line,
+                          f"uses clue-markup feature "
+                          f"(first at {clue.pos}: {m.group(0)!r})")
+            break
+
+
+@rule("XD305", Severity.INFO, "uses-cluegroup")
+def _(ctx):
+    """File declares a Cluegroup header or has clues in a non-A/D group."""
+    cg = next((h for h in ctx.parsed.headers
+               if h.key.lower() == "cluegroup"), None)
+    if cg is not None:
+        yield finding("XD305", Severity.INFO, cg.line,
+                      f"uses Cluegroup feature (value={cg.value!r})")
+        return
+    for clue in ctx.parsed.clues:
+        if clue.direction and clue.direction not in ("A", "D"):
+            yield finding("XD305", Severity.INFO, clue.line,
+                          f"uses Cluegroup feature "
+                          f"(undeclared group {clue.direction!r} "
+                          f"at {clue.pos})")
+            break
+
+
+@rule("XD306", Severity.INFO, "uses-quantum-rebus")
+def _(ctx):
+    """File uses the (extension) quantum/Schrödinger rebus syntax: '/'
+    for directional alts or '|' for letter-choice alts."""
+    rebus = parse_rebus_header(get_header(ctx.parsed, "Rebus") or "")
+    for k, exp in rebus.items():
+        if exp.is_directional or exp.is_schrodinger(0) or exp.is_schrodinger(1):
+            line = next((h.line for h in ctx.parsed.headers
+                         if h.key.lower() == "rebus"), 0)
+            kind = ("directional" if exp.is_directional
+                    else "Schrödinger")
+            yield finding("XD306", Severity.INFO, line,
+                          f"uses quantum-rebus feature ({kind} key {k!r})")
+            break
+
+
+@rule("XD307", Severity.INFO, "uses-notes-section")
+def _(ctx):
+    """File has content in the Notes section."""
+    if ctx.parsed.notes_text.strip():
+        yield finding("XD307", Severity.INFO, 0,
+                      "uses Notes section")
 
 
 # ---------------------------------------------------------------------------
@@ -1176,19 +1289,20 @@ def _(ctx):
                           "grid row has leading whitespace (legal but unnecessary)")
 
 
-@rule("XD204", Severity.INFO, "tab-character")
+@rule("XD204", Severity.WARNING, "tab-character")
 def _(ctx):
     for i, line in enumerate(ctx.parsed.lines, 1):
         if "\t" in line:
             col = line.index("\t") + 1
-            yield finding("XD204", Severity.INFO, i,
+            yield finding("XD204", Severity.WARNING, i,
                           f"tab character at col {col}")
 
 
-@rule("XD205", Severity.INFO, "limited-charset")
+@rule("XD205", Severity.WARNING, "limited-charset")
 def _(ctx):
     """Grid uses 1 or 2 distinct letters. Catches redacted (all-X)
-    contest puzzles and accidentally-corrupted imports."""
+    contest puzzles and accidentally-corrupted imports — almost always
+    one of those, never legitimate, so warn-level."""
     if not ctx.parsed.grid:
         return
     distinct = set()
@@ -1199,7 +1313,7 @@ def _(ctx):
             if ch.isalpha():
                 distinct.add(ch.upper())
     if 1 <= len(distinct) <= 2:
-        yield finding("XD205", Severity.INFO, ctx.parsed.grid[0].line,
+        yield finding("XD205", Severity.WARNING, ctx.parsed.grid[0].line,
                       f"grid uses only {len(distinct)} distinct letter(s) "
                       f"({sorted(distinct)}) — redacted? imported wrong?")
 
@@ -1807,6 +1921,8 @@ def _run_fix_mode(args, source, active_codes):
             else:
                 fixed_ctx = ctx
             for f in run_checks(fixed_ctx, active_codes):
+                if f.severity.rank < gate_rank:
+                    continue
                 print(format_finding(path, f))
                 findings_total += 1
                 if f.severity.rank >= gate_rank:
@@ -1843,8 +1959,12 @@ def main():
     ap.add_argument("--base", help="git diff base sha/ref (enables diff mode)")
     ap.add_argument("--head", default="HEAD", help="git diff head (default: HEAD)")
     ap.add_argument("--max-severity",
-                    choices=["error", "warning", "info"], default="error",
-                    help="exit nonzero if a finding meets this level (default: error)")
+                    choices=["error", "warning", "info", "debug"],
+                    default="warning",
+                    help="threshold for both printing and the exit gate: "
+                         "findings below this level are suppressed, and "
+                         "exit is nonzero if any finding meets or exceeds "
+                         "this level (default: warning)")
     ap.add_argument("--disable", default="",
                     help="comma-separated rule codes to skip (e.g. XD013,XD016)")
     ap.add_argument("--enable-only", default="",
@@ -1931,6 +2051,8 @@ def main():
     for path, ctx in source:
         checked += 1
         for f in run_checks(ctx, active):
+            if f.severity.rank < gate_rank:
+                continue
             print(format_finding(path, f))
             findings_total += 1
             if f.severity.rank >= gate_rank:
@@ -1939,8 +2061,8 @@ def main():
         # accumulate one entry per file forever.
         _SLOT_CACHE.pop(id(ctx), None)
 
-    print(f"\nchecked {checked} file(s), {findings_total} finding(s), "
-          f"{gate_hit} at or above '{args.max_severity}'", file=sys.stderr)
+    print(f"\nchecked {checked} file(s), {findings_total} finding(s) "
+          f"at or above '{args.max_severity}'", file=sys.stderr)
     return 1 if gate_hit > 0 else 0
 
 
