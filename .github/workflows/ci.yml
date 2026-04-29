@@ -1,4 +1,4 @@
-name: Pipeline (analyze)
+name: CI
 
 on:
   push:
@@ -7,7 +7,35 @@ on:
     branches: [ "master" ]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install ruff
+      - run: ruff check .
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install pytest -r requirements.txt
+      - run: pytest
+
   analyze:
+    needs: [lint, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -22,7 +50,6 @@ jobs:
         run: echo "key=$(date -u +%Y-%U)" >> "$GITHUB_OUTPUT"
 
       - name: Restore gxd cache
-        id: gxd-cache
         uses: actions/cache@v4
         with:
           path: gxd
