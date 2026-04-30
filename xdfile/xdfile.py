@@ -183,11 +183,13 @@ class xdfile:
         return self.grid[r][c]
 
     def is_redacted(self):
-        # True when the puzzle's letter cells are all 'X' — typically a contest
-        # puzzle published before answers were released. Useful for excluding
-        # from grid/answer/clue analysis while still counting it in metadata.
+        # True when the puzzle's letter cells are all the same character —
+        # typically a contest puzzle published before answers were released.
+        # WSJ uses 'X', BEQ uses 'D'; treat any single-letter fill as redacted.
+        # Useful for excluding from grid/answer/clue analysis while still
+        # counting the puzzle in metadata.
         letters = ''.join(c for row in self.grid for c in row if c not in '#_.')
-        return bool(letters) and all(c == 'X' for c in letters)
+        return bool(letters) and len(set(letters)) == 1
 
     def rebus(self):
         """returns rebus dict of only special (non A-Z) characters"""

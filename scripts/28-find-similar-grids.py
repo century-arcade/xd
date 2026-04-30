@@ -2,17 +2,30 @@
 """
 Find puzzle pairs with similar grid patterns, using numpy.
 
-Reads grids from the corpus (via iter_corpus / corpus cache) and writes pairs
-(xdid1, xdid2, matchpct) where xdid1 is the earlier puzzle and matchpct is
-the percentage of non-block cells that share the same letter. A negative
-matchpct means the second grid matches better when transposed (only checked
-for 15x15 grids, matching the existing C-extension behavior in
-src/sqlite_gridcmp.c).
+Reads grids from the corpus (via iter_corpus / corpus cache) and writes two
+kinds of rows to similar.tsv, matching the format the legacy SQL matcher
+produced (src/findmatches.sql):
+
+  - Match rows  (xdid1, xdid2, matchpct): xdid1 is the earlier puzzle and
+    matchpct is the percentage of non-block cells that share the same letter.
+    A negative matchpct means the second grid matches better when transposed
+    (only checked for square grids, since transposing a non-square grid
+     changes its shape).
+  - Sentinel rows (empty, xdid2, empty): emitted for every processed puzzle
+    that never appears as xdid2 in any match — i.e., a puzzle that's been
+    checked and either has no matches or only matches as the earlier puzzle.
+    Disable with --no-sentinels. Puzzles deliberately skipped (e.g. redacted
+    WSJ contest grids) are excluded by default; pass
+    --treat-skipped-as-checked to sentinel them too.
 
 Replaces the SQLite + C-extension matcher path
 (src/findmatches.py + src/sqlite_gridcmp.c). Recomputes from scratch on every
-run; for ~94k puzzles this completes in well under a minute on a single core,
-so incremental bookkeeping isn't worth the complexity.
+run. For ~94k puzzles, expect roughly:
+  - ~30s on a GPU via cupy
+  - ~5 min on a multi-core CPU with multi-threaded BLAS
+  - ~30 min on a single core
+Fine for periodic local runs; probably too slow for per-commit CI without incremental
+support.
 
 Usage:
     scripts/28-find-similar-grids.py -c gxd -o gxd/similar.tsv [--threshold 30]
@@ -59,26 +72,58 @@ def grid_to_array(rows):
     return arr.reshape(h, w)
 
 
-def load_buckets():
+def load_buckets(min_size=0, max_size=None):
     """Walk the corpus, group puzzles by grid shape (h, w). Each bucket's
     items are sorted by (date, xdid) so higher indices correspond to later
-    puzzles."""
+    puzzles. Grids outside [min_size, max_size] in either dimension are
+    skipped (defaults: no bounds — pass --min-size to filter mini-grids)."""
     raw = defaultdict(list)
-    skipped = 0
+    malformed = 0
+    skipped_xdids = set()
+    skipped_redacted = 0
+    skipped_size = 0
     for xd in iter_corpus():
+        # Deliberate skip — redacted contest grids (no usable letter signal).
+        if xd.is_redacted():
+            xdid = xd.xdid()
+            if xdid:
+                skipped_xdids.add(xdid)
+            skipped_redacted += 1
+            continue
         arr = grid_to_array(xd.grid)
         if arr is None:
-            skipped += 1
+            malformed += 1
+            continue
+        # Deliberate skip — grid shape outside the size band.
+        h, w = arr.shape
+        if (h < min_size or w < min_size or
+                (max_size is not None and (h > max_size or w > max_size))):
+            xdid = xd.xdid()
+            if xdid:
+                skipped_xdids.add(xdid)
+            skipped_size += 1
             continue
         date = xd.date()
         xdid = xd.xdid()
         if not date or not xdid:
-            skipped += 1
+            malformed += 1
             continue
         raw[arr.shape].append((xdid, date, arr))
 
-    if skipped:
-        info(f"skipped {skipped} puzzles (missing date/xdid or malformed grid)")
+    if malformed:
+        info(f"skipped {malformed} puzzles with malformed grid or missing date/xdid")
+    if skipped_redacted:
+        info(f"skipped {skipped_redacted} puzzles as redacted "
+             f"(e.g. WSJ/BEQ contest grids)")
+    if skipped_size:
+        bounds = f">={min_size}" if max_size is None else f"in [{min_size}, {max_size}]"
+        info(f"skipped {skipped_size} puzzles whose shape was not {bounds}")
+    if skipped_xdids:
+        sample = sorted(skipped_xdids)[:5]
+        more = f" ... (+{len(skipped_xdids) - len(sample)} more)" \
+               if len(skipped_xdids) > len(sample) else ""
+        info(f"  ({len(skipped_xdids)} unique xdids: "
+             f"{', '.join(sample)}{more})")
 
     buckets = {}
     for key, items in raw.items():
@@ -86,7 +131,7 @@ def load_buckets():
         xdids = [x[0] for x in items]
         grids = np.stack([x[2] for x in items])
         buckets[key] = (xdids, grids)
-    return buckets
+    return buckets, skipped_xdids
 
 
 def find_pairs(xdids, grids, threshold, show_progress, chunk_size=None):
@@ -115,7 +160,7 @@ def find_pairs(xdids, grids, threshold, show_progress, chunk_size=None):
     # Block-mask, used the same way to count shared-block cells.
     B = (flat == BLOCK).astype(xp.float32)
 
-    do_transpose = (h == 15 and w == 15)
+    do_transpose = (h == w)
     if do_transpose:
         flat_t = xp.asarray(grids.transpose(0, 2, 1).reshape(n, cells))
         M_T = (flat_t[:, :, None] == chars[None, None, :]).astype(xp.float32) \
@@ -176,6 +221,19 @@ def main():
     p = args_parser(desc='find puzzle pairs with similar grid patterns')
     p.add_argument('--threshold', type=int, default=30,
                    help='minimum |matchpct| to emit (default: 30)')
+    p.add_argument('--no-sentinels', action='store_true',
+                   help='omit no-match sentinel rows for processed puzzles '
+                        'that never appear as xdid2 in any match')
+    p.add_argument('--treat-skipped-as-checked', action='store_true',
+                   help='also emit sentinel rows for deliberately-skipped '
+                        'puzzles (e.g. redacted contest grids); no effect '
+                        'with --no-sentinels')
+    p.add_argument('--min-size', type=int, default=0,
+                   help='ignore grids with either dimension < N '
+                        '(default: 0, no lower bound)')
+    p.add_argument('--max-size', type=int, default=None,
+                   help='ignore grids with either dimension > N '
+                        '(default: unbounded)')
     args = get_args(parser=p)
 
     if not args.output:
@@ -186,12 +244,14 @@ def main():
 
     info(f"backend: {'GPU (cupy)' if USING_GPU else 'CPU (numpy)'}")
     info("loading corpus...")
-    buckets = load_buckets()
+    buckets, skipped_xdids = load_buckets(min_size=args.min_size,
+                                          max_size=args.max_size)
     total = sum(len(xdids) for xdids, _ in buckets.values())
     info(f"loaded {total} puzzles in {len(buckets)} size buckets "
          f"({time.time()-t_start:.1f}s)")
 
     sorted_buckets = sorted(buckets.items(), key=lambda kv: -len(kv[1][0]))
+    all_processed = {xdid for xdids, _ in buckets.values() for xdid in xdids}
 
     pairs = []
     for (h, w), (xdids, grids) in sorted_buckets:
@@ -207,11 +267,26 @@ def main():
 
     pairs.sort(key=lambda p: (p[0], p[1]))
 
-    info(f"writing {len(pairs)} pairs to {args.output}...")
+    if args.no_sentinels:
+        sentinels = []
+    else:
+        # A processed puzzle that never appears as xdid2 in any match has
+        # no entry yet — emit a sentinel so downstream consumers can tell
+        # "checked, no matches" from "not checked".
+        xdid2_set = {x2 for _, x2, _ in pairs}
+        sentinel_pool = all_processed
+        if args.treat_skipped_as_checked:
+            sentinel_pool = sentinel_pool | skipped_xdids
+        sentinels = sorted(sentinel_pool - xdid2_set)
+
+    info(f"writing {len(pairs)} matches and {len(sentinels)} sentinels "
+         f"to {args.output}...")
     with open(args.output, 'w', encoding='utf-8') as f:
         f.write("xdid1\txdid2\tmatchpct\n")
         for xdid1, xdid2, pct in pairs:
             f.write(f"{xdid1}\t{xdid2}\t{pct}\n")
+        for xdid in sentinels:
+            f.write(f"\t{xdid}\t\n")
 
     info(f"done ({time.time()-t_start:.1f}s total)")
 
