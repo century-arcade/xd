@@ -829,6 +829,27 @@ def _(ctx):
 
 _C1_RE = re.compile(r"[\x80-\x9f]")
 
+# Source-encoding candidates for each C1 codepoint. cp1252 covers most of our
+# corpus (em dashes, smart quotes, š), but some files were originally Mac
+# Roman (0x8E='é' in Mac Roman, 'Ž' in cp1252) and U+0080/U+0098 sometimes
+# stand for symbols (°, ÷) that neither encoding maps to. Showing both in
+# the finding lets the user pick when --fix can't decide.
+_CP1252_CANDIDATES = {}
+_MAC_ROMAN_CANDIDATES = {}
+for _b in range(0x80, 0xa0):
+    try:
+        _CP1252_CANDIDATES[_b] = bytes([_b]).decode("cp1252")
+    except UnicodeDecodeError:
+        pass
+    _MAC_ROMAN_CANDIDATES[_b] = bytes([_b]).decode("mac_roman")
+
+
+def _c1_candidates(cp: int) -> str:
+    cp1252 = (f"cp1252: {_CP1252_CANDIDATES[cp]!r}"
+              if cp in _CP1252_CANDIDATES else "cp1252: undefined")
+    mac = f"Mac Roman: {_MAC_ROMAN_CANDIDATES[cp]!r}"
+    return f"{cp1252}, {mac}"
+
 
 @rule("XD010", Severity.ERROR, "bad-codepoint")
 def _(ctx):
@@ -838,7 +859,7 @@ def _(ctx):
             cp = ord(m.group(0))
             yield finding("XD010", Severity.ERROR, i,
                           f"C1 control U+{cp:04X} at col {m.start() + 1} "
-                          f"(likely Windows-1252 mojibake)")
+                          f"({_c1_candidates(cp)})")
 
 
 _HTML_ENTITY_RE = re.compile(r"&(?:[a-zA-Z]{1,8}|#\d+|#x[0-9a-fA-F]+);")
@@ -1400,16 +1421,81 @@ def _detect_nl(text: str) -> str:
     return "\r\n" if "\r\n" in text else "\n"
 
 
+# U+008E is the only codepoint where cp1252's mapping is consistently wrong
+# in our corpus: cp1252 says 'Ž' (Slavic), but every U+008E we have is the
+# Mac Roman 'é' (Cézanne, José, risqué, Gérard, Cité, entrée). Override.
+_CP1252_OVERRIDES = {chr(0x8e): "é"}
+
+# Single-byte C1 controls we refuse to auto-fix because cp1252 maps them
+# to a character (€, ˜) that almost never matches the intent in our corpus
+# (degree sign, division sign, etc.). The XD010 finding shows candidates
+# so the user can fix manually. Only applies to standalone occurrences;
+# U+0080 followed by another C1 control is handled by the UTF-8 trailer
+# pass below.
+_CP1252_SKIP_SINGLE = {chr(0x80), chr(0x98)}
+
+# Two consecutive C1 controls beginning with U+0080 are almost always the
+# trailing two bytes of a UTF-8 sequence \xe2\x80\xXX (the smart-quote /
+# dash / bullet block U+2010-U+201F). The lead byte may have been dropped
+# (we prepend \xe2) or survived as 'â' (the latin-1 reading of \xe2, after
+# a UTF-8 round-trip). Either way, latin-1-encoding the run and
+# UTF-8-decoding it reconstructs the original character.
+_UTF8_TRAILER_RE = re.compile(r"â?\x80[\x80-\x9f]")
+
+# Orphan smart-quote trailer: U+009C / U+009D appearing immediately after a
+# straight ". The original was the UTF-8 byte sequence \xe2\x80\x9c (left
+# curly) or \xe2\x80\x9d (right curly). Some upstream processor replaced the
+# \xe2\x80 with a straight " quote but left the \x9c/\x9d trailer behind.
+# The straight " already serves as the quote; the trailer is dead weight.
+# In our corpus this pattern is 100% uniform — every U+009C/U+009D is
+# preceded by ", with no exceptions.
+_ORPHAN_QUOTE_TRAILER_RE = re.compile(r'"[\x9c\x9d]')
+
+
 @fixer("XD010")
 def _(text):
-    """The standard mojibake pattern: a Windows-1252 byte was read as
-    latin-1/iso-8859-1 and stored as its U+0080-U+009F codepoint. Reverse it
-    by routing each such codepoint back through cp1252 (e.g. U+0091 -> U+2018).
+    """C1-control mojibake. Four passes:
+
+    1. UTF-8 trailer: an optional 'â' + \\u0080 + another C1 control ->
+       reconstructed UTF-8 smart quote / dash (handles bytes whose lead
+       \\xe2 was either lost or survived as latin-1 'â').
+    2. Orphan smart-quote trailer: a U+009C/U+009D after a straight " is
+       a stray byte from a UTF-8 smart quote whose lead bytes were turned
+       into the straight ". Drop the trailer byte.
+    3. Per-codepoint overrides where cp1252 is reliably wrong (U+008E -> é).
+    4. cp1252 default for the rest, skipping codepoints that are too
+       ambiguous to auto-fix (U+0080, U+0098).
     """
     count = 0
+
+    def utf8_repl(m):
+        nonlocal count
+        s = m.group(0)
+        bs = s.encode("latin-1")
+        if not bs.startswith(b"\xe2"):
+            bs = b"\xe2" + bs
+        try:
+            replacement = bs.decode("utf-8")
+        except UnicodeDecodeError:
+            return s
+        count += 1
+        return replacement
+    text = _UTF8_TRAILER_RE.sub(utf8_repl, text)
+
+    def orphan_repl(m):
+        nonlocal count
+        count += 1
+        return '"'
+    text = _ORPHAN_QUOTE_TRAILER_RE.sub(orphan_repl, text)
+
     def repl(m):
         nonlocal count
         ch = m.group(0)
+        if ch in _CP1252_OVERRIDES:
+            count += 1
+            return _CP1252_OVERRIDES[ch]
+        if ch in _CP1252_SKIP_SINGLE:
+            return ch
         try:
             replacement = ch.encode("latin-1").decode("cp1252")
         except UnicodeDecodeError:

@@ -441,6 +441,22 @@ class TestErrorRules:
         f = run_rule("XD010", text)
         assert any("U+0091" in x.message for x in f)
 
+    def test_xd010_finding_lists_both_candidates(self):
+        # Finding should show cp1252 and Mac Roman candidates so the
+        # user can pick when --fix declines to auto-fix.
+        text = SIMPLE.replace("Title: T", "Title: Tfoo")
+        f = run_rule("XD010", text)
+        assert any("cp1252:" in x.message and "Mac Roman:" in x.message
+                   for x in f)
+
+    def test_xd010_finding_undefined_cp1252(self):
+        # U+009D is undefined in cp1252; finding should say so but
+        # still show the Mac Roman candidate.
+        text = SIMPLE.replace("Title: T", "Title: Tfoo")
+        f = run_rule("XD010", text)
+        assert any("cp1252: undefined" in x.message
+                   and "Mac Roman:" in x.message for x in f)
+
     def test_xd011_html_entity(self):
         text = SIMPLE.replace("Title: T", "Title: T &amp; U")
         f = run_rule("XD011", text)
@@ -772,6 +788,53 @@ class TestFixers:
         assert n == 1
         assert "‘" in new
         assert "" not in new
+
+    def test_xd010_fix_macroman_e_acute(self):
+        # U+008E is Mac Roman é, not cp1252 Ž. Override produces é.
+        text = "Czanne\n"
+        new, n = xdlint.FIXERS["XD010"][1](text)
+        assert n == 1
+        assert new == "Cézanne\n"
+
+    def test_xd010_fix_utf8_trailer_smart_quote(self):
+        # U+0080 followed by another C1 control = trailing bytes of
+        # \xe2\x80\xXX. Reconstruct the original UTF-8 character.
+        text = "say hi\n"
+        new, n = xdlint.FIXERS["XD010"][1](text)
+        assert n == 2
+        assert new == "say “hi”\n"
+
+    def test_xd010_fix_skips_ambiguous_single(self):
+        # U+0080 alone: cp1252 says € but corpus shows °/$/÷ too.
+        # Leave for manual fix; finding still surfaces.
+        text = "90 on a compass\n"
+        new, n = xdlint.FIXERS["XD010"][1](text)
+        assert n == 0
+        assert text == new
+
+    def test_xd010_fix_orphan_smart_quote_trailer(self):
+        # U+009C/U+009D after a straight " is a stray UTF-8 trailer
+        # byte from a smart quote whose lead bytes were already turned
+        # into the straight ". Strip the trailer.
+        text = '"Beyond the Sea" singer\n'
+        new, n = xdlint.FIXERS["XD010"][1](text)
+        assert n == 1
+        assert new == '"Beyond the Sea" singer\n'
+
+    def test_xd010_fix_orphan_open_quote_trailer(self):
+        # U+009C is the trailer for left curly quote; same pattern.
+        text = '"hello"\n'
+        new, n = xdlint.FIXERS["XD010"][1](text)
+        assert n == 2
+        assert new == '"hello"\n'
+
+    def test_xd010_fix_does_not_strip_lone_u009d(self):
+        # U+009D NOT preceded by a straight " is unusual; leave it alone
+        # so the finding stays visible for manual review.
+        text = 'foobar\n'
+        new, n = xdlint.FIXERS["XD010"][1](text)
+        assert n == 0
+        assert new == text
 
     def test_xd011_html_entity_unescape(self):
         text = "Title: A &amp; B\n"
