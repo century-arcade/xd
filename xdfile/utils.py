@@ -44,6 +44,80 @@ def space_with_nbsp(text):
     """ Replace spaces with ;nbsp; """
     return text.replace(' ', '&nbsp;')
 
+
+# C1 control codepoints (U+0080..U+009F) appear in puzzle text whenever bytes
+# from a non-latin-1 source were decoded as latin-1. Most are cp1252 mojibake
+# (em dashes, smart quotes, š), but a handful are Mac Roman ('é' for U+008E),
+# UTF-8 trailers (\xe2\x80\xXX with the lead byte lost or surviving as 'â'),
+# or symbols neither encoding represents (°, ÷). Kept in lockstep with the
+# XD010 fixer in xdlint.py.
+_CP1252_OVERRIDES = {chr(0x8e): "é"}  # cp1252's 'Ž' is wrong in our corpus
+_CP1252_SKIP_SINGLE = {chr(0x80), chr(0x98)}  # too ambiguous to auto-decide
+_C1_RE = re.compile(r"[\x80-\x9f]")
+_UTF8_TRAILER_RE = re.compile(r"â?\x80[\x80-\x9f]")
+
+
+# UTF-8 byte sequence \xc2\xXX or \xc3\xXX (encoding U+0080-U+00FF, the
+# latin supplement) misread as latin-1 produces 'Â' or 'Ã' followed by a
+# char in U+0080-U+00BF (the continuation-byte range). Re-encoding as
+# latin-1 and decoding as UTF-8 reverses the corruption. Common in puzzle
+# text from sources where UTF-8 .puz contents got decoded as ISO-8859-1
+# by puzpy. Real text rarely has 'Â'/'Ã' followed by a U+0080-U+00BF
+# char, so the false-positive rate is low.
+_LATIN1_UTF8_RE = re.compile(r'[\xc2\xc3][\x80-\xbf]')
+
+
+def clean_latin1_utf8_mojibake(s: str) -> str:
+    """Re-decode UTF-8 byte pairs that were misread as latin-1. Catches
+    accented vowels and other latin-supplement characters that survived
+    a wrong-encoding round-trip (e.g. 'Ãª' -> 'ê', 'Ã©' -> 'é')."""
+    def repl(m):
+        try:
+            return m.group(0).encode('latin-1').decode('utf-8')
+        except UnicodeDecodeError:
+            return m.group(0)
+    return _LATIN1_UTF8_RE.sub(repl, s)
+
+
+def clean_c1_controls(s: str) -> str:
+    """Clean C1 control codepoints (U+0080-U+009F) out of a string.
+
+    Three passes:
+    1. UTF-8 trailer: optional 'â' + \\u0080 + another C1 control gets
+       reconstructed by latin-1 encoding then UTF-8 decoding (with an
+       \\xe2 prefix added if 'â' was missing). Recovers smart quotes,
+       en/em dashes, etc. that lost their lead byte.
+    2. Per-codepoint overrides where cp1252 maps wrong (U+008E -> 'é').
+    3. cp1252 default for the rest, except U+0080 and U+0098 which the
+       caller must resolve manually (cp1252 says '€' / '˜' but the corpus
+       uses these for '°' / '÷' / etc.).
+
+    Codepoints undefined in cp1252 (U+0081, U+008D, U+008F, U+0090, U+009D)
+    pass through unchanged.
+    """
+    def utf8_repl(m):
+        s = m.group(0)
+        bs = s.encode("latin-1")
+        if not bs.startswith(b"\xe2"):
+            bs = b"\xe2" + bs
+        try:
+            return bs.decode("utf-8")
+        except UnicodeDecodeError:
+            return s
+    s = _UTF8_TRAILER_RE.sub(utf8_repl, s)
+
+    def repl(m):
+        ch = m.group(0)
+        if ch in _CP1252_OVERRIDES:
+            return _CP1252_OVERRIDES[ch]
+        if ch in _CP1252_SKIP_SINGLE:
+            return ch
+        try:
+            return ch.encode("latin-1").decode("cp1252")
+        except UnicodeDecodeError:
+            return ch
+    return _C1_RE.sub(repl, s)
+
 def split_xdid(xdid):
     """ Split xdid [nyt2015-07-01] into set
     If not matched return None

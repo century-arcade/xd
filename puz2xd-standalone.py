@@ -27,22 +27,70 @@ HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'number', 'date',
 NON_ANSWER_CHARS = [BLOCK_CHAR, OPEN_CHAR]  # UNKNOWN_CHAR is a wildcard answer character
 
 
+# --- C1-control cleanup (kept in lockstep with xdfile.utils.clean_c1_controls
+# and the XD010 fixer in xdlint.py). Standalone duplicates this so the script
+# can run without the xdfile package. ---
+_CP1252_OVERRIDES = {chr(0x8e): "é"}  # cp1252's 'Ž' is wrong in our corpus
+_CP1252_SKIP_SINGLE = {chr(0x80), chr(0x98)}  # too ambiguous to auto-decide
+_C1_RE = re.compile(r"[\x80-\x9f]")
+_UTF8_TRAILER_RE = re.compile(r"â?\x80[\x80-\x9f]")
+_LATIN1_UTF8_RE = re.compile(r"[\xc2\xc3][\x80-\xbf]")
+
+
+def clean_latin1_utf8_mojibake(s):
+    def repl(m):
+        try:
+            return m.group(0).encode('latin-1').decode('utf-8')
+        except UnicodeDecodeError:
+            return m.group(0)
+    return _LATIN1_UTF8_RE.sub(repl, s)
+
+
+def clean_c1_controls(s):
+    def utf8_repl(m):
+        s = m.group(0)
+        bs = s.encode("latin-1")
+        if not bs.startswith(b"\xe2"):
+            bs = b"\xe2" + bs
+        try:
+            return bs.decode("utf-8")
+        except UnicodeDecodeError:
+            return s
+    s = _UTF8_TRAILER_RE.sub(utf8_repl, s)
+
+    def repl(m):
+        ch = m.group(0)
+        if ch in _CP1252_OVERRIDES:
+            return _CP1252_OVERRIDES[ch]
+        if ch in _CP1252_SKIP_SINGLE:
+            return ch
+        try:
+            return ch.encode("latin-1").decode("cp1252")
+        except UnicodeDecodeError:
+            return ch
+    return _C1_RE.sub(repl, s)
+
+
 def decode(s):
-    s = s.replace('\x92', "'")
-    s = s.replace('\xc2\x92', "'")
-    s = s.replace('\xc2\xa0', ' ')  # UTF-8 NBSP double-decoded as latin-1
-    s = s.replace('\xc3\x82',"")
-    s = s.replace('\xc3\xa8',"è") # +A5. Crème de la crème ~ ELITE
-    s = s.replace('\xe0','à') # -A49. Do the seemingly impossible, à la Jesus ~ WALKONWATER
-    s = s.replace('\xc2', " ") # Change rest of 0xC2 to 0x20
-    s = s.replace('\xa0'," ")
-    s = s.replace('\x93', '"')
-    s = s.replace('\x94', '"')
-    s = s.replace('\x97', "—")
-    s = s.replace('\x85', '...')
-    s = s.replace('\x86', '†')
-    s = s.replace('\xd3','"')
-    s = s.replace('\xd4','"')
+    # 'Â' (U+00C2) before a C1 control: \xc2\xXX UTF-8 misread as latin-1.
+    # Strip the orphan 'Â' so clean_c1_controls handles the trailer.
+    s = re.sub(r'Â([\x80-\x9f])', r'\1', s)
+    # UTF-8 NBSP read as latin-1 -> 'Â\xa0'; then any remaining NBSPs.
+    s = s.replace('\xc2\xa0', ' ')
+    s = s.replace('\xa0', ' ')
+    # \xc3\xa8 UTF-8 (è) misread as latin-1 -> 'Ã¨'. Targeted replacement.
+    s = s.replace('Ã¨', 'è')
+    # MacRoman left/right curly double quotes.
+    s = s.replace('\xd3', '"')
+    s = s.replace('\xd4', '"')
+    s = clean_latin1_utf8_mojibake(s)
+    s = clean_c1_controls(s)
+    # ASCII typography convention (corpus keeps em dash, flattens the rest).
+    s = s.translate(str.maketrans({
+        '‘': "'", '’': "'",
+        '“': '"', '”': '"',
+        '…': '...',
+    }))
     s = urllib.parse.unquote(s)
     s = html.unescape(s)
     # Remove spurious semicolons from invalid HTML entity refs
