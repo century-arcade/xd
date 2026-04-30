@@ -836,6 +836,28 @@ class TestFixers:
         assert n == 0
         assert new == text
 
+    def test_xd009_fix_latin1_utf8_mojibake(self):
+        # 'Ãª' = UTF-8 \xc3\xaa misread as latin-1 -> should
+        # round-trip back to 'ê'.
+        text = 'D18. "___ tÃªte" lyric\n'
+        new, n = xdlint.FIXERS["XD009"][1](text)
+        assert n == 1
+        assert new == 'D18. "___ tête" lyric\n'
+
+    def test_xd009_fix_multiple_mojibake_in_one_line(self):
+        text = "MÃ¡laga and CafÃ©\n"
+        new, n = xdlint.FIXERS["XD009"][1](text)
+        assert n == 2
+        assert new == "Málaga and Café\n"
+
+    def test_xd009_fix_leaves_real_a_circumflex_alone(self):
+        # 'Âge' with ASCII 'g' is not in U+0080-U+00BF so the
+        # regex doesn\'t match. No false positives on real French.
+        text = "Âge moyen\n"
+        new, n = xdlint.FIXERS["XD009"][1](text)
+        assert n == 0
+        assert new == text
+
     def test_xd011_html_entity_unescape(self):
         text = "Title: A &amp; B\n"
         new, n = xdlint.FIXERS["XD011"][1](text)

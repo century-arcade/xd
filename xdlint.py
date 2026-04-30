@@ -830,25 +830,29 @@ def _(ctx):
 _C1_RE = re.compile(r"[\x80-\x9f]")
 
 # Source-encoding candidates for each C1 codepoint. cp1252 covers most of our
-# corpus (em dashes, smart quotes, š), but some files were originally Mac
-# Roman (0x8E='é' in Mac Roman, 'Ž' in cp1252) and U+0080/U+0098 sometimes
-# stand for symbols (°, ÷) that neither encoding maps to. Showing both in
-# the finding lets the user pick when --fix can't decide.
+# corpus (em dashes, smart quotes, š); some files were originally Mac Roman
+# (0x8E='é' in Mac Roman, 'Ž' in cp1252); a few older Newsday/NYSun files
+# came from cp437/cp850 (DOS) where 0x82='é', 0x89='ë'; and U+0080/U+0098
+# sometimes stand for symbols (°, ÷) that no standard encoding maps to.
+# Showing all three lets the user pick when --fix can't decide.
 _CP1252_CANDIDATES = {}
 _MAC_ROMAN_CANDIDATES = {}
+_CP437_CANDIDATES = {}
 for _b in range(0x80, 0xa0):
     try:
         _CP1252_CANDIDATES[_b] = bytes([_b]).decode("cp1252")
     except UnicodeDecodeError:
         pass
     _MAC_ROMAN_CANDIDATES[_b] = bytes([_b]).decode("mac_roman")
+    _CP437_CANDIDATES[_b] = bytes([_b]).decode("cp437")
 
 
 def _c1_candidates(cp: int) -> str:
     cp1252 = (f"cp1252: {_CP1252_CANDIDATES[cp]!r}"
               if cp in _CP1252_CANDIDATES else "cp1252: undefined")
     mac = f"Mac Roman: {_MAC_ROMAN_CANDIDATES[cp]!r}"
-    return f"{cp1252}, {mac}"
+    cp437 = f"cp437: {_CP437_CANDIDATES[cp]!r}"
+    return f"{cp1252}, {mac}, {cp437}"
 
 
 @rule("XD010", Severity.ERROR, "bad-codepoint")
@@ -860,6 +864,28 @@ def _(ctx):
             yield finding("XD010", Severity.ERROR, i,
                           f"C1 control U+{cp:04X} at col {m.start() + 1} "
                           f"({_c1_candidates(cp)})")
+
+
+# UTF-8 byte sequence \xc2\xXX or \xc3\xXX (latin-supplement block) misread
+# as latin-1 leaves 'Â' or 'Ã' followed by a U+0080-U+00BF char. Re-encoding
+# as latin-1 and decoding as UTF-8 reverses the corruption.
+_LATIN1_UTF8_RE = re.compile(r"[\xc2\xc3][\x80-\xbf]")
+
+
+@rule("XD009", Severity.ERROR, "latin1-utf8-mojibake")
+def _(ctx):
+    """UTF-8 latin-supplement bytes misread as latin-1 (e.g. 'Ãª' for 'ê',
+    'Ã©' for 'é'). Common when a UTF-8 .puz file was decoded as ISO-8859-1
+    by an upstream converter."""
+    for i, line in enumerate(ctx.parsed.lines, 1):
+        for m in _LATIN1_UTF8_RE.finditer(line):
+            try:
+                fix = m.group(0).encode('latin-1').decode('utf-8')
+            except UnicodeDecodeError:
+                continue
+            yield finding("XD009", Severity.ERROR, i,
+                          f"latin-1 misread of UTF-8 {m.group(0)!r} "
+                          f"at col {m.start() + 1} (should be {fix!r})")
 
 
 _HTML_ENTITY_RE = re.compile(r"&(?:[a-zA-Z]{1,8}|#\d+|#x[0-9a-fA-F]+);")
@@ -1271,6 +1297,19 @@ def _(ctx):
                       "uses Notes section")
 
 
+@rule("XD308", Severity.INFO, "uses-open-cells")
+def _(ctx):
+    """Grid uses '_' for non-cell positions (non-rectangular puzzle shapes)."""
+    for row in ctx.parsed.grid:
+        col = row.cells.find("_")
+        if col == -1:
+            col = row.cells.find("＿")
+        if col != -1:
+            yield finding("XD308", Severity.INFO, row.line,
+                          f"uses open-cell feature ('_' at col {col})")
+            break
+
+
 # ---------------------------------------------------------------------------
 # Rules - info
 # ---------------------------------------------------------------------------
@@ -1394,6 +1433,11 @@ FIXERS: Dict[str, Tuple[bool, FixerFn]] = {}  # code -> (unsafe, fn)
 # chars later passes see), then whitespace/structural cleanup, then
 # header reordering, then in-section content fixes.
 FIX_ORDER = [
+    "XD009",  # UTF-8 latin-supplement misread as latin-1 ('Ãª' -> 'ê').
+              # Runs before XD010 because a triple-mojibake like
+              # 'Â' decomposes to 'Â' + '' here,
+              # leaving '' which the XD010 trailer pass then
+              # reconstructs to '"'.
     "XD010",  # cp1252 mojibake -> intended chars
     "XD011",  # HTML entities -> unescaped chars
     "XD110",  # de-indent '## Section' headers
@@ -1450,6 +1494,22 @@ _UTF8_TRAILER_RE = re.compile(r"â?\x80[\x80-\x9f]")
 # In our corpus this pattern is 100% uniform — every U+009C/U+009D is
 # preceded by ", with no exceptions.
 _ORPHAN_QUOTE_TRAILER_RE = re.compile(r'"[\x9c\x9d]')
+
+
+@fixer("XD009")
+def _(text):
+    """UTF-8 latin-supplement misread as latin-1: 'Ã' + cont-byte (and 'Â'
+    + cont-byte) re-decoded through latin-1 -> UTF-8 round-trip."""
+    count = 0
+    def repl(m):
+        nonlocal count
+        try:
+            replacement = m.group(0).encode('latin-1').decode('utf-8')
+        except UnicodeDecodeError:
+            return m.group(0)
+        count += 1
+        return replacement
+    return _LATIN1_UTF8_RE.sub(repl, text), count
 
 
 @fixer("XD010")
