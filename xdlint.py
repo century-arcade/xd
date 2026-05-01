@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+
+# ailevel: 7
+# This code (and its unit tests in tests/) was written by Claude Code Opus 4.6
+# at the behest of a human developer over the course of several hours of iteration.
+# Each rule was specified, reviewed, tested, and refined by a human.
+
+
 """
 xdlint.py - authoritative validator for the .xd crossword format.
 
@@ -29,6 +36,7 @@ Add a new rule:
         if condition:
             yield finding("XD###", Severity.WARNING, line, "message")
 """
+
 from __future__ import annotations
 
 import argparse
