@@ -14,7 +14,7 @@ import urllib.error
 import time
 
 import xdfile
-from .utils import warn
+from .utils import warn, clean_c1_controls, clean_latin1_utf8_mojibake
 
 
 def reparse_date(s):
@@ -24,21 +24,35 @@ def reparse_date(s):
 
 
 def decode(s):
-    s = s.replace('\x92', "'")
-    s = s.replace('\xc2\x92', "'")
-    s = s.replace('\xc2\xa0', ' ')  # UTF-8 NBSP double-decoded as latin-1
-    s = s.replace('\xc3\x82',"")
-    s = s.replace('\xc3\xa8',"è") # +A5. Crème de la crème ~ ELITE
-    s = s.replace('\xe0','à') # -A49. Do the seemingly impossible, à la Jesus ~ WALKONWATER
-    s = s.replace('\xc2', " ") # Change rest ot 0xC2 to 0x20
-    s = s.replace('\xa0'," ")
-    s = s.replace('\x93', '"')
-    s = s.replace('\x94', '"')
-    s = s.replace('\x97', "—")
-    s = s.replace('\x85', '...')
-    s = s.replace('\x86', '†')
-    s = s.replace('\xd3','"')
-    s = s.replace('\xd4','"')
+    # UTF-8-encoded characters read as latin-1 surface as 'Â' + trailing
+    # byte. Strip the orphan 'Â' before a C1 control (then clean_c1_controls
+    # handles the trailer). E.g. .puz bytes \xc2\x92 (UTF-8 U+0092) read as
+    # latin-1 -> 'Â' -> '' -> "'".
+    s = re.sub(r'Â([\x80-\x9f])', r'\1', s)
+    # UTF-8 NBSP read as latin-1 surfaces as 'Â\xa0'; collapse to space.
+    s = s.replace('\xc2\xa0', ' ')
+    s = s.replace('\xa0', ' ')
+    # \xc3\xa8 = UTF-8 byte sequence for U+00E8 (è) misread as latin-1 ('Ã¨').
+    # Targeted because real 'Ã¨' is unusual in puzzle text.
+    s = s.replace('Ã¨', 'è')
+    # MacRoman left/right curly double quotes.
+    s = s.replace('\xd3', '"')
+    s = s.replace('\xd4', '"')
+    # UTF-8 latin-supplement bytes (\xc3\xXX, \xc2\xXX) misread as latin-1
+    # leave 'Ã'/'Â' + continuation byte. Re-decode before C1 cleanup so any
+    # 'Â' + C1 sequence collapses cleanly into the C1 path below.
+    s = clean_latin1_utf8_mojibake(s)
+    # Systematic C1-control cleanup (cp1252 + Mac Roman + UTF-8 trailers).
+    # Replaces the per-byte hand-coded list this function used to carry.
+    s = clean_c1_controls(s)
+    # The corpus convention is ASCII typography (em dash is the lone Unicode
+    # exception, matching the legacy `\x97 -> "—"` mapping). Flatten the
+    # other smart-typography chars that clean_c1_controls produced.
+    s = s.translate(str.maketrans({
+        '‘': "'", '’': "'",  # curly single quotes
+        '“': '"', '”': '"',  # curly double quotes
+        '…': '...',               # horizontal ellipsis
+    }))
     s = urllib.parse.unquote(s)
     s = html.unescape(s)
     # Remove spurious semicolons from invalid HTML entity refs
