@@ -2,6 +2,17 @@
 
 The xd project includes a [text format for crossword puzzles](doc/xd-format.md) and a pipeline for downloading, parsing, analyzing puzzles, and producing the website and released data at [xd.saul.pw](https://xd.saul.pw).
 
+## Validating .xd files
+
+[`xdlint.py`](xdlint.py) is the authoritative validator for the .xd format. It enforces the [spec](doc/xd-format.md) plus a set of structural and quality rules grounded in real-world fix patterns. Stdlib-only, no dependencies.
+
+    xdlint.py path [path ...]              # lint files or directories
+    xdlint.py --base BASE [--head HEAD]    # lint files changed in a git diff
+    xdlint.py --list-rules                 # print the rule catalog
+    xdlint.py --no-experimental ...        # skip rules interpreting unspec'd extensions
+
+See [`doc/rebus-conventions.md`](doc/rebus-conventions.md) for the rebus / quantum / Schrödinger conventions the linter recognizes (these are extensions to the spec, not yet formalized).
+
 ## Requirements
 
 - python 3.7+
