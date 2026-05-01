@@ -2,14 +2,14 @@
 
 ## Status
 
-The .xd format spec ([doc/xd-format.md](xd-format.md)) declares the file is "a simple UTF-8 text file, and can often be 7-bit ASCII clean." In practice, the gxd corpus (94k+ puzzles, ingested over decades from publisher feeds) contains a small fraction of files with byte-level artifacts from at least five different upstream encodings. None of them are inherent to .xd itself — they were inherited from the source .puz / .ipuz / PDF files and propagated through legacy converters.
+The .xd format spec ([doc/xd-format.md](xd-format.md)) declares the file is "a simple UTF-8 text file, and can often be 7-bit ASCII clean." In practice, the gxd corpus (94k+ puzzles, ingested over years from multiple sources) contains a small fraction of files with byte-level artifacts from at least five different upstream encodings. None of them are inherent to .xd itself — they were inherited from the source .puz / .ipuz / PDF files and propagated through legacy converters.
 
 This document catalogues the patterns observed, the diagnostics that distinguish them, and the cleanup pipeline that handles each. It exists because we hit every one of these patterns at least once during a single review pass and had to figure them out from scratch.
 
 The two relevant tools:
 
 - [`xdfile/puz2xd.py`](../xdfile/puz2xd.py) `decode()` — runs at conversion time on every clue/header pulled out of a .puz file. The shared utility lives in [`xdfile/utils.py`](../xdfile/utils.py).
-- [`xdlint.py`](../xdlint.py) rules `XD009` (latin-1 misread of UTF-8) and `XD010` (C1 control mojibake) — run at lint time over .xd files already on disk.
+- [`xdlint.py`](../xdlint.py) rules `XD009` (latin-1 misread of UTF-8) and `XD010` (C1 control [mojibake](https://en.wikipedia.org/wiki/Mojibake)) — run at lint time over .xd files already on disk.
 
 Both implementations are kept in lockstep with each other and with the standalone [`puz2xd-standalone.py`](../puz2xd-standalone.py).
 
@@ -152,7 +152,7 @@ Universal Crossword 2018 has files with `Ã¢ÂÂ™` patterns — a UTF-8 seque
 Em dash (U+2014) appears 839 times across 416 corpus files. It serves at least three distinct purposes, only the first two of which are valid:
 
 1. **Real typography** — `"say it again — I'm outta here"`, attribution dashes (`—Woody Allen`).
-2. **Fill-in-the-blank marker** — `"— Miniver (1942 film classic) ~ MRS"`, `"Persona non — ~ GRATA"`. This is a publisher convention distinct from the spec's `___` (underscore) FITB. Found extensively in Wapost, Eltana, NYTimes corpora.
+2. **Fill-in-the-blank marker** — `"— Miniver (1942 film classic) ~ MRS"`, `"Persona non — ~ GRATA"`. This is a publisher convention distinct from the common ascii-form `___` (triple-underscore) FITB. Found extensively in Wapost, Eltana, NYTimes corpora.
 3. **Mac Roman 'ó' mojibake** — `"Almod—var ~ PEDROS"` should be `Almodóvar`. Mac Roman `0x97 = ó` (cp1252 `0x97 = —`). The legacy converter applied cp1252 indiscriminately, turning Mac Roman accented `ó` bytes into spurious em dashes.
 
 Because of (3), **don't auto-flatten em dashes to `--` corpus-wide**. Doing so would erase the diagnostic signal for the Mac Roman cases. Em dashes that are clearly typography or FITB can be left alone; the suspicious ones (mid-word in proper nouns) need manual review.
