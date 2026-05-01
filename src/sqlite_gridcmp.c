@@ -42,6 +42,9 @@ sql_gridcmp(sqlite3_context *ctx, int argc, sqlite3_value **argv)
     if (rowlen) {
         // compare transposed
         for (int i=0; i < grid2_size; ++i) {
+            if (grid1[i] == '|') {
+                continue;
+            }
             int y = i/rowlen;
             int x = i%rowlen;
 
