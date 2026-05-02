@@ -72,3 +72,12 @@ def test_clean_latin1_utf8_mojibake_no_change_for_clean_text():
     assert utils.clean_latin1_utf8_mojibake("café") == "café"
     assert utils.clean_latin1_utf8_mojibake("plain ascii") == "plain ascii"
 
+def test_clean_c1_controls_strips_orphan_quote_trailer():
+    # U+009C/D after a straight " is the surviving trailer byte of
+    # a UTF-8 smart quote whose lead bytes were turned into the
+    # straight " upstream. Strip it.
+    assert utils.clean_c1_controls('"Big Brother"') == '"Big Brother"'
+    assert utils.clean_c1_controls('"open"') == '"open"'
+    # Lone U+009D not preceded by " is left intact for manual review.
+    assert utils.clean_c1_controls("foobar") == "foobar"
+
