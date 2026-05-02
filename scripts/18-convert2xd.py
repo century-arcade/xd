@@ -174,7 +174,7 @@ def main():
                             run_owner = paths_written_this_run.get(path)
                             if run_owner and run_owner != own_key:
                                 warn("shelf slot %s already written this run by %s; not overwriting with %s" % (
-                                    path + ".xd", run_owner, SourceFilename))
+                                    path + ".xd", run_owner[1], SourceFilename))
                                 owned_by_other = True
                                 rejected = ""
                                 break
