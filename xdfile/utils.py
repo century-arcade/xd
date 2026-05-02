@@ -55,6 +55,16 @@ _CP1252_OVERRIDES = {chr(0x8e): "é"}  # cp1252's 'Ž' is wrong in our corpus
 _CP1252_SKIP_SINGLE = {chr(0x80), chr(0x98)}  # too ambiguous to auto-decide
 _C1_RE = re.compile(r"[\x80-\x9f]")
 _UTF8_TRAILER_RE = re.compile(r"â?\x80[\x80-\x9f]")
+# Orphan smart-quote trailer: U+009C/D after any close-quote variant is the
+# trailing byte of a UTF-8 smart quote whose lead bytes were already turned
+# into a quote upstream. Strip it. Must run BEFORE the cp1252 pass because
+#   - U+009D is undefined in cp1252 and survives, but
+#   - U+009C is cp1252's 'œ' so the cp1252 pass would consume it.
+# Lead-quote variants matched: straight ASCII ", cp1252's curly bytes
+# U+0093/U+0094 (which only become real curly quotes during the cp1252
+# pass), and the already-converted curly U+201C/U+201D. The trailer is
+# always U+009C (left) or U+009D (right).
+_ORPHAN_QUOTE_TRAILER_RE = re.compile(r'["\x93\x94“”][\x9c\x9d]')
 
 
 # UTF-8 byte sequence \xc2\xXX or \xc3\xXX (encoding U+0080-U+00FF, the
@@ -82,18 +92,21 @@ def clean_latin1_utf8_mojibake(s: str) -> str:
 def clean_c1_controls(s: str) -> str:
     """Clean C1 control codepoints (U+0080-U+009F) out of a string.
 
-    Three passes:
+    Four passes:
     1. UTF-8 trailer: optional 'â' + \\u0080 + another C1 control gets
        reconstructed by latin-1 encoding then UTF-8 decoding (with an
        \\xe2 prefix added if 'â' was missing). Recovers smart quotes,
        en/em dashes, etc. that lost their lead byte.
-    2. Per-codepoint overrides where cp1252 maps wrong (U+008E -> 'é').
-    3. cp1252 default for the rest, except U+0080 and U+0098 which the
+    2. Orphan smart-quote trailer: U+009C/D right after a straight " is
+       a stray UTF-8 byte from a curly quote whose \\xe2\\x80 lead got
+       replaced with the straight " upstream. Drop the trailer.
+    3. Per-codepoint overrides where cp1252 maps wrong (U+008E -> 'é').
+    4. cp1252 default for the rest, except U+0080 and U+0098 which the
        caller must resolve manually (cp1252 says '€' / '˜' but the corpus
        uses these for '°' / '÷' / etc.).
 
     Codepoints undefined in cp1252 (U+0081, U+008D, U+008F, U+0090, U+009D)
-    pass through unchanged.
+    that survive pass 2 pass through unchanged.
     """
     def utf8_repl(m):
         s = m.group(0)
@@ -105,6 +118,10 @@ def clean_c1_controls(s: str) -> str:
         except UnicodeDecodeError:
             return s
     s = _UTF8_TRAILER_RE.sub(utf8_repl, s)
+    # Orphan strip runs BEFORE cp1252 so U+009C (which cp1252 maps
+    # to a real char) isn't consumed before we recognize it as a stray
+    # trailer. Preserves the lead-quote char, drops only the orphan.
+    s = _ORPHAN_QUOTE_TRAILER_RE.sub(lambda m: m.group(0)[0], s)
 
     def repl(m):
         ch = m.group(0)
@@ -116,7 +133,9 @@ def clean_c1_controls(s: str) -> str:
             return ch.encode("latin-1").decode("cp1252")
         except UnicodeDecodeError:
             return ch
-    return _C1_RE.sub(repl, s)
+    s = _C1_RE.sub(repl, s)
+    return s
+
 
 def split_xdid(xdid):
     """ Split xdid [nyt2015-07-01] into set

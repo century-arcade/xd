@@ -34,6 +34,7 @@ _CP1252_OVERRIDES = {chr(0x8e): "é"}  # cp1252's 'Ž' is wrong in our corpus
 _CP1252_SKIP_SINGLE = {chr(0x80), chr(0x98)}  # too ambiguous to auto-decide
 _C1_RE = re.compile(r"[\x80-\x9f]")
 _UTF8_TRAILER_RE = re.compile(r"â?\x80[\x80-\x9f]")
+_ORPHAN_QUOTE_TRAILER_RE = re.compile(r'["\x93\x94“”][\x9c\x9d]')
 _LATIN1_UTF8_RE = re.compile(r"[\xc2\xc3][\x80-\xbf]")
 
 
@@ -57,6 +58,7 @@ def clean_c1_controls(s):
         except UnicodeDecodeError:
             return s
     s = _UTF8_TRAILER_RE.sub(utf8_repl, s)
+    s = _ORPHAN_QUOTE_TRAILER_RE.sub(lambda m: m.group(0)[0], s)
 
     def repl(m):
         ch = m.group(0)

@@ -139,7 +139,7 @@ For UTF-8 codepoints in the U+2000–U+27FF block (smart quotes, dashes), the en
 
 A specific, very common variant of 6b: smart quotes around a phrase like `\xe2\x80\x9c hello \xe2\x80\x9d` had each `\xe2\x80` lead pair replaced with a straight ASCII `"`, but the `\x9c` / `\x9d` trailer byte was left orphaned next to the straight quote. Pattern uniformly observed: every U+009C / U+009D in the corpus appears immediately after a `"` (336/336 occurrences, no exceptions).
 
-`XD010` strips the orphan trailer when adjacent to a straight quote.
+Both `clean_c1_controls()` and `XD010`'s fixer strip the orphan trailer when adjacent to a straight quote, so reimports through `puz2xd.decode()` and lint passes both eliminate it. (Originally only `XD010` did the strip, but a 2026-05 reimport of CrossSynergy puzzles surfaced reintroduced orphans because `puz2xd.decode()` was still emitting them — moved into the shared util.)
 
 ### 6d. Triple-encoded mojibake
 
@@ -185,7 +185,7 @@ Similar artifacts appeared at byte 0x80 in BG 2009-2011 files for `°` (`90° on
 3. **Targeted UTF-8 fix**: `\xc3\xa8` (`Ã¨`) → `è`. (Subsumed by `clean_latin1_utf8_mojibake` but kept explicit for clarity / backward-compat with old test cases.)
 4. **Mac Roman curly quotes**: `\xd3` → `"`, `\xd4` → `"`.
 5. **`clean_latin1_utf8_mojibake`**: §6a — `Ã/Â + cont byte` → re-decoded UTF-8 char.
-6. **`clean_c1_controls`**: §3, §4 — UTF-8 trailer reconstruction → U+008E override → cp1252 default with U+0080/U+0098 skipped.
+6. **`clean_c1_controls`**: §3, §4, §6c — UTF-8 trailer reconstruction → orphan `"/D` strip → U+008E override → cp1252 default with U+0080/U+0098 skipped.
 7. **ASCII typography flattening**: curly quotes → ASCII, ellipsis → `...`. Em dash kept as Unicode (matches existing corpus convention).
 8. **URL unquote, HTML entity unescape, whitespace collapse** — pre-existing legacy steps.
 

@@ -112,12 +112,25 @@ def test_decode_undefined_cp1252_passes_through():
 
 
 def test_decode_strips_orphan_quote_trailer():
-    # Specifically NOT something decode() handles directly — orphan U+009C
-    # / U+009D after a straight " is XD010-fixer territory (the .xd-level
-    # cleanup, not the puz-conversion pipeline). Document that here so a
-    # future change doesn't accidentally start handling it in decode().
-    out = decode('"Beyond the Sea"\x9d')
-    assert "\x9d" in out  # decode passes it through; XD010 strips it later
+    # U+009C/D after a close-quote is a UTF-8 smart-quote trailer whose
+    # \xe2\x80 lead was already turned into a quote upstream. decode()
+    # must strip it so reimports don't reintroduce orphans.
+    #
+    # Three lead-quote variants must all work:
+    # - straight ASCII " (already-flattened .xd files)
+    # - cp1252 curly bytes \x93/\x94 (raw puzpy ISO-8859-1 output)
+    # - real curly U+201C/D (UTF-8 source files)
+    #
+    # Regression: cs2015-03-02.xd `D13. "Big Brother" host Julie ~ CHEN`
+    # came from raw puzpy bytes \x93Big Brother\x94\x9d. With the orphan
+    # strip running AFTER cp1252, U+009D survived because cp1252 had
+    # already converted U+0094 into U+201D. The fix moves the orphan
+    # strip BEFORE cp1252 and matches U+0094 + U+009D as a pair.
+    assert decode('D13. "Big Brother"\x9d host Julie') == 'D13. "Big Brother" host Julie'
+    assert decode('"Beyond the Sea"\x9d') == '"Beyond the Sea"'
+    assert decode('"\x9copen"') == '"open"'
+    # Raw puzpy form (cp1252 byte 0x94 + orphan):
+    assert decode('\x93Big Brother\x94\x9d host') == '"Big Brother" host'
 
 
 def test_decode_no_orphan_a_circumflex_strip():
