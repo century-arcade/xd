@@ -136,6 +136,19 @@ class TestRebusParsing:
         m = xdlint.parse_rebus_header("1=ONE bare 22=BAD =EMPTY")
         assert set(m) == {"1"}
 
+    def test_parse_rebus_header_tolerates_commas(self):
+        # XD109 flags the comma form, but the parser must still extract
+        # the entries so XD006/XD007 don't degenerate on those files.
+        m = xdlint.parse_rebus_header("1=ONE,2=TWO,3=A/B")
+        assert set(m) == {"1", "2", "3"}
+        assert m["1"].across == ["ONE"]
+        assert m["3"].across == ["A"] and m["3"].down == ["B"]
+
+    def test_parse_rebus_header_mixed_separators(self):
+        # Comma + space combinations also tolerated.
+        m = xdlint.parse_rebus_header("1=ONE, 2=TWO  3=THREE")
+        assert set(m) == {"1", "2", "3"}
+
 
 class TestEnumerateSlots:
     def test_simple_3x3(self):
@@ -197,12 +210,94 @@ class TestAnswerValidation:
         result = self._validate("ONEB", [(0, 0), (0, 1)], ["1B"], rebus, 0)
         assert result is None
 
-    def test_rebus_inline_directional_form(self):
-        # 1=IE/EI; declared answer can embed both inline as "STOOLEI/IE"
+    def test_rebus_directional_quantum_form(self):
+        # 1=IE/EI; an across clue can declare the across reading 'IE'
+        # alone (the "quantum" form — single full spelling using one
+        # direction's alt). The down reading 'EI' is also accepted
+        # because the validator unions across+down at each cell.
         rebus = {"1": xdlint.RebusExpansion(across=["IE"], down=["EI"])}
-        # Single-cell across slot with the declared answer using inline form.
+        assert self._validate("IE", [(0, 0)], ["1"], rebus, 0) is None
+        assert self._validate("EI", [(0, 0)], ["1"], rebus, 0) is None
+
+    def test_rebus_schrodinger_spelled_out_form(self):
+        # Both readings on the clue line, separated by ' / ' (with spaces).
+        rebus = {"1": xdlint.RebusExpansion(across=["IE"], down=["EI"])}
+        assert self._validate("IE / EI", [(0, 0)], ["1"], rebus, 0) is None
+
+    def test_rebus_inline_embed_form_rejected(self):
+        # The deprecated inline-embed form 'IE/EI' (no surrounding spaces
+        # around the slash) is no longer accepted: after consuming 'IE'
+        # at the rebus cell, the trailing '/EI' has no slot to match.
+        rebus = {"1": xdlint.RebusExpansion(across=["IE"], down=["EI"])}
         result = self._validate("IE/EI", [(0, 0)], ["1"], rebus, 0)
-        assert result is None
+        assert result is not None and result[0] == "XD006"
+
+    def test_rebus_multichar_kitkat_style(self):
+        # Real-world example: every rebus cell reads KIT across, KAT down.
+        # Quantum form picks one; spelled-out form lists both.
+        rebus = {"1": xdlint.RebusExpansion(across=["KIT"], down=["KAT"])}
+        assert self._validate("KIT", [(0, 0)], ["1"], rebus, 0) is None
+        assert self._validate("KAT", [(0, 0)], ["1"], rebus, 0) is None
+        assert self._validate("KIT / KAT", [(0, 0)], ["1"], rebus, 0) is None
+
+    def test_rebus_full_schrodinger_answer(self):
+        # CLINTON/BOBDOLE-style: every cell is Schrödinger, but the
+        # alternatives are inter-dependent so only two spellings are
+        # legal. Validator just checks each declared spelling cell-by-cell.
+        rebus = {
+            "C": xdlint.RebusExpansion(across=["C", "P"], down=["C", "P"]),
+            "I": xdlint.RebusExpansion(across=["I", "E"], down=["I", "E"]),
+            "G": xdlint.RebusExpansion(across=["G", "N"], down=["G", "N"]),
+            "A": xdlint.RebusExpansion(across=["A", "I"], down=["A", "I"]),
+            "R": xdlint.RebusExpansion(across=["R", "S"], down=["R", "S"]),
+        }
+        cells = [(0, 0), (0, 1), (0, 2), (0, 3), (0, 4)]
+        grid_row = "CIGAR"  # rebus keys placed in order
+        assert self._validate("CIGAR / PENIS", cells, [grid_row], rebus, 0) is None
+        # Either reading alone is also fine.
+        assert self._validate("CIGAR", cells, [grid_row], rebus, 0) is None
+        assert self._validate("PENIS", cells, [grid_row], rebus, 0) is None
+
+    def test_rebus_quantum_unequal_length_alts(self):
+        # Real-world example: PH/F where every across clue at the rebus
+        # cell reads 'PH' and every down cross reads 'F'. Longest-first
+        # alt matching handles the asymmetry without backtracking.
+        rebus = {"1": xdlint.RebusExpansion(across=["PH"], down=["F"])}
+        # Across slot: G R A {1} → "GRAPH"
+        assert self._validate("GRAPH", [(0, 0), (0, 1), (0, 2), (0, 3)],
+                              ["GRA1"], rebus, 0) is None
+        # Down slot: O {1} → "OF"
+        assert self._validate("OF", [(0, 0), (1, 0)],
+                              ["O", "1"], rebus, 1) is None
+        # Spelled-out Schrödinger form across the same cell.
+        assert self._validate("GRAPH / GRAF",
+                              [(0, 0), (0, 1), (0, 2), (0, 3)],
+                              ["GRA1"], rebus, 0) is None
+
+    def test_rebus_schrodinger_with_asymmetric_down_expansion(self):
+        # Real-world: 1=E|A/EA. Across is Schrödinger over single chars
+        # E or A; down expands the cell to BOTH letters, making the down
+        # cross one cell shorter than its declared answer.
+        # Example: across = STATIONERY / STATIONARY, down = TEARS.
+        rebus = {"1": xdlint.RebusExpansion(across=["E", "A"], down=["EA"])}
+        # Across, spelled-out form (10-cell slot).
+        across_cells = [(0, i) for i in range(10)]
+        across_grid = ["STATION1RY"]
+        assert self._validate("STATIONERY / STATIONARY",
+                              across_cells, across_grid, rebus, 0) is None
+        # Down, single 5-char answer in a 4-cell slot (rebus consumes 2).
+        down_cells = [(0, 0), (1, 0), (2, 0), (3, 0)]
+        down_grid = ["T", "1", "R", "S"]
+        assert self._validate("TEARS", down_cells, down_grid, rebus, 1) is None
+
+    def test_rebus_literal_slash_cell_unaffected(self):
+        # Rebus value '1=/' means the cell content is a literal '/'.
+        # Splitting the declared answer on ' / ' must NOT split on the
+        # bare '/' inside the answer.
+        rebus = {"1": xdlint.RebusExpansion(across=["/"], down=["/"])}
+        # 3-cell across slot: I, /, O — declared "I/O".
+        assert self._validate("I/O", [(0, 0), (0, 1), (0, 2)],
+                              ["I1O"], rebus, 0) is None
 
     def test_rebus_variable_length_alts_match_longest_first(self):
         """Regression test for the alt-by-length sort fix.
@@ -581,6 +676,81 @@ class TestWarningRules:
         f = run_rule("XD108", text)
         assert len(f) == 1
 
+    def test_xd109_comma_separated_rebus_header(self):
+        text = SIMPLE.replace(
+            "Title: T",
+            "Title: T\nRebus: 1=ONE,2=TWO",
+        )
+        f = run_rule("XD109", text)
+        assert any("comma" in x.message.lower() for x in f), f
+
+    def test_xd109_silent_on_canonical_rebus_header(self):
+        text = SIMPLE.replace(
+            "Title: T",
+            "Title: T\nRebus: 1=ONE 2=TWO",
+        )
+        f = run_rule("XD109", text)
+        assert f == []
+
+    def test_xd703_fires_on_inline_embed(self):
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=J/P\n\n\n"
+            "1OKER\n\n\n"
+            "A1. card game ~ J/POKER\n"
+        )
+        f = run_rule("XD703", text)
+        assert any("J/POKER" in x.message and "JOKER / POKER" in x.message for x in f), f
+
+    def test_xd703_silent_without_directional_rebus(self):
+        # Same shape but rebus is non-directional — no firing.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=ONE\n\n\n"
+            "ONE12\n\n\n"  # 5-cell slot using 1=ONE plus literals
+            "A1. clue ~ ONEONETWO\n"
+        )
+        f = run_rule("XD703", text)
+        assert f == []
+
+    def test_xd703_silent_on_canonical_spelled_out(self):
+        # Already in canonical form — no firing.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=J/P\n\n\n"
+            "1OKER\n\n\n"
+            "A1. card game ~ JOKER / POKER\n"
+        )
+        f = run_rule("XD703", text)
+        assert f == []
+
+    def test_xd703_silent_on_multi_alt_schrodinger(self):
+        # Multi-alt rebus (1=A|B) doesn't trigger the precondition.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=A|B\n\n\n"
+            "1XY\n\n\n"
+            "A1. one reading ~ AXY\n"
+        )
+        f = run_rule("XD703", text)
+        assert f == []
+
+    def test_xd704_fires_on_inline_embed(self):
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=J/P\n\n\n"
+            "1OKER\n\n\n"
+            "A1. card game ~ J/POKER\n"
+        )
+        f = run_rule("XD704", text)
+        assert any("J/POKER" in x.message and "JOKER" in x.message for x in f), f
+
+    def test_xd704_silent_on_spelled_out(self):
+        # Already-expanded answer is skipped (collapse should be applied
+        # to original inline-embed only).
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=J/P\n\n\n"
+            "1OKER\n\n\n"
+            "A1. card game ~ JOKER / POKER\n"
+        )
+        f = run_rule("XD704", text)
+        assert f == []
+
     def test_xd110_indented_section_header(self):
         text = "  ## Metadata\nTitle: T\n## Grid\nAB\n## Clues\nA1. x ~ AB\n"
         f = run_rule("XD110", text)
@@ -898,6 +1068,175 @@ class TestFixers:
         new, n = xdlint.FIXERS["XD107"][1](text)
         assert n == 1
         assert "First" in new and "Second" not in new
+
+    def test_xd109_comma_to_space_basic(self):
+        text = "Title: T\nRebus: 1=ONE,2=TWO,3=A/B\n\n\nABC\n\n\nA1. x ~ ABC\n"
+        new, n = xdlint.FIXERS["XD109"][1](text)
+        assert n == 1
+        assert "Rebus: 1=ONE 2=TWO 3=A/B\n" in new
+
+    def test_xd109_collapses_comma_with_padding(self):
+        # Comma followed by a space already would naively double the space;
+        # fixer collapses '\s*,\s*' to a single space.
+        text = "Title: T\nRebus: 1=ONE, 2=TWO , 3=A/B\n\n\nABC\n\n\nA1. x ~ ABC\n"
+        new, n = xdlint.FIXERS["XD109"][1](text)
+        assert n == 1
+        assert "Rebus: 1=ONE 2=TWO 3=A/B\n" in new
+
+    def test_xd109_idempotent_on_canonical(self):
+        text = "Title: T\nRebus: 1=ONE 2=TWO\n\n\nABC\n\n\nA1. x ~ ABC\n"
+        new, n = xdlint.FIXERS["XD109"][1](text)
+        assert n == 0
+        assert new == text
+
+    def test_xd703_fixer_expands_inline_embed_across(self):
+        # 'SUPIE/EINEL' → 'SUPIENEL / SUPEINEL' (left=IE, right=EI).
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=IE/EI\n\n\n"
+            "SUP1NEL\n\n\n"
+            "A1. clue ~ SUPIE/EINEL\n"
+        )
+        new, n = xdlint.FIXERS["XD703"][1](text)
+        assert n == 1
+        assert "A1. clue ~ SUPIENEL / SUPEINEL\n" in new
+
+    def test_xd703_fixer_expands_direction_agnostic(self):
+        # Down slot through the same rebus produces the same expansion.
+        # The expanded form lists both spellings; the human classifies
+        # quantum vs Schrödinger downstream.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=IE/EI\n\n\n"
+            "S\nU\nP\n1\nN\nE\nL\n\n\n"
+            "D1. clue ~ SUPIE/EINEL\n"
+        )
+        new, n = xdlint.FIXERS["XD703"][1](text)
+        assert n == 1
+        assert "D1. clue ~ SUPIENEL / SUPEINEL\n" in new
+
+    def test_xd703_fixer_expands_two_inline_embeds_in_one_slot(self):
+        # User's VIVIENLEIGH example: two rebus cells, paired left/right.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=IE/EI 2=EI/IE\n\n\n"
+            "VIV1NL2GH\n\n\n"
+            "A1. actress ~ VIVIE/EINLEI/IEGH\n"
+        )
+        new, n = xdlint.FIXERS["XD703"][1](text)
+        assert n == 1
+        assert "A1. actress ~ VIVIENLEIGH / VIVEINLIEGH\n" in new
+
+    def test_xd703_fixer_expands_short_inline_embed(self):
+        # 'J/POKER' shape: rebus at slot start, short across alt.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=J/P\n\n\n"
+            "1OKER\n\n\n"
+            "A1. clue ~ J/POKER\n"
+        )
+        new, n = xdlint.FIXERS["XD703"][1](text)
+        assert n == 1
+        assert "A1. clue ~ JOKER / POKER\n" in new
+
+    def test_xd703_fixer_skips_multi_alt_schrodinger(self):
+        # Multi-alt Schrödinger (1=A|B) never has the inline-embed form;
+        # precondition fails and the fixer leaves it alone.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=A|B\n\n\n"
+            "1XY\n\n\n"
+            "A1. one reading ~ AXY\n"
+        )
+        new, n = xdlint.FIXERS["XD703"][1](text)
+        assert n == 0
+        assert new == text
+
+    def test_xd703_fixer_idempotent_on_already_expanded(self):
+        # Already in spelled-out form — leave alone.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=IE/EI\n\n\n"
+            "SUP1NEL\n\n\n"
+            "A1. clue ~ SUPIENEL / SUPEINEL\n"
+        )
+        new, n = xdlint.FIXERS["XD703"][1](text)
+        assert n == 0
+        assert new == text
+
+    def test_xd703_fixer_idempotent_on_canonical_single(self):
+        # Already in single canonical form — no inline-embed found, no rewrite.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=IE/EI\n\n\n"
+            "SUP1NEL\n\n\n"
+            "A1. clue ~ SUPIENEL\n"
+        )
+        new, n = xdlint.FIXERS["XD703"][1](text)
+        assert n == 0
+        assert new == text
+
+    def test_xd703_fixer_leaves_genuine_letter_mismatch_alone(self):
+        # Answer doesn't match the grid for non-rebus reasons; walking
+        # fails, fixer leaves the clue untouched.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=IE/EI\n\n\n"
+            "ABC1DEF\n\n\n"
+            "A1. clue ~ AXCIEDEF\n"  # second char wrong: X instead of B
+        )
+        new, n = xdlint.FIXERS["XD703"][1](text)
+        assert n == 0
+        assert new == text
+
+    def test_xd704_fixer_collapses_across_to_left_half(self):
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=J/P\n\n\n"
+            "1OKER\n\n\n"
+            "A1. card game ~ J/POKER\n"
+        )
+        new, n = xdlint.FIXERS["XD704"][1](text)
+        assert n == 1
+        assert "A1. card game ~ JOKER\n" in new
+
+    def test_xd704_fixer_collapses_down_to_right_half(self):
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=J/P\n\n\n"
+            "1\nO\nK\nE\nR\n\n\n"
+            "D1. card game ~ J/POKER\n"
+        )
+        new, n = xdlint.FIXERS["XD704"][1](text)
+        assert n == 1
+        assert "D1. card game ~ POKER\n" in new
+
+    def test_xd704_fixer_handles_multi_rebus_slot(self):
+        # User's VIVIENLEIGH example, collapsed (across keeps left at every cell).
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=IE/EI 2=EI/IE\n\n\n"
+            "VIV1NL2GH\n\n\n"
+            "A1. actress ~ VIVIE/EINLEI/IEGH\n"
+        )
+        new, n = xdlint.FIXERS["XD704"][1](text)
+        assert n == 1
+        assert "A1. actress ~ VIVIENLEIGH\n" in new
+
+    def test_xd704_fixer_skips_already_expanded(self):
+        # Spelled-out form (XD703 already applied) is left alone — the
+        # collapse fix is for the original inline-embed input only.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=J/P\n\n\n"
+            "1OKER\n\n\n"
+            "A1. card game ~ JOKER / POKER\n"
+        )
+        new, n = xdlint.FIXERS["XD704"][1](text)
+        assert n == 0
+        assert new == text
+
+    def test_xd703_then_xd704_default_fix_order_expands(self):
+        # When both XD703 and XD704 are in the active set (default --fix
+        # without --enable-only), XD703 runs first and expands. XD704
+        # then sees ' / ' and is a no-op. Verifies the order safety net.
+        text = (
+            "Title: T\nDate: 2024-01-01\nRebus: 1=J/P\n\n\n"
+            "1OKER\n\n\n"
+            "A1. card game ~ J/POKER\n"
+        )
+        new, counts = xdlint.apply_fixes(text, codes=None, unsafe_ok=False)
+        assert "A1. card game ~ JOKER / POKER\n" in new
+        assert counts.get("XD703", 0) >= 1
+        assert counts.get("XD704", 0) == 0  # XD704 saw ' / ' and skipped
 
     def test_xd102_collapse_blank_runs_in_clues(self):
         # Explicit mode so the parser preserves the run inside clues.
