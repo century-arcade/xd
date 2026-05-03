@@ -18,4 +18,5 @@ gxd.sqlite
 .venv
 .meta
 uv.lock
+.corpus.*.jsonl
 
