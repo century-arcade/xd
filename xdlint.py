@@ -475,9 +475,13 @@ def parse_rebus_value(value: str) -> RebusExpansion:
 
 
 def parse_rebus_header(value: str) -> Dict[str, RebusExpansion]:
-    """Parse 'Rebus: 1=ONE 2=TWO 3=A/B' into {key: RebusExpansion}."""
+    """Parse 'Rebus: 1=ONE 2=TWO 3=A/B' into {key: RebusExpansion}.
+
+    Tolerates comma separators ('1=ONE,2=TWO') alongside whitespace so
+    downstream rules don't choke on files that diverge from the spec.
+    XD109 flags the comma form as a style violation."""
     out: Dict[str, RebusExpansion] = {}
-    for part in value.split():
+    for part in re.split(r"[,\s]+", value.strip()):
         if "=" not in part:
             continue
         k, _, v = part.partition("=")
@@ -580,39 +584,57 @@ def _validate_answer_against_slot(
     Returns None on success. Returns (code, message) on failure where
     code is 'XD006' for length problems and 'XD007' for letter problems.
 
-    Handles three answer styles per cell:
-      - Plain (single-letter or rebus, no quantum syntax)
-      - Schrödinger '|' alternates: try each
-      - Inline '<across>/<down>' form: when a rebus has exactly one
-        across-alt and one down-alt and they differ, the declared
-        answer may embed both inline (e.g. STOOLEI/IE for 1=EI/IE).
+    Splits the declared answer on ' / ' (one space, slash, one space)
+    into candidate spellings and validates each against the slot. ALL
+    candidates must validate. This accepts the spelled-out Schrödinger
+    convention — e.g. 'TACK / RACK' for an across slot through a cell
+    whose rebus alts are {T, R}, or 'CIGAR / PENIS' for an all-cells-
+    Schrödinger answer — while rejecting inline-embedded forms like
+    'T/RACK' that paste both readings mid-word (those fail because the
+    bare '/' won't match the next grid cell). The space-flanked split
+    leaves answers with literal '/' content (rebus value '1=/') intact.
 
-    The xd-crossword-tools '|' word-split convention is stripped from
-    the declared answer first (harmless for plain rebus; for Schrödinger
-    answers we don't expect '|' to appear since each clue picks one
-    alternative).
-    """
+    At each rebus cell, accepts any alt from either direction's
+    expansion (union of across and down). Quantum-vs-Schrödinger
+    distinction at the cell level is moot under this framing — the
+    answer-line spelling chooses, not the rebus syntax.
+
+    direction_idx is retained for callsite compatibility but no longer
+    constrains which alts are acceptable.
+
+    The xd-crossword-tools '|' word-split convention is stripped before
+    splitting on ' / '."""
     declared = declared.replace("|", "")
+    candidates = declared.split(" / ")
+    for candidate in candidates:
+        result = _walk_one_answer(candidate, cells, grid, rebus_map)
+        if result is not None:
+            return result
+    return None
+
+
+def _walk_one_answer(
+    declared: str,
+    cells: List[Tuple[int, int]],
+    grid: List[GridRow],
+    rebus_map: Dict[str, RebusExpansion],
+) -> Optional[Tuple[str, str]]:
     di = 0
     for (r, c) in cells:
         ch = grid_get(grid, r, c)
         if ch in rebus_map:
             rebus = rebus_map[ch]
-            chosen = rebus.across if direction_idx == 0 else rebus.down
-            # Try inline '<across>/<down>' first when both directions
-            # have a single distinct expansion.
-            if (len(rebus.across) == 1 and len(rebus.down) == 1
-                    and rebus.across[0] != rebus.down[0]):
-                full = rebus.across[0] + "/" + rebus.down[0]
-                if declared[di:di + len(full)].upper() == full:
-                    di += len(full)
-                    continue
-            # Otherwise match one of the chosen direction's alts. Try the
-            # longer alt first: with unequal-length alts (e.g. 1=A|AB), a
-            # greedy short match would consume the wrong number of cells
-            # and force the next cell into a false XD007.
+            # Union of across+down alts: any reading is acceptable for
+            # any direction, mirroring the spelled-out answer convention.
+            alts = list(rebus.across)
+            for a in rebus.down:
+                if a not in alts:
+                    alts.append(a)
+            # Longest-first: with unequal-length alts (e.g. 1=A|AB or
+            # 1=KIT/KAT alongside 1=KITKAT), a greedy short match would
+            # consume too few characters and misalign the rest of the slot.
             matched = False
-            for alt in sorted(chosen, key=len, reverse=True):
+            for alt in sorted(alts, key=len, reverse=True):
                 if declared[di:di + len(alt)].upper() == alt:
                     di += len(alt)
                     matched = True
@@ -620,8 +642,8 @@ def _validate_answer_against_slot(
             if not matched:
                 if di >= len(declared):
                     return ("XD006", "answer too short for slot")
-                expected = " or ".join(repr(a) for a in chosen)
-                fragment = declared[di:di + max((len(a) for a in chosen), default=1)]
+                expected = " or ".join(repr(a) for a in alts)
+                fragment = declared[di:di + max((len(a) for a in alts), default=1)]
                 return ("XD007", f"at position {di + 1}: expected {expected}, "
                                  f"found {fragment!r}")
         elif ch == WILDCARD_CHAR:
@@ -944,6 +966,79 @@ def _(ctx):
                       f"Date header {hdr_match.group(1)}")
 
 
+@rule("XD703", Severity.WARNING, "deprecated-rebus-inline-embed")
+def _(ctx):
+    """Answer uses the deprecated inline-embed rebus form at a directional
+    rebus cell — '<across>/<down>' pasted mid-word, e.g. 'J/POKER',
+    'ALPH/FA', 'VIVIE/EINLEI/IEGH'. The canonical form spells out both
+    readings: 'JOKER / POKER', 'ALPHA / ALFA'.
+
+    The --fix expands inline-embed to spelled-out (information-preserving;
+    no commitment to quantum vs. Schrödinger). For confirmed-quantum
+    puzzles, a follow-up step collapses spelled-out to the directional
+    half. Only fires on cells with one distinct alt per direction."""
+    rebus_map = _rebus_for(ctx)
+    if not rebus_map:
+        return
+    if not any(len(set(r.across) | set(r.down)) >= 2
+               for r in rebus_map.values()):
+        return  # no multi-alt rebus in this puzzle
+    idx = _slot_index_or_none(ctx)
+    if idx is None:
+        return
+    for clue in ctx.parsed.clues:
+        if clue.direction not in ("A", "D"):
+            continue
+        if clue.pos not in idx:
+            continue
+        _direction, cells = idx[clue.pos]
+        expanded = _expand_inline_embeds(
+            clue.answer, cells, ctx.parsed.grid, rebus_map)
+        if expanded is None:
+            continue
+        yield finding("XD703", Severity.WARNING, clue.line,
+                      f"clue {clue.pos}: deprecated inline-embed rebus "
+                      f"answer {clue.answer!r} (--fix expands to "
+                      f"{expanded!r})")
+
+
+@rule("XD704", Severity.WARNING, "rebus-quantum-collapse-available",
+      experimental=True)
+def _(ctx):
+    """Sibling of XD703: same detection (inline-embed at a directional
+    rebus cell), but the --fix collapses to the directional half (across
+    keeps the left, down keeps the right) instead of expanding.
+
+    Information-discarding — the non-directional half is dropped — so
+    it should only be applied to puzzles classified as quantum. Marked
+    experimental so it doesn't fire alongside XD703 by default; opt in
+    with '--enable-only XD704 --fix' on a per-file basis once you've
+    confirmed the puzzle isn't a Schrödinger."""
+    rebus_map = _rebus_for(ctx)
+    if not rebus_map:
+        return
+    if not any(len(set(r.across) | set(r.down)) >= 2
+               for r in rebus_map.values()):
+        return
+    idx = _slot_index_or_none(ctx)
+    if idx is None:
+        return
+    for clue in ctx.parsed.clues:
+        if clue.direction not in ("A", "D"):
+            continue
+        if clue.pos not in idx:
+            continue
+        _direction, cells = idx[clue.pos]
+        collapsed = _collapse_inline_embeds(
+            clue.answer, cells, ctx.parsed.grid, rebus_map, clue.direction)
+        if collapsed is None:
+            continue
+        yield finding("XD704", Severity.WARNING, clue.line,
+                      f"clue {clue.pos}: rebus inline-embed "
+                      f"{clue.answer!r} collapses to {collapsed!r} "
+                      f"(quantum {clue.direction.lower()}-only reading)")
+
+
 @rule("XD014", Severity.ERROR, "broken-ref")
 def _(ctx):
     """Clue's ^Refs metadata names a position that doesn't exist."""
@@ -1160,6 +1255,21 @@ def _(ctx):
                           f"(first at line {seen[k]})")
         else:
             seen[k] = h.line
+
+
+@rule("XD109", Severity.WARNING, "non-canonical-rebus-separator")
+def _(ctx):
+    """The spec separates Rebus entries with single spaces:
+        Rebus: 1=ONE 2=TWO 3=THREE
+    Files using commas ('1=ONE,2=TWO') parse correctly under the
+    permissive parser, but the comma form is a corpus-wide style
+    violation — flag it so it can be migrated."""
+    for h in ctx.parsed.headers:
+        if h.key.lower() != "rebus":
+            continue
+        if "," in h.value:
+            yield finding("XD109", Severity.WARNING, h.line,
+                          "Rebus header uses comma separators; spec uses spaces")
 
 
 _INDENTED_HEADER_RE = re.compile(r"^[ \t]+##\s+")
@@ -1456,9 +1566,17 @@ FIX_ORDER = [
     "XD107",  # drop duplicate header lines (after XD103: lets XD103 pick the
               # editor-bearing Author even if it isn't the first one, then
               # cleans up the duplicate it leaves behind)
+    "XD109",  # rewrite comma separators in the Rebus header to spaces
     "XD202",  # reorder canonical headers (picks up the new Editor)
     "XD102",  # collapse 2+ blank lines in clues to 1
     "XD013",  # synthesize ^Refs from cross-refs in clue bodies
+    "XD703",  # expand deprecated inline-embed rebus answers ('IE/EI'
+              # mid-word) to the canonical spelled-out form ('IE / EI');
+              # depends on a sane Rebus header so XD109 must run first
+    "XD704",  # alternative collapse to directional alt; experimental and
+              # opt-in via --enable-only XD704. Skips inputs containing
+              # ' / ', so when both XD703 and XD704 are active (default
+              # --fix run) XD703 expands first and XD704 becomes a no-op.
 ]
 
 
@@ -1658,6 +1776,296 @@ def _(text):
     lines = text.splitlines(keepends=True)
     out = [line for i, line in enumerate(lines, 1) if i not in drops]
     return "".join(out), len(drops)
+
+
+def _detect_inline_embed_pair(declared, di, alts):
+    """At position `di` in declared, look for an inline-embed
+    '<X>/<Y>' where X, Y are distinct alts of the current rebus.
+    Returns (left_alt, right_alt, total_consumed) on hit, else None.
+
+    Tries longer pairs first so a 'LW/L|W'-style compound rebus —
+    where the alts are {LW, L, W} — picks the right pair instead
+    of greedily eating a shorter prefix first."""
+    sorted_alts = sorted(alts, key=len, reverse=True)
+    for x in sorted_alts:
+        for y in sorted_alts:
+            if x == y:
+                continue
+            full = x + "/" + y
+            if declared[di:di + len(full)].upper() == full:
+                return (x, y, len(full))
+    return None
+
+
+def _expand_inline_embeds(declared, cells, grid, rebus_map):
+    """Expand the deprecated inline-embed rebus answer form (e.g.
+    'J/POKER', 'ALPH/FA', 'VIVIE/EINLEI/IEGH', 'RACHEL/WEISZ') to the
+    canonical spelled-out form ('JOKER / POKER', 'ALPHA / ALFA', etc.)
+    — two full spellings of the slot with one inline-embed half at
+    every rebus cell going to the left output and the other to the
+    right.
+
+    Information-preserving: produces both spellings instead of
+    committing to a directional collapse. For Schrödinger puzzles this
+    is the canonical form; for quantum puzzles a follow-up pass
+    collapses spelled-out → directional once classified.
+
+    Returns the rewritten string, or None if the answer can't be
+    cleanly walked or contains no inline-embeds. Skips inputs already
+    in spelled-out form (any ' / ' present).
+
+    Inline-embed detection accepts any '<X>/<Y>' pair drawn from a
+    rebus cell's alts (across ∪ down), so straight quantum (1=A/B),
+    bare Schrödinger (1=A|B), and compound forms (1=LW/L|W where the
+    inline-embed halves are the down Schrödinger pair) all match."""
+    if " / " in declared:
+        return None
+
+    left_out = []
+    right_out = []
+    di = 0
+    found_inline = False
+
+    for (r, c) in cells:
+        ch = grid_get(grid, r, c)
+        if ch in rebus_map:
+            rebus = rebus_map[ch]
+            alts = list(rebus.across)
+            for a in rebus.down:
+                if a not in alts:
+                    alts.append(a)
+            inline = _detect_inline_embed_pair(declared, di, alts)
+            if inline is not None:
+                left, right, consumed = inline
+                left_out.append(left)
+                right_out.append(right)
+                di += consumed
+                found_inline = True
+                continue
+            # No inline-embed at this cell — consume a single alt.
+            matched = False
+            for alt in sorted(alts, key=len, reverse=True):
+                if declared[di:di + len(alt)].upper() == alt:
+                    chunk = declared[di:di + len(alt)]
+                    left_out.append(chunk)
+                    right_out.append(chunk)
+                    di += len(alt)
+                    matched = True
+                    break
+            if not matched:
+                return None
+        elif ch == WILDCARD_CHAR:
+            if di >= len(declared):
+                return None
+            left_out.append(declared[di])
+            right_out.append(declared[di])
+            di += 1
+        else:
+            if di >= len(declared):
+                return None
+            if declared[di].upper() != ch.upper():
+                return None
+            left_out.append(declared[di])
+            right_out.append(declared[di])
+            di += 1
+
+    if di < len(declared):
+        return None
+    if not found_inline:
+        return None
+    return "".join(left_out) + " / " + "".join(right_out)
+
+
+def _collapse_inline_embeds(declared, cells, grid, rebus_map, direction):
+    """Collapse inline-embed rebus answers to one half of the inline
+    pair: across keeps the left half of '<X>/<Y>', down keeps the right.
+    Returns rewritten string, or None if the answer can't be cleanly
+    walked or has no inline-embed.
+
+    Skips spelled-out form (' / ' present) — apply this fix to original
+    inline-embed input only, since spelled-out form has already lost the
+    inline-embed structural cue.
+
+    Inline-embed detection mirrors XD703's expand: any '<X>/<Y>' pair
+    drawn from a rebus cell's alts (across ∪ down). Note this means the
+    'left' for compound rebuses (1=LW/L|W) is the matched alt order
+    found by the detector, not necessarily across vs. down."""
+    if " / " in declared:
+        return None
+    direction_idx = 0 if direction == "A" else 1
+    out = []
+    di = 0
+    found_inline = False
+    for (r, c) in cells:
+        ch = grid_get(grid, r, c)
+        if ch in rebus_map:
+            rebus = rebus_map[ch]
+            alts = list(rebus.across)
+            for a in rebus.down:
+                if a not in alts:
+                    alts.append(a)
+            inline = _detect_inline_embed_pair(declared, di, alts)
+            if inline is not None:
+                left, right, consumed = inline
+                out.append(left if direction_idx == 0 else right)
+                di += consumed
+                found_inline = True
+                continue
+            matched = False
+            for alt in sorted(alts, key=len, reverse=True):
+                if declared[di:di + len(alt)].upper() == alt:
+                    out.append(declared[di:di + len(alt)])
+                    di += len(alt)
+                    matched = True
+                    break
+            if not matched:
+                return None
+        elif ch == WILDCARD_CHAR:
+            if di >= len(declared):
+                return None
+            out.append(declared[di])
+            di += 1
+        else:
+            if di >= len(declared):
+                return None
+            if declared[di].upper() != ch.upper():
+                return None
+            out.append(declared[di])
+            di += 1
+    if di < len(declared):
+        return None
+    if not found_inline:
+        return None
+    return "".join(out)
+
+
+@fixer("XD703")
+def _(text):
+    """Expand the deprecated inline-embed rebus answer form to the
+    canonical spelled-out Schrödinger form. 'J/POKER' becomes
+    'JOKER / POKER'; 'VIVIE/EINLEI/IEGH' becomes
+    'VIVIENLEIGH / VIVEINLIEGH'.
+
+    Information-preserving (the down half is kept rather than
+    discarded), reversible, and direction-agnostic. For puzzles that
+    are actually quantum (where only one half is the real answer), a
+    follow-up classification + collapse step picks the directional
+    half. The expansion is a safe first move regardless of which case
+    the puzzle turns out to be.
+
+    Conservative: only acts at cells with one distinct alt per
+    direction — multi-alt Schrödingers (rebus '1=A|B') and unrelated
+    XD007 letter-mismatches are left alone."""
+    parsed = parse(text)
+    if not parsed.grid or not parsed.clues:
+        return text, 0
+    rebus_map = parse_rebus_header(get_header(parsed, "Rebus") or "")
+    if not rebus_map:
+        return text, 0
+
+    slots = enumerate_slots(parsed.grid)
+    idx = {(d, n): cells for (d, n, _r, _c, cells) in slots}
+
+    rewrites = {}
+    for clue in parsed.clues:
+        if clue.direction not in ("A", "D"):
+            continue
+        cells = idx.get((clue.direction, clue.number))
+        if cells is None:
+            continue
+        expanded = _expand_inline_embeds(
+            clue.answer, cells, parsed.grid, rebus_map)
+        if expanded is not None and expanded != clue.answer:
+            rewrites[clue.line] = expanded
+
+    if not rewrites:
+        return text, 0
+
+    lines = text.splitlines(keepends=True)
+    out = []
+    for i, line in enumerate(lines, 1):
+        if i in rewrites:
+            stripped = line.rstrip("\r\n")
+            ending = line[len(stripped):]
+            tilde = stripped.rfind(" ~ ")
+            if tilde < 0:
+                out.append(line)
+                continue
+            out.append(stripped[:tilde + 3] + rewrites[i] + ending)
+        else:
+            out.append(line)
+    return "".join(out), len(rewrites)
+
+
+@fixer("XD704")
+def _(text):
+    """Collapse inline-embed rebus answers to the directional half:
+    'J/POKER' becomes 'JOKER' for across clues, 'POKER' for down.
+    Information-discarding sibling of the XD703 expand fixer — apply
+    only to puzzles confirmed to be quantum (across/down readings
+    differ; not Schrödinger). Conservative: only acts at cells with
+    one distinct alt per direction."""
+    parsed = parse(text)
+    if not parsed.grid or not parsed.clues:
+        return text, 0
+    rebus_map = parse_rebus_header(get_header(parsed, "Rebus") or "")
+    if not rebus_map:
+        return text, 0
+
+    slots = enumerate_slots(parsed.grid)
+    idx = {(d, n): cells for (d, n, _r, _c, cells) in slots}
+
+    rewrites = {}
+    for clue in parsed.clues:
+        if clue.direction not in ("A", "D"):
+            continue
+        cells = idx.get((clue.direction, clue.number))
+        if cells is None:
+            continue
+        collapsed = _collapse_inline_embeds(
+            clue.answer, cells, parsed.grid, rebus_map, clue.direction)
+        if collapsed is not None and collapsed != clue.answer:
+            rewrites[clue.line] = collapsed
+
+    if not rewrites:
+        return text, 0
+
+    lines = text.splitlines(keepends=True)
+    out = []
+    for i, line in enumerate(lines, 1):
+        if i in rewrites:
+            stripped = line.rstrip("\r\n")
+            ending = line[len(stripped):]
+            tilde = stripped.rfind(" ~ ")
+            if tilde < 0:
+                out.append(line)
+                continue
+            out.append(stripped[:tilde + 3] + rewrites[i] + ending)
+        else:
+            out.append(line)
+    return "".join(out), len(rewrites)
+
+
+@fixer("XD109")
+def _(text):
+    """Replace comma separators in the Rebus header with single spaces.
+    Header keys can't contain commas, so a line-wide substitution on the
+    Rebus line is safe."""
+    parsed = parse(text)
+    rebus_lines = {h.line for h in parsed.headers
+                   if h.key.lower() == "rebus" and "," in h.value}
+    if not rebus_lines:
+        return text, 0
+    lines = text.splitlines(keepends=True)
+    out = []
+    for i, line in enumerate(lines, 1):
+        if i in rebus_lines:
+            stripped = line.rstrip("\r\n")
+            ending = line[len(stripped):]
+            out.append(re.sub(r"\s*,\s*", " ", stripped) + ending)
+        else:
+            out.append(line)
+    return "".join(out), len(rebus_lines)
 
 
 # Port of clean_author() from scripts/21-clean-metadata.py. Splits an Author
@@ -1899,16 +2307,28 @@ def apply_fixes(text: str, codes: Optional[set],
 # ---------------------------------------------------------------------------
 
 def iter_xd_paths(roots):
-    """Yield .xd file paths under each root (file or directory)."""
+    """Yield .xd file paths under each root (file or directory).
+
+    Paths are emitted with forward slashes regardless of platform so the
+    finding output is bash/git-bash-friendly on Windows (where os.walk
+    otherwise produces 'gxd/nytimes/2022\\nyt...' with mixed separators
+    that downstream shells can't resolve).
+
+    A nonexistent root prints to stderr and is skipped — silently
+    walking nothing for a typo'd path turned into a 'checked 0 file(s)'
+    surprise too easily."""
     for root in roots:
+        if not os.path.exists(root):
+            print(f"{root}: no such file or directory", file=sys.stderr)
+            continue
         if os.path.isfile(root):
             if root.endswith(".xd"):
-                yield root
+                yield root.replace("\\", "/")
             continue
         for dirpath, _dirnames, filenames in os.walk(root):
             for fn in filenames:
                 if fn.endswith(".xd"):
-                    yield os.path.join(dirpath, fn)
+                    yield os.path.join(dirpath, fn).replace("\\", "/")
 
 
 def _decode_with_findings(data: bytes):
@@ -2161,10 +2581,27 @@ def main():
 
     experimental_codes = {code for (code, _s, _n, exp, _f) in RULES if exp}
 
+    # All codes the runtime knows about: rule codes, parser-level finding
+    # codes, and fixer-only codes. Used to validate --enable-only/--disable
+    # so a typo'd code fails loudly instead of silently selecting nothing.
+    known_codes = (
+        {code for (code, _s, _n, _e, _f) in RULES}
+        | {c for (c, _s, _n) in PARSER_LEVEL_FINDINGS}
+        | set(FIXERS.keys())
+    )
+
     if args.enable_only:
         active = {c.strip() for c in args.enable_only.split(",") if c.strip()}
+        unknown = active - known_codes
+        if unknown:
+            ap.error(f"unknown rule code(s) in --enable-only: "
+                     f"{','.join(sorted(unknown))}")
     elif args.disable:
         disabled = {c.strip() for c in args.disable.split(",") if c.strip()}
+        unknown = disabled - known_codes
+        if unknown:
+            ap.error(f"unknown rule code(s) in --disable: "
+                     f"{','.join(sorted(unknown))}")
         active = {code for (code, _s, _n, _e, _f) in RULES} - disabled
         # Parse-level findings (XD012/XD019/XD021/XD022) are emitted directly
         # by the parser, not via @rule, so they need to be added to `active`
