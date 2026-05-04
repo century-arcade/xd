@@ -6,6 +6,7 @@
 #   Appends to receipts.tsv
 #
 
+import fnmatch
 import os
 import time
 
@@ -27,6 +28,29 @@ from xdfile import catalog
 
 import xdfile
 
+
+def _load_excludes_file(fpath):
+    out = []
+    with open(fpath) as f:
+        for i, line in enumerate(f):
+            line = line.rstrip('\n')
+            if not line:
+                continue
+            col0 = line.split('\t', 1)[0]
+            if i == 0 and col0 == 'path':
+                continue
+            out.append(col0)
+    return out
+
+
+def _accept_path(path, includes, excludes):
+    if includes and not any(fnmatch.fnmatch(path, pat) for pat in includes):
+        return False
+    if excludes and any(fnmatch.fnmatch(path, pat) for pat in excludes):
+        return False
+    return True
+
+
 def main():
     global args
     parsers = {
@@ -47,8 +71,19 @@ def main():
     p.add_argument('--pubid', default=None, help='PublicationAbbr (pubid) to use')
     p.add_argument('--skip-unchanged', action='store_true', help='Skip writing .xd and appending receipt if output is byte-identical to existing file')
     p.add_argument('--reimport', action='store_true', help='Re-parse and rewrite .xd for sources that have already been received (e.g. to pick up parser or decoder fixes).')
-    p.add_argument('--force', action='store_true', help='With --reimport, overwrite even when a different source owns the xdid.')
+    p.add_argument('--overwrite', action='store_true', help='Overwrite an existing shelf slot owned by a different (ExternalSource, SourceFilename). Without this, sibling-source duplicates and cross-source collisions are skipped with a warning.')
+    p.add_argument('--include', action='append', default=None,
+                   help='Glob (fnmatch) pattern; only SourceFilenames matching at least one --include are processed. May be repeated.')
+    p.add_argument('--exclude', action='append', default=None,
+                   help='Glob (fnmatch) pattern; SourceFilenames matching any --exclude are skipped. May be repeated.')
+    p.add_argument('--excludes-file', action='append', default=None,
+                   help='File of exclude patterns/paths, one per line (or TSV; first column). May be repeated.')
     args = get_args(parser=p)
+
+    includes = list(args.include or [])
+    excludes = list(args.exclude or [])
+    for fpath in args.excludes_file or []:
+        excludes.extend(_load_excludes_file(fpath))
 
     outf = open_output()
 
@@ -84,6 +119,11 @@ def main():
                     continue
 
                 innerfn = strip_toplevel(fn).replace('\\', '/')
+
+                if not _accept_path(innerfn, includes, excludes):
+                    debug("filter excluded: %s" % innerfn)
+                    continue
+
                 if innerfn in source_files:
                     srcrow = source_files[innerfn]
                     CaptureTime = srcrow.DownloadTime
@@ -102,18 +142,21 @@ def main():
                 xdid = ""
                 prev_xdid = ""  # unshelved by default
 
-                existing_xdids = set(r.xdid for r in already_received)
-                if existing_xdids:
-                    if len(existing_xdids) > 1:
-                        warn('previously received this same file under multiple xdids: ' + ' '.join(existing_xdids))
-                    else:
-                        prev_xdid = existing_xdids.pop()
-                        debug('already received as %s' % prev_xdid)
+                # The latest receipt for this (ExternalSource, SourceFilename) is authoritative:
+                # it reflects the most recent xdid (handles shelf-relocations) or '' if the
+                # latest attempt failed to shelve.
+                if already_received:
+                    latest = max(already_received, key=lambda r: r.ReceivedTime)
+                    prev_xdid = latest.xdid
+                    if prev_xdid:
+                        debug('already shelved as %s' % prev_xdid)
 
-                # Default: previously-received sources are skipped entirely (no parse, no write).
-                # --reimport: reprocess and rewrite the .xd.
-                if already_received and not args.reimport:
-                    debug("already received, skipping: %s:%s" % (ExternalSource, SourceFilename))
+                # Default: skip files that have a successful, non-provisional prior shelving.
+                # Files with empty latest xdid (never successfully shelved) and provisional
+                # xdids (shelved into unshelved/) fall through to retry. --reimport reprocesses
+                # everything.
+                if prev_xdid and not catalog.is_provisional(prev_xdid) and not args.reimport:
+                    debug("already shelved as %s, skipping: %s:%s" % (prev_xdid, ExternalSource, SourceFilename))
                     continue
 
                 # try each parser by extension
@@ -150,18 +193,49 @@ def main():
                             xdstr = xd.to_unicode()
 
                             mdtext = "|".join((ExternalSource,InternalSource,SourceFilename))
-                            xdid = prev_xdid or catalog.deduce_xdid(xd, mdtext)
-                            path = catalog.get_shelf_path(xd, args.pubid, mdtext)
-                            if not path:
-                                raise xdfile.NoShelfError("no shelf path for %s" % xd.filename)
 
-                            # --reimport guard: refuse to overwrite if a different source
-                            # owns this xdid (unless --force).
-                            if args.reimport and not args.force and xdid:
+                            # Manual xdid pin from overrides.tsv takes precedence over all
+                            # automatic resolution. Use the pinned xdid for both the receipt
+                            # and the shelf path; pubid is derived from the xdid format.
+                            override_xdid = catalog.lookup_xdid_override(ExternalSource, SourceFilename)
+                            if override_xdid:
+                                xdid = override_xdid
+                                path = catalog.shelf_path_from_xdid(override_xdid)
+                                if not path:
+                                    raise xdfile.NoShelfError("override xdid %s is not a recognized shelf format" % override_xdid)
+                            else:
+                                # Resolve pubid once and pass it down — keeps deduce_xdid and
+                                # get_shelf_path consistent and avoids triple-resolution per file.
+                                pubid = args.pubid or catalog.resolve_pubid(xd, mdtext)
+
+                                # Strict deduction for the relocation comparison: ignore the
+                                # provisional fallback, only flag real-vs-real divergences.
+                                deduced_xdid_strict = catalog.deduce_xdid(xd, pubid, mdtext, strict=True)
+                                if (args.reimport and prev_xdid and not catalog.is_provisional(prev_xdid)
+                                        and deduced_xdid_strict and prev_xdid != deduced_xdid_strict):
+                                    warn("shelf relocation: %s previously %s, current headers deduce %s" % (
+                                        SourceFilename, prev_xdid, deduced_xdid_strict))
+                                # Reuse prev_xdid only when it's a real (non-provisional) shelving;
+                                # for provisional or empty prev_xdid, deduce fresh (may now succeed).
+                                if prev_xdid and not catalog.is_provisional(prev_xdid):
+                                    xdid = prev_xdid
+                                else:
+                                    xdid = catalog.deduce_xdid(xd, pubid, mdtext)
+                                path = catalog.get_shelf_path(xd, pubid, mdtext)
+                                if not path:
+                                    raise xdfile.NoShelfError("no shelf path for %s" % xd.filename)
+
+                            # Always-on ownership guard: refuse to overwrite if a different
+                            # (ExternalSource, SourceFilename) already owns this xdid. This
+                            # catches both cross-source overwrites and same-source sibling
+                            # duplicates (same logical puzzle filed under multiple paths in
+                            # the archive). Provisional xdids are hash-unique by construction
+                            # and don't need this guard. --overwrite overrides.
+                            if not args.overwrite and xdid and not catalog.is_provisional(xdid):
                                 latest = metadb.latest_receipt_for_xdid(xdid)
-                                if latest and latest.ExternalSource != ExternalSource:
-                                    warn("xdid %s last imported from '%s', not overwriting from '%s' (use --force to override)" % (
-                                        xdid, latest.ExternalSource, ExternalSource))
+                                if latest and (latest.ExternalSource, latest.SourceFilename) != (ExternalSource, SourceFilename):
+                                    warn("xdid %s already owned by (%s, %s); not overwriting from (%s, %s) (use --overwrite to override)" % (
+                                        xdid, latest.ExternalSource, latest.SourceFilename, ExternalSource, SourceFilename))
                                     owned_by_other = True
                                     rejected = ""
                                     break
@@ -200,6 +274,22 @@ def main():
                             else:
                                 outf.write_file(path + ".xd", xdstr, dt)
 
+                            # Promotion cleanup: a previously-provisional shelving
+                            # has been replaced by a real (or different provisional)
+                            # one. Remove the old provisional .xd so receipts and
+                            # disk stay in sync.
+                            if (catalog.is_provisional(prev_xdid)
+                                    and prev_xdid != xdid
+                                    and not unchanged):
+                                try:
+                                    old_relpath = catalog.provisional_path(prev_xdid, ExternalSource) + ".xd"
+                                    full_old = os.path.join(outf.toplevel, old_relpath)
+                                    if os.path.exists(full_old):
+                                        os.unlink(full_old)
+                                        debug("promoted: removed old provisional %s" % old_relpath)
+                                except AttributeError:
+                                    pass
+
                             rejected = ""
                             break  # stop after first successful parsing
                         except xdfile.NoShelfError as e:
@@ -213,16 +303,21 @@ def main():
                     if rejected:
                         error("could not convert: %s" % rejected)
 
-                    # Receipt policy: append only when this is a newly-received source
-                    # that produced a written .xd. Rewrites of already-received sources
-                    # don't add a new receipt (the prior one already binds SourceFilename
-                    # → xdid). Unchanged writes and ownership-blocked writes skip too.
-                    if already_received:
-                        debug("already received %s:%s" % (ExternalSource, SourceFilename))
+                    # Receipt policy: append when the xdid we just assigned is non-empty AND
+                    # represents a state change from the latest prior receipt. This covers:
+                    #   - brand-new sources (no prior receipt)
+                    #   - retries that succeeded (prior xdid empty, new xdid assigned)
+                    #   - provisional-to-real promotions (prior xdid was provisional, new is real)
+                    # Skips when: parse failed (empty xdid), the xdid is unchanged from latest
+                    # (no new info), the slot is owned by another key, or write was a no-op.
+                    if not xdid:
+                        debug("no xdid (parse failed), receipt skip %s:%s" % (ExternalSource, SourceFilename))
                     elif owned_by_other:
                         debug("slot owned, receipt skip %s:%s" % (ExternalSource, SourceFilename))
                     elif unchanged:
                         debug("unchanged receipt skip %s:%s" % (ExternalSource, SourceFilename))
+                    elif already_received and prev_xdid == xdid:
+                        debug("xdid unchanged from latest receipt, skip %s:%s" % (ExternalSource, SourceFilename))
                     else:
                         receipts.append([
                             CaptureTime,
