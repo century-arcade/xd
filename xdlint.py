@@ -45,8 +45,10 @@ import enum
 import html
 import os
 import re
+import shutil
 import subprocess
 import sys
+import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
@@ -747,6 +749,36 @@ def _rebus_for(ctx) -> Dict[str, RebusExpansion]:
     return cache
 
 
+def _validations_for(ctx):
+    """List of (clue, validation_result) for clues that map to a slot.
+    Memoized per ctx so XD006 and XD007 share the per-clue validation
+    work instead of each calling _validate_answer_against_slot
+    independently. result is None on success or (code, message) on
+    failure; the rules each filter on result[0]."""
+    cache = getattr(ctx, "_validations", None)
+    if cache is not None:
+        return cache
+    idx = _slot_index_or_none(ctx)
+    if idx is None:
+        ctx._validations = []
+        return ctx._validations
+    rebus_map = _rebus_for(ctx)
+    out = []
+    for clue in ctx.parsed.clues:
+        if not clue.answer or clue.direction not in ("A", "D"):
+            continue
+        if clue.pos not in idx:
+            continue  # XD004 fires
+        direction, cells = idx[clue.pos]
+        direction_idx = 0 if direction == "A" else 1
+        result = _validate_answer_against_slot(
+            clue.answer, cells, ctx.parsed.grid, rebus_map, direction_idx,
+        )
+        out.append((clue, result))
+    ctx._validations = out
+    return out
+
+
 @rule("XD004", Severity.ERROR, "missing-slot-for-clue")
 def _(ctx):
     idx = _slot_index_or_none(ctx)
@@ -784,20 +816,7 @@ def _(ctx):
 
 @rule("XD006", Severity.ERROR, "answer-length-mismatch", experimental=True)
 def _(ctx):
-    idx = _slot_index_or_none(ctx)
-    if idx is None:
-        return
-    rebus_map = _rebus_for(ctx)
-    for clue in ctx.parsed.clues:
-        if not clue.answer or clue.direction not in ("A", "D"):
-            continue
-        if clue.pos not in idx:
-            continue  # XD004 fires
-        direction, cells = idx[clue.pos]
-        direction_idx = 0 if direction == "A" else 1
-        result = _validate_answer_against_slot(
-            clue.answer, cells, ctx.parsed.grid, rebus_map, direction_idx,
-        )
+    for clue, result in _validations_for(ctx):
         if result is not None and result[0] == "XD006":
             yield finding("XD006", Severity.ERROR, clue.line,
                           f"clue {clue.pos}: {result[1]} "
@@ -806,20 +825,7 @@ def _(ctx):
 
 @rule("XD007", Severity.ERROR, "answer-grid-letter-mismatch", experimental=True)
 def _(ctx):
-    idx = _slot_index_or_none(ctx)
-    if idx is None:
-        return
-    rebus_map = _rebus_for(ctx)
-    for clue in ctx.parsed.clues:
-        if not clue.answer or clue.direction not in ("A", "D"):
-            continue
-        if clue.pos not in idx:
-            continue
-        direction, cells = idx[clue.pos]
-        direction_idx = 0 if direction == "A" else 1
-        result = _validate_answer_against_slot(
-            clue.answer, cells, ctx.parsed.grid, rebus_map, direction_idx,
-        )
+    for clue, result in _validations_for(ctx):
         if result is not None and result[0] == "XD007":
             yield finding("XD007", Severity.ERROR, clue.line,
                           f"clue {clue.pos}: {result[1]} "
@@ -1536,6 +1542,60 @@ def _(ctx):
                       f"{known}); content ignored")
 
 
+# Typography characters that puz2xd's decode() flattens to ASCII on import
+# (see doc/character-encoding.md §9 step 7 and step 2). Files imported
+# pre-flatten or via non-puz2xd pipelines retain these. Em dash (U+2014)
+# is *not* in this set: corpus convention keeps it as Unicode (FITB marker
+# in NYT/Wapost/Eltana, per doc/character-encoding.md §11).
+_TYPOGRAPHY_FLATTEN = {
+    "‘": "'",    # left single quote
+    "’": "'",    # right single quote
+    "“": '"',    # left double quote
+    "”": '"',    # right double quote
+    "…": "...",  # horizontal ellipsis
+    " ": " ",    # no-break space
+}
+_TYPOGRAPHY_RE = re.compile("[" + "".join(_TYPOGRAPHY_FLATTEN) + "]")
+
+
+@rule("XD208", Severity.WARNING, "non-ascii-typography")
+def _(ctx):
+    """Non-ASCII typography that puz2xd's decode() would have flattened on
+    import: curly quotes, ellipsis, NBSP. Auto-fixable via --fix; saves a
+    full reimport for files that escaped the flatten step."""
+    for i, line in enumerate(ctx.parsed.lines, 1):
+        for m in _TYPOGRAPHY_RE.finditer(line):
+            ch = m.group(0)
+            cp = ord(ch)
+            yield finding("XD208", Severity.WARNING, i,
+                          f"non-ascii typography U+{cp:04X} {ch!r} at "
+                          f"col {m.start() + 1} (flatten to "
+                          f"{_TYPOGRAPHY_FLATTEN[ch]!r})")
+
+
+# Interior run of 2+ ASCII spaces. Anchored to non-space on both sides so
+# leading indentation and trailing whitespace are out of scope (XD201
+# handles trailing). Grid rows are skipped at the call site — a run of
+# spaces inside a grid is XD002's domain, not a typography issue.
+_MULTI_SPACE_RE = re.compile(r"(?<=\S) {2,}(?=\S)")
+
+
+@rule("XD209", Severity.WARNING, "multiple-internal-spaces")
+def _(ctx):
+    """Run of 2+ ASCII spaces between non-space characters. puz2xd's
+    decode() collapses these on import (re.sub(r'\\s+', ' ', s)); files
+    that escaped the collapse retain them. Skips grid rows."""
+    grid_lines = {row.line for row in ctx.parsed.grid}
+    for i, line in enumerate(ctx.parsed.lines, 1):
+        if i in grid_lines:
+            continue
+        m = _MULTI_SPACE_RE.search(line)
+        if m:
+            yield finding("XD209", Severity.WARNING, i,
+                          f"run of {len(m.group(0))} spaces at "
+                          f"col {m.start() + 1} (collapse to single space)")
+
+
 # ---------------------------------------------------------------------------
 # Fixers - mechanical corrections for safe rules
 # ---------------------------------------------------------------------------
@@ -1558,10 +1618,15 @@ FIX_ORDER = [
               # reconstructs to '"'.
     "XD010",  # cp1252 mojibake -> intended chars
     "XD011",  # HTML entities -> unescaped chars
+    "XD208",  # curly quotes / ellipsis / NBSP -> ASCII (after XD011 because
+              # &hellip; etc. unescape to a flagged char first)
     "XD110",  # de-indent '## Section' headers
     "XD203",  # de-indent grid rows
     "XD204",  # tabs -> spaces
     "XD201",  # trim trailing whitespace
+    "XD209",  # collapse interior runs of 2+ spaces (after XD201 so trailing
+              # runs are already gone; after XD204/XD208 so tabs and NBSPs
+              # have already become regular spaces)
     "XD103",  # split editor out of Author header
     "XD107",  # drop duplicate header lines (after XD103: lets XD103 pick the
               # editor-bearing Author even if it isn't the first one, then
@@ -1703,6 +1768,36 @@ def _(text):
             count += 1
         return out
     return _HTML_ENTITY_RE.sub(repl, text), count
+
+
+@fixer("XD208")
+def _(text):
+    """Flatten curly quotes / ellipsis / NBSP to ASCII. Mirrors puz2xd's
+    decode() steps 2 and 7."""
+    count = sum(1 for ch in text if ch in _TYPOGRAPHY_FLATTEN)
+    if not count:
+        return text, 0
+    new = text.translate({ord(k): v for k, v in _TYPOGRAPHY_FLATTEN.items()})
+    return new, count
+
+
+@fixer("XD209")
+def _(text):
+    """Collapse interior runs of 2+ spaces to a single space, on every line
+    except grid rows. Mirrors the trailing whitespace-collapse in decode()."""
+    parsed = parse(text)
+    grid_lines = {row.line for row in parsed.grid}
+    count = 0
+    out = []
+    for i, line in enumerate(text.splitlines(keepends=True), 1):
+        if i in grid_lines:
+            out.append(line)
+            continue
+        new, n = _MULTI_SPACE_RE.subn(" ", line)
+        if n:
+            count += n
+        out.append(new)
+    return "".join(out), count
 
 
 @fixer("XD110")
@@ -2355,17 +2450,25 @@ def _decode_with_findings(data: bytes):
 
 
 def contexts_from_paths(paths):
-    for path in iter_xd_paths(paths):
-        try:
-            with open(path, "rb") as f:
-                data = f.read()
-        except OSError as e:
-            print(f"{path}\tIO\terror reading: {e}", file=sys.stderr)
-            continue
-        text, decode_findings = _decode_with_findings(data)
-        parsed = parse(text)
-        parsed.parse_errors[:0] = decode_findings
-        yield path, Ctx(filename=path, text=text, parsed=parsed)
+    """Returns (total_count, generator-of-(path, Ctx)). The list is
+    materialized so the caller can show progress. Memory cost is just
+    the path strings; file contents are still read lazily."""
+    file_paths = list(iter_xd_paths(paths))
+
+    def gen():
+        for path in file_paths:
+            try:
+                with open(path, "rb") as f:
+                    data = f.read()
+            except OSError as e:
+                print(f"{path}\tIO\terror reading: {e}", file=sys.stderr)
+                continue
+            text, decode_findings = _decode_with_findings(data)
+            parsed = parse(text)
+            parsed.parse_errors[:0] = decode_findings
+            yield path, Ctx(filename=path, text=text, parsed=parsed)
+
+    return len(file_paths), gen()
 
 
 def _git(*args):
@@ -2403,18 +2506,104 @@ def _batch_show(ref, paths):
 
 
 def contexts_from_git(base, head):
-    """Lint files added or modified between two refs."""
+    """Lint files added or modified between two refs.
+
+    Returns (total_count, generator-of-(path, Ctx))."""
     out = _git("diff", "--name-only", "--diff-filter=AM", f"{base}..{head}")
     paths = [p for p in out.splitlines() if p.endswith(".xd")]
     blobs = _batch_show(head, paths)
-    for path in paths:
-        content = blobs.get(path)
-        if content is None:
-            continue
-        text, decode_findings = _decode_with_findings(content)
-        parsed = parse(text)
-        parsed.parse_errors[:0] = decode_findings
-        yield path, Ctx(filename=path, text=text, parsed=parsed)
+
+    def gen():
+        for path in paths:
+            content = blobs.get(path)
+            if content is None:
+                continue
+            text, decode_findings = _decode_with_findings(content)
+            parsed = parse(text)
+            parsed.parse_errors[:0] = decode_findings
+            yield path, Ctx(filename=path, text=text, parsed=parsed)
+
+    return len(paths), gen()
+
+
+# ---------------------------------------------------------------------------
+# Progress reporting
+# ---------------------------------------------------------------------------
+
+def _format_duration(seconds: float) -> str:
+    """Compact h:mm:ss / m:ss formatter for elapsed/eta values."""
+    s = int(seconds)
+    if s >= 3600:
+        return f"{s // 3600}:{(s % 3600) // 60:02d}:{s % 60:02d}"
+    return f"{s // 60}:{s % 60:02d}"
+
+
+class _Progress:
+    """Single-line, in-place progress reporter for long corpus runs.
+
+    Throttles redraws to ~10/sec so a fast inner loop doesn't spend more
+    time on terminal I/O than on actual work. Always renders the final
+    tick. When disabled, every method is a no-op."""
+
+    def __init__(self, total: int, enabled: bool, stream=None):
+        self.total = total
+        self.enabled = enabled
+        # Resolve sys.stderr lazily so redirect_stderr() (in tests) and any
+        # late-bound replacement of sys.stderr are honored.
+        self.stream = stream if stream is not None else sys.stderr
+        self.start = time.monotonic()
+        self.last_draw = 0.0
+        self.n = 0
+        self.drew = False
+
+    def tick(self, current: str = "") -> None:
+        self.n += 1
+        if not self.enabled:
+            return
+        now = time.monotonic()
+        if (now - self.last_draw) < 0.1 and self.n != self.total:
+            return
+        self.last_draw = now
+        self._draw(current)
+
+    def _draw(self, current: str) -> None:
+        elapsed = time.monotonic() - self.start
+        if self.n > 0 and elapsed > 0 and self.total > 0:
+            eta = (self.total - self.n) * (elapsed / self.n)
+        else:
+            eta = 0.0
+        pct = 100.0 * self.n / self.total if self.total else 0.0
+        width = len(str(self.total))
+        prefix = (f"[{self.n:>{width}}/{self.total}] {pct:5.1f}% "
+                  f"elapsed {_format_duration(elapsed)} "
+                  f"eta {_format_duration(eta)} ")
+        cols = shutil.get_terminal_size((100, 20)).columns
+        room = max(0, cols - len(prefix) - 1)
+        if len(current) > room and room > 3:
+            current = "..." + current[-(room - 3):]
+        elif len(current) > room:
+            current = ""
+        self.stream.write("\r\033[K" + prefix + current)
+        self.stream.flush()
+        self.drew = True
+
+    def done(self) -> None:
+        if self.enabled and self.drew:
+            self.stream.write("\r\033[K")
+            self.stream.flush()
+
+
+def _progress_enabled(arg: str, stream=None) -> bool:
+    if arg == "always":
+        return True
+    if arg == "never":
+        return False
+    if stream is None:
+        stream = sys.stderr
+    try:
+        return stream.isatty()
+    except (AttributeError, ValueError):
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -2441,7 +2630,7 @@ def format_finding(path, f: Finding) -> str:
     return f"{loc}\t{f.severity.value}\t{f.code}\t{f.message}"
 
 
-def _run_fix_mode(args, source, active_codes):
+def _run_fix_mode(args, total, source, active_codes):
     """Apply fixers per file, then re-lint and report what's left.
     With --diff, print diffs to stdout and skip writing."""
     fix_codes = set(FIXERS.keys())
@@ -2454,9 +2643,11 @@ def _run_fix_mode(args, source, active_codes):
     findings_total = 0
     gate_hit = 0
     gate_rank = Severity(args.max_severity).rank
+    progress = _Progress(total, _progress_enabled(args.progress))
 
     for path, ctx in source:
         files_seen += 1
+        progress.tick(path)
 
         # If the file has decode errors, skip — the in-memory text already
         # has U+FFFD replacements and writing it back would lose bytes.
@@ -2504,6 +2695,8 @@ def _run_fix_mode(args, source, active_codes):
             _SLOT_CACHE.pop(id(fixed_ctx), None)
 
         _SLOT_CACHE.pop(id(ctx), None)
+
+    progress.done()
 
     if args.diff:
         print(f"\n{files_changed} of {files_seen} file(s) would be modified",
@@ -2557,6 +2750,10 @@ def main():
                     help="with --fix, include fixes that may alter semantics")
     ap.add_argument("--show-fixes", action="store_true",
                     help="with --fix, enumerate the fixes applied per file")
+    ap.add_argument("--progress", choices=["auto", "always", "never"],
+                    default="auto",
+                    help="progress reporting on stderr (default: auto = on "
+                         "when stderr is a tty)")
     args = ap.parse_args()
 
     # --diff implies --fix (matching ruff)
@@ -2625,22 +2822,24 @@ def main():
                  "(which reads git blobs, not files on disk)")
 
     if args.base:
-        source = contexts_from_git(args.base, args.head)
+        total, source = contexts_from_git(args.base, args.head)
     elif args.paths:
-        source = contexts_from_paths(args.paths)
+        total, source = contexts_from_paths(args.paths)
     else:
         ap.error("give --base for git-diff mode, or explicit .xd paths")
 
     if args.fix:
-        return _run_fix_mode(args, source, active)
+        return _run_fix_mode(args, total, source, active)
 
     gate_rank = Severity(args.max_severity).rank
     checked = 0
     findings_total = 0
     gate_hit = 0
+    progress = _Progress(total, _progress_enabled(args.progress))
 
     for path, ctx in source:
         checked += 1
+        progress.tick(path)
         for f in run_checks(ctx, active):
             if f.severity.rank < gate_rank:
                 continue
@@ -2651,6 +2850,8 @@ def main():
         # Drop the slot cache for this ctx; otherwise large corpus runs
         # accumulate one entry per file forever.
         _SLOT_CACHE.pop(id(ctx), None)
+
+    progress.done()
 
     print(f"\nchecked {checked} file(s), {findings_total} finding(s) "
           f"at or above '{args.max_severity}'", file=sys.stderr)

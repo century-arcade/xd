@@ -836,6 +836,74 @@ class TestInfoRules:
         f = run_rule("XD207", text)
         assert any("Mystery" in x.message for x in f)
 
+    def test_xd208_curly_quotes_flagged(self):
+        text = SIMPLE.replace(
+            "A1. First ~ ABC",
+            "A1. “First” ~ ABC",
+        )
+        f = run_rule("XD208", text)
+        assert len(f) == 2
+        assert any("U+201C" in x.message for x in f)
+        assert any("U+201D" in x.message for x in f)
+
+    def test_xd208_ellipsis_and_nbsp_flagged(self):
+        text = SIMPLE.replace(
+            "A1. First ~ ABC",
+            "A1. First… ~ ABC",
+        ).replace("Title: T", "Title: T")
+        f = run_rule("XD208", text)
+        codes = [x.message for x in f]
+        assert any("U+2026" in m for m in codes)
+        assert any("U+00A0" in m for m in codes)
+
+    def test_xd208_em_dash_not_flagged(self):
+        # Em dash (U+2014) is corpus convention for FITB markers; intentional
+        # exception per doc/character-encoding.md §9 step 7.
+        text = SIMPLE.replace("A1. First ~ ABC", "A1. — marker ~ ABC")
+        f = run_rule("XD208", text)
+        assert f == []
+
+    def test_xd208_clean_on_simple(self):
+        f = run_rule("XD208", SIMPLE)
+        assert f == []
+
+    def test_xd209_double_space_in_clue_flagged(self):
+        text = SIMPLE.replace("A1. First ~ ABC", "A1. First  word ~ ABC")
+        f = run_rule("XD209", text)
+        assert len(f) == 1
+        assert "2 spaces" in f[0].message
+
+    def test_xd209_double_space_in_header_flagged(self):
+        text = SIMPLE.replace("Title: T", "Title:  T")
+        f = run_rule("XD209", text)
+        assert len(f) == 1
+
+    def test_xd209_grid_rows_skipped(self):
+        # Internal whitespace in a grid row is XD002's domain (unrecognized
+        # grid char), not XD209's. Use explicit-mode so the contrived row
+        # doesn't break the implicit-mode section detector.
+        text = (
+            "## Metadata\nTitle: T\nDate: 2024-01-01\n"
+            "## Grid\nA C\nD#E\nFGH\n"
+            "## Clues\n"
+            "A1. x ~ AC\n"
+            "A3. y ~ FGH\n"
+            "D1. z ~ ADF\n"
+            "D2. w ~ CEH\n"
+        )
+        f = run_rule("XD209", text)
+        assert f == []
+
+    def test_xd209_trailing_run_not_flagged(self):
+        # XD201 owns trailing whitespace; XD209 only catches interior runs.
+        text = SIMPLE.replace("Title: T\n", "Title: T   \n")
+        f = run_rule("XD209", text)
+        assert f == []
+
+    def test_xd209_clean_on_simple(self):
+        f = run_rule("XD209", SIMPLE)
+        assert f == []
+
 
 class TestFeatureDetectionRules:
     """XD3xx rules: announce feature usage so the corpus can be searched.
@@ -1033,6 +1101,60 @@ class TestFixers:
         new, n = xdlint.FIXERS["XD011"][1](text)
         assert n == 1
         assert "&" in new and "&amp;" not in new
+
+    def test_xd208_flatten_typography(self):
+        text = "A1. “Hello” … ~ ABC\n"
+        new, n = xdlint.FIXERS["XD208"][1](text)
+        assert n == 3
+        assert new == 'A1. "Hello" ... ~ ABC\n'
+
+    def test_xd208_flatten_nbsp(self):
+        text = "Title: A\xa0B\n"
+        new, n = xdlint.FIXERS["XD208"][1](text)
+        assert n == 1
+        assert new == "Title: A B\n"
+        assert "\xa0" not in new
+
+    def test_xd208_idempotent(self):
+        text = "A1. “x” ~ ABC\n"
+        new1, _ = xdlint.FIXERS["XD208"][1](text)
+        new2, n = xdlint.FIXERS["XD208"][1](new1)
+        assert n == 0
+        assert new1 == new2
+
+    def test_xd209_collapse_interior_run(self):
+        text = SIMPLE.replace("A1. First ~ ABC", "A1. First  word ~ ABC")
+        new, n = xdlint.FIXERS["XD209"][1](text)
+        assert n == 1
+        assert "First word" in new
+        assert "First  word" not in new
+
+    def test_xd209_preserves_grid(self):
+        # Grid rows must not be collapsed even when they contain (malformed)
+        # internal whitespace.
+        text = (
+            "## Metadata\nTitle: T\nDate: 2024-01-01\n"
+            "## Grid\nA C\nD#E\nFGH\n"
+            "## Clues\nA1. x ~ AC\nA3. y ~ FGH\n"
+            "D1. z ~ ADF\nD2. w ~ CEH\n"
+        )
+        new, n = xdlint.FIXERS["XD209"][1](text)
+        assert n == 0
+        assert "A C" in new
+
+    def test_xd209_preserves_trailing_whitespace(self):
+        # Trailing runs are XD201's domain; XD209 must leave them alone.
+        text = "Title: T   \n"
+        new, n = xdlint.FIXERS["XD209"][1](text)
+        assert n == 0
+        assert new == text
+
+    def test_xd209_idempotent(self):
+        text = SIMPLE.replace("A1. First ~ ABC", "A1. First   word ~ ABC")
+        new1, _ = xdlint.FIXERS["XD209"][1](text)
+        new2, n = xdlint.FIXERS["XD209"][1](new1)
+        assert n == 0
+        assert new1 == new2
 
     def test_xd110_dedent_section_header(self):
         text = "  ## Metadata\nTitle: T\n"
@@ -1514,6 +1636,22 @@ class TestCLI:
         p.write_bytes(b"Title: T\xff\n\n\nAB\n\n\nA1. x ~ AB\n")
         code, out, _ = run_main([str(p)])
         assert "XD022" in out
+
+    def test_progress_auto_silent_on_non_tty(self, tmp_xd_file):
+        # run_main redirects stderr to StringIO (no isatty); auto should
+        # produce no progress lines, only the closing summary.
+        _, _, err = run_main([tmp_xd_file, "--progress", "auto"])
+        assert "elapsed" not in err
+        assert "checked 1 file" in err
+
+    def test_progress_always_renders(self, tmp_xd_file):
+        _, _, err = run_main([tmp_xd_file, "--progress", "always"])
+        assert "[1/1]" in err
+        assert "elapsed" in err
+
+    def test_progress_never_silent(self, tmp_xd_file):
+        _, _, err = run_main([tmp_xd_file, "--progress", "never"])
+        assert "elapsed" not in err
 
 
 class TestFixCLI:
