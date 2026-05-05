@@ -610,6 +610,102 @@ class TestWarningRules:
         f = run_rule("XD018", text)
         assert len(f) == 1
 
+    def test_xd023_unclosed_parenthetical_flags_real_defect(self):
+        text = SIMPLE.replace(
+            "A1. First ~ ABC",
+            'A1. "__ Soleil" (The Sun King ~ ABC',
+        )
+        f = run_rule("XD023", text)
+        assert len(f) == 1
+        assert "A1" in f[0].message
+
+    def test_xd023_balanced_parens_clean(self):
+        text = SIMPLE.replace(
+            "A1. First ~ ABC",
+            "A1. Word (with aside) here ~ ABC",
+        )
+        f = run_rule("XD023", text)
+        assert f == []
+
+    def test_xd023_smiley_not_flagged(self):
+        # ':-(' has '(' glued to '-', not preceded by space — should be ignored.
+        text = SIMPLE.replace("A1. First ~ ABC", "A1. Sad face :-( ~ ABC")
+        f = run_rule("XD023", text)
+        assert f == []
+
+    def test_xd023_trailing_paren_not_flagged(self):
+        # Bare trailing '(' as last char of body is ignored (likely smiley).
+        text = SIMPLE.replace("A1. First ~ ABC", "A1. Frown ( ~ ABC")
+        f = run_rule("XD023", text)
+        assert f == []
+
+    def test_xd023_paren_then_punct_not_flagged(self):
+        # '(' followed by ',' or '.' — clue cues the literal paren character.
+        text1 = SIMPLE.replace("A1. First ~ ABC", "A1. (, for example ~ ABC")
+        text2 = SIMPLE.replace("A1. First ~ ABC", "A1. (. shapewise ~ ABC")
+        assert run_rule("XD023", text1) == []
+        assert run_rule("XD023", text2) == []
+
+    def test_xd023_parenthetical_starting_with_quote(self):
+        # Real parenthetical that opens with a quoted title: still flagged
+        # when unclosed.
+        text = SIMPLE.replace(
+            "A1. First ~ ABC",
+            'A1. clue ("Moon River ~ ABC',
+        )
+        f = run_rule("XD023", text)
+        assert len(f) == 1
+
+    def test_xd023_fixer_appends_close_paren(self):
+        text = SIMPLE.replace(
+            "A1. First ~ ABC",
+            'A1. "__ Soleil" (The Sun King ~ ABC',
+        )
+        new, n = xdlint.FIXERS["XD023"][1](text)
+        assert n == 1
+        assert 'A1. "__ Soleil" (The Sun King) ~ ABC\n' in new
+
+    def test_xd023_fixer_skips_balanced(self):
+        text = SIMPLE.replace(
+            "A1. First ~ ABC",
+            "A1. Word (with aside) here ~ ABC",
+        )
+        new, n = xdlint.FIXERS["XD023"][1](text)
+        assert n == 0
+        assert new == text
+
+    def test_xd023_fixer_skips_wrong_bracket_type(self):
+        # 'Seeped (through}' has unclosed '(' AND orphan '}'; fixer should
+        # leave it alone since the right edit is ambiguous.
+        text = SIMPLE.replace(
+            "A1. First ~ ABC",
+            "A1. Seeped (through} ~ ABC",
+        )
+        new, n = xdlint.FIXERS["XD023"][1](text)
+        assert n == 0
+        assert new == text
+
+    def test_xd023_fixer_idempotent(self):
+        text = SIMPLE.replace(
+            "A1. First ~ ABC",
+            'A1. "__ Soleil" (The Sun King ~ ABC',
+        )
+        once, n1 = xdlint.FIXERS["XD023"][1](text)
+        twice, n2 = xdlint.FIXERS["XD023"][1](once)
+        assert n1 == 1
+        assert n2 == 0
+        assert once == twice
+
+    def test_xd023_fixer_skips_multiple_unclosed(self):
+        # opens=2, closes=0: ambiguous, leave alone.
+        text = SIMPLE.replace(
+            "A1. First ~ ABC",
+            "A1. (one (two ~ ABC",
+        )
+        new, n = xdlint.FIXERS["XD023"][1](text)
+        assert n == 0
+        assert new == text
+
     def test_xd101_backslash_in_clue(self):
         text = SIMPLE.replace("A1. First ~ ABC", "A1. has\\bs ~ ABC")
         f = run_rule("XD101", text)
@@ -1618,6 +1714,75 @@ class TestCLI:
         # ...but should appear at info gate.
         code, out, _ = run_main([str(p), "--max-severity", "info"])
         assert "XD302" in out
+
+    def test_fix_with_enable_only_no_fixer_errors(self, tmp_path):
+        # XD014 (broken-ref) has no fixer; --fix becomes a no-op for the
+        # whole run, so we error out.
+        p = tmp_path / "src2024-01-01.xd"
+        p.write_text(SIMPLE, encoding="utf-8")
+        code, _out, err = run_main(
+            [str(p), "--fix", "--enable-only", "XD014"]
+        )
+        assert code != 0
+        assert "no fixer" in err.lower() or "XD014" in err
+
+    def test_fix_with_enable_only_some_have_fixer_warns(self, tmp_path):
+        # Mixed selection: XD023 has a (safe-once-enabled) fixer, XD014
+        # has none. With --unsafe-fixes provided, XD023 is runnable, so
+        # the run proceeds with a warning naming XD014.
+        p = tmp_path / "src2024-01-01.xd"
+        p.write_text(SIMPLE, encoding="utf-8")
+        code, _out, err = run_main(
+            [str(p), "--fix", "--enable-only", "XD023,XD014",
+             "--unsafe-fixes"]
+        )
+        assert "XD014" in err
+        assert "no fixer" in err.lower()
+
+    def test_fix_with_enable_only_unsafe_fixer_without_flag_errors(self, tmp_path):
+        # XD023 has an unsafe fixer; without --unsafe-fixes the run is a
+        # silent no-op, so we error instead.
+        p = tmp_path / "src2024-01-01.xd"
+        p.write_text(SIMPLE, encoding="utf-8")
+        code, _out, err = run_main(
+            [str(p), "--fix", "--enable-only", "XD023"]
+        )
+        assert code != 0
+        assert "XD023" in err
+        assert "unsafe" in err.lower()
+
+    def test_fix_with_enable_only_unsafe_fixer_with_flag_runs(self, tmp_path):
+        # Same selection plus --unsafe-fixes: validation should pass.
+        p = tmp_path / "src2024-01-01.xd"
+        p.write_text(SIMPLE, encoding="utf-8")
+        _code, _out, err = run_main(
+            [str(p), "--fix", "--enable-only", "XD023", "--unsafe-fixes"]
+        )
+        assert "no fixer" not in err.lower()
+        assert "skipping unsafe" not in err.lower()
+
+    def test_quiet_suppresses_check_summary(self, tmp_path):
+        p = tmp_path / "src2024-01-01.xd"
+        p.write_text(SIMPLE, encoding="utf-8")
+        _code, _out, err = run_main([str(p), "--quiet"])
+        assert "checked" not in err
+        assert "finding(s)" not in err
+
+    def test_quiet_suppresses_fix_summary(self, tmp_path):
+        p = tmp_path / "src2024-01-01.xd"
+        p.write_text(SIMPLE, encoding="utf-8")
+        _code, _out, err = run_main(
+            [str(p), "--fix", "--quiet"]
+        )
+        assert "fixed" not in err
+        assert "remaining finding(s)" not in err
+
+    def test_default_emits_check_summary(self, tmp_path):
+        # Negative case for --quiet: default mode prints the summary.
+        p = tmp_path / "src2024-01-01.xd"
+        p.write_text(SIMPLE, encoding="utf-8")
+        _code, _out, err = run_main([str(p)])
+        assert "checked" in err
 
     def test_debug_gate_surfaces_debug_findings(self, tmp_path):
         text = SIMPLE.replace("A1. First ~ ABC", "A1. body ~ extra ~ ABC")
