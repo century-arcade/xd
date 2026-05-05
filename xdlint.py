@@ -706,7 +706,7 @@ def _(ctx):
                           f"unrecognized grid character {ch!r} at col {col}")
 
 
-@rule("XD003", Severity.ERROR, "rebus-key-not-in-grid")
+@rule("XD003", Severity.WARNING, "rebus-key-not-in-grid")
 def _(ctx):
     rebus_header = next((h for h in ctx.parsed.headers
                          if h.key.lower() == "rebus"), None)
@@ -720,7 +720,7 @@ def _(ctx):
         used.update(row.cells)
     for k in rebus:
         if k not in used:
-            yield finding("XD003", Severity.ERROR, rebus_header.line,
+            yield finding("XD003", Severity.WARNING, rebus_header.line,
                           f"rebus key {k!r} declared but never used in grid")
 
 
@@ -779,7 +779,7 @@ def _validations_for(ctx):
     return out
 
 
-@rule("XD004", Severity.ERROR, "missing-slot-for-clue")
+@rule("XD004", Severity.WARNING, "missing-slot-for-clue")
 def _(ctx):
     idx = _slot_index_or_none(ctx)
     if idx is None:
@@ -788,11 +788,11 @@ def _(ctx):
         if clue.direction not in ("A", "D"):
             continue
         if clue.pos not in idx:
-            yield finding("XD004", Severity.ERROR, clue.line,
+            yield finding("XD004", Severity.WARNING, clue.line,
                           f"clue {clue.pos} has no corresponding slot in grid")
 
 
-@rule("XD005", Severity.ERROR, "clue-count-mismatch")
+@rule("XD005", Severity.WARNING, "clue-count-mismatch")
 def _(ctx):
     """Compares distinct clue *positions* (not total clues) to slot count.
     Schrödinger puzzles legitimately have multiple clues at the same
@@ -809,30 +809,30 @@ def _(ctx):
                        if c.pos and c.direction in ("A", "D")})
     if n_slots != n_positions:
         line = ctx.parsed.clues[0].line if ctx.parsed.clues else 0
-        yield finding("XD005", Severity.ERROR, line,
+        yield finding("XD005", Severity.WARNING, line,
                       f"distinct clue positions {n_positions} "
                       f"!= grid slot count {n_slots}")
 
 
-@rule("XD006", Severity.ERROR, "answer-length-mismatch", experimental=True)
+@rule("XD006", Severity.WARNING, "answer-length-mismatch", experimental=True)
 def _(ctx):
     for clue, result in _validations_for(ctx):
         if result is not None and result[0] == "XD006":
-            yield finding("XD006", Severity.ERROR, clue.line,
+            yield finding("XD006", Severity.WARNING, clue.line,
                           f"clue {clue.pos}: {result[1]} "
                           f"(declared={clue.answer!r})")
 
 
-@rule("XD007", Severity.ERROR, "answer-grid-letter-mismatch", experimental=True)
+@rule("XD007", Severity.WARNING, "answer-grid-letter-mismatch", experimental=True)
 def _(ctx):
     for clue, result in _validations_for(ctx):
         if result is not None and result[0] == "XD007":
-            yield finding("XD007", Severity.ERROR, clue.line,
+            yield finding("XD007", Severity.WARNING, clue.line,
                           f"clue {clue.pos}: {result[1]} "
                           f"(declared={clue.answer!r})")
 
 
-@rule("XD008", Severity.ERROR, "duplicate-clue-position", experimental=True)
+@rule("XD008", Severity.WARNING, "duplicate-clue-position", experimental=True)
 def _(ctx):
     """Two clues at the same position are legal only when the slot
     contains a Schrödinger cell in that direction (the puzzle author
@@ -858,7 +858,7 @@ def _(ctx):
                     allowed = True
                     break
         if not allowed:
-            yield finding("XD008", Severity.ERROR, clue.line,
+            yield finding("XD008", Severity.WARNING, clue.line,
                           f"clue position {clue.pos} duplicated "
                           f"(first seen at line {seen[clue.pos]})")
 
@@ -1045,7 +1045,7 @@ def _(ctx):
                       f"(quantum {clue.direction.lower()}-only reading)")
 
 
-@rule("XD014", Severity.ERROR, "broken-ref")
+@rule("XD014", Severity.WARNING, "broken-ref")
 def _(ctx):
     """Clue's ^Refs metadata names a position that doesn't exist."""
     positions = {c.pos for c in ctx.parsed.clues if c.pos}
@@ -1055,7 +1055,7 @@ def _(ctx):
             continue
         for token in refs.split():
             if token not in positions:
-                yield finding("XD014", Severity.ERROR, clue.line,
+                yield finding("XD014", Severity.WARNING, clue.line,
                               f"clue {clue.pos} ^Refs points to "
                               f"non-existent clue {token}")
 
