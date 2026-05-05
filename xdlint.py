@@ -1110,6 +1110,38 @@ def _(ctx):
                           "(parsers may pick different splits)")
 
 
+@rule("XD023", Severity.WARNING, "unclosed-parenthetical")
+def _(ctx):
+    """Clue body has an opening '(' that begins a parenthetical but no
+    matching ')'. Filtered to avoid common false positives:
+      - '(' must be at start of body or preceded by a space (skips smileys
+        like ':-(' where the paren is glued to the prior char)
+      - '(' must NOT be the last non-space char of the body (skips trailing
+        '(' which is more likely a smiley remnant than a real parenthetical)
+      - The character after '(' must not be ',' or '.' (skips clues whose
+        answer cues the literal '(' character, e.g. '(, for example' ~ PAREN)
+    """
+    for clue in ctx.parsed.clues:
+        body = clue.body.rstrip()
+        if not body:
+            continue
+        opens = 0
+        for i, ch in enumerate(body):
+            if ch != "(":
+                continue
+            if i > 0 and body[i-1] != " ":
+                continue
+            if i == len(body) - 1:
+                continue
+            if body[i+1] in ",.":
+                continue
+            opens += 1
+        closes = body.count(")")
+        if opens > closes:
+            yield finding("XD023", Severity.WARNING, clue.line,
+                          f"clue {clue.pos} has an unclosed '(' parenthetical")
+
+
 @rule("XD016", Severity.ERROR, "no-letters-in-grid")
 def _(ctx):
     if not ctx.parsed.grid:
@@ -1642,6 +1674,8 @@ FIX_ORDER = [
               # opt-in via --enable-only XD704. Skips inputs containing
               # ' / ', so when both XD703 and XD704 are active (default
               # --fix run) XD703 expands first and XD704 becomes a no-op.
+    "XD023",  # append ')' to clues with one unclosed parenthetical; unsafe
+              # because the close-paren placement is heuristic (end-of-body).
 ]
 
 
@@ -2377,6 +2411,60 @@ def _(text):
     return "".join(lines), len(insertions)
 
 
+@fixer("XD023", unsafe=True)
+def _(text):
+    """Append ')' to clue body when there's exactly one unclosed '('
+    parenthetical (per XD023's filters) and no orphan '}'/']' that would
+    hint at a wrong-bracket-type defect. Marked unsafe because the right
+    place for the ')' is heuristic — most defects in the corpus are
+    truncated trailing parentheticals where end-of-body is correct, but a
+    midline-dropped close would be silently misplaced."""
+    parsed = parse(text)
+    if not parsed.clues:
+        return text, 0
+    target_lines = set()
+    for clue in parsed.clues:
+        body = clue.body.rstrip()
+        if not body:
+            continue
+        opens = 0
+        for i, ch in enumerate(body):
+            if ch != "(":
+                continue
+            if i > 0 and body[i-1] != " ":
+                continue
+            if i == len(body) - 1:
+                continue
+            if body[i+1] in ",.":
+                continue
+            opens += 1
+        closes = body.count(")")
+        if opens != closes + 1:
+            continue
+        # Skip wrong-bracket-type cases (e.g. '(through}'); those need a
+        # human edit, not an appended ')'.
+        if body.count("{") != body.count("}"):
+            continue
+        if body.count("[") != body.count("]"):
+            continue
+        target_lines.add(clue.line)
+    if not target_lines:
+        return text, 0
+    out = []
+    count = 0
+    for i, line in enumerate(text.splitlines(keepends=True), 1):
+        if i in target_lines:
+            idx = line.rfind(" ~ ")
+            if idx > 0:
+                out.append(line[:idx] + ")" + line[idx:])
+                count += 1
+            else:
+                out.append(line)
+        else:
+            out.append(line)
+    return "".join(out), count
+
+
 def apply_fixes(text: str, codes: Optional[set],
                 unsafe_ok: bool) -> Tuple[str, Dict[str, int]]:
     """Apply fixers in canonical order. Each fixer is idempotent and
@@ -2699,13 +2787,15 @@ def _run_fix_mode(args, total, source, active_codes):
     progress.done()
 
     if args.diff:
-        print(f"\n{files_changed} of {files_seen} file(s) would be modified",
-              file=sys.stderr)
+        if not args.quiet:
+            print(f"\n{files_changed} of {files_seen} file(s) would be modified",
+                  file=sys.stderr)
         return 1 if files_changed > 0 else 0
 
-    print(f"\nfixed {total_fixes} issue(s) in {files_changed} of "
-          f"{files_seen} file(s); {findings_total} remaining finding(s), "
-          f"{gate_hit} at or above '{args.max_severity}'", file=sys.stderr)
+    if not args.quiet:
+        print(f"\nfixed {total_fixes} issue(s) in {files_changed} of "
+              f"{files_seen} file(s); {findings_total} remaining finding(s), "
+              f"{gate_hit} at or above '{args.max_severity}'", file=sys.stderr)
     return 1 if gate_hit > 0 else 0
 
 
@@ -2754,11 +2844,19 @@ def main():
                     default="auto",
                     help="progress reporting on stderr (default: auto = on "
                          "when stderr is a tty)")
+    ap.add_argument("-q", "--quiet", action="store_true",
+                    help="suppress trailing summary line and live progress; "
+                         "findings and warnings still print")
     args = ap.parse_args()
 
     # --diff implies --fix (matching ruff)
     if args.diff:
         args.fix = True
+
+    # --quiet forces progress off too; the summary line is its primary target,
+    # but a live progress bar would also be unwanted in quiet mode.
+    if args.quiet:
+        args.progress = "never"
 
     if args.list_rules:
         print(f"{'CODE':<8} {'SEVERITY':<8} {'FLAGS':<10} NAME")
@@ -2821,6 +2919,40 @@ def main():
         ap.error("--fix is incompatible with --base "
                  "(which reads git blobs, not files on disk)")
 
+    # When --fix is set with --enable-only, catch silent-no-op cases:
+    #   - selected rule has no fixer registered
+    #   - selected rule has an unsafe fixer but --unsafe-fixes is off
+    # Warn for each affected code; error if NO selected rule will produce
+    # any fix (the entire --fix run would be a no-op).
+    if args.fix and args.enable_only:
+        selected = {c.strip() for c in args.enable_only.split(",") if c.strip()}
+        no_fixer = sorted(selected - set(FIXERS.keys()))
+        unsafe_skipped = sorted(
+            c for c in selected
+            if c in FIXERS and FIXERS[c][0] and not args.unsafe_fixes
+        )
+        runnable = {
+            c for c in selected
+            if c in FIXERS and (not FIXERS[c][0] or args.unsafe_fixes)
+        }
+        if not runnable:
+            parts = []
+            if no_fixer:
+                parts.append(f"no fixer for {','.join(no_fixer)}")
+            if unsafe_skipped:
+                parts.append(f"unsafe fixer(s) {','.join(unsafe_skipped)} "
+                             f"need --unsafe-fixes")
+            ap.error(f"--fix with --enable-only={args.enable_only}: "
+                     f"nothing to fix ({'; '.join(parts)})")
+        if no_fixer:
+            print(f"warning: --fix has no effect for selected rule(s) "
+                  f"{','.join(no_fixer)} (no fixer registered)",
+                  file=sys.stderr)
+        if unsafe_skipped:
+            print(f"warning: --fix skipping unsafe fixer(s) "
+                  f"{','.join(unsafe_skipped)} (pass --unsafe-fixes to apply)",
+                  file=sys.stderr)
+
     if args.base:
         total, source = contexts_from_git(args.base, args.head)
     elif args.paths:
@@ -2853,8 +2985,9 @@ def main():
 
     progress.done()
 
-    print(f"\nchecked {checked} file(s), {findings_total} finding(s) "
-          f"at or above '{args.max_severity}'", file=sys.stderr)
+    if not args.quiet:
+        print(f"\nchecked {checked} file(s), {findings_total} finding(s) "
+              f"at or above '{args.max_severity}'", file=sys.stderr)
     return 1 if gate_hit > 0 else 0
 
 
