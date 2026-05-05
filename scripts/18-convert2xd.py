@@ -215,15 +215,34 @@ def main():
                                         and deduced_xdid_strict and prev_xdid != deduced_xdid_strict):
                                     warn("shelf relocation: %s previously %s, current headers deduce %s" % (
                                         SourceFilename, prev_xdid, deduced_xdid_strict))
-                                # Reuse prev_xdid only when it's a real (non-provisional) shelving;
-                                # for provisional or empty prev_xdid, deduce fresh (may now succeed).
-                                if prev_xdid and not catalog.is_provisional(prev_xdid):
+                                # Reuse prev_xdid only when it's a real (non-provisional) shelving
+                                # AND current headers still support a real xdid. The latter check
+                                # catches "regressions" where prev_xdid was set under different
+                                # rules (e.g. a stricter pubregex was relaxed, or a Number heuristic
+                                # was tightened) and keeping it would put xdid and path out of sync.
+                                is_regression = (prev_xdid and not catalog.is_provisional(prev_xdid)
+                                                 and not deduced_xdid_strict)
+                                if prev_xdid and not catalog.is_provisional(prev_xdid) and deduced_xdid_strict:
                                     xdid = prev_xdid
                                 else:
                                     xdid = catalog.deduce_xdid(xd, pubid, mdtext)
                                 path = catalog.get_shelf_path(xd, pubid, mdtext)
                                 if not path:
                                     raise xdfile.NoShelfError("no shelf path for %s" % xd.filename)
+
+                                # Single warning per provisional shelving with whichever reason
+                                # applies. Suppresses the duplicated/unclear messages that used
+                                # to come from get_shelf_path AND the convert loop separately.
+                                if catalog.is_provisional(xdid):
+                                    if is_regression:
+                                        warn("%s: unshelved as %s (was %s)" % (
+                                            SourceFilename, xdid, prev_xdid))
+                                    elif xdid.startswith(catalog.PROVISIONAL_MARKER):
+                                        warn("%s: unshelved as %s (no pubid resolved)" % (
+                                            SourceFilename, xdid))
+                                    else:
+                                        warn("%s: unshelved as %s (no Date or Number)" % (
+                                            SourceFilename, xdid))
 
                             # Always-on ownership guard: refuse to overwrite if a different
                             # (ExternalSource, SourceFilename) already owns this xdid. This

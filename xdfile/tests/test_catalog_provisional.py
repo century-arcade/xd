@@ -1,5 +1,9 @@
 """Unit tests for catalog.py provisional xdid helpers."""
 from xdfile import catalog
+from xdfile.xdfile import xdfile as XDFile
+
+
+_MINIMAL_XD = "Title: t\n\n\nA\n\n\nA1. c ~ A\n"
 
 
 def test_is_provisional_real_xdids_negative():
@@ -107,3 +111,50 @@ def test_shelf_path_from_xdid_unrecognized():
     assert catalog.shelf_path_from_xdid("not-an-xdid") is None
     assert catalog.shelf_path_from_xdid("unshelved-a3f9c2b1-foo") is None
     assert catalog.shelf_path_from_xdid("") is None
+
+
+def _make_xd(filename):
+    xd = XDFile(_MINIMAL_XD, filename=filename)
+    return xd
+
+
+def test_deduce_set_seqnum_skips_embedded_digits():
+    # Embedded digits (year fragment, dir index) shouldn't become Number.
+    xd = _make_xd("WAPost/wp92bms.xd")
+    catalog.deduce_set_seqnum(xd)
+    assert not xd.get_header("Number"), "wp92bms (year fragment) should not produce Number"
+    assert not xd.get_header("Date")
+
+
+def test_deduce_set_seqnum_trailing_digits_become_number():
+    xd = _make_xd("foo/up-1234.xd")
+    catalog.deduce_set_seqnum(xd)
+    assert xd.get_header("Number") == "1234"
+
+
+def test_deduce_set_seqnum_trailing_digits_no_separator():
+    xd = _make_xd("other_sources/UP0481.xd")
+    catalog.deduce_set_seqnum(xd)
+    assert xd.get_header("Number") == "481"
+
+
+def test_deduce_set_seqnum_single_digit_number():
+    # Real corpus has small-number puzzles (e.g. bg-1, bg-2); regex must catch.
+    xd = _make_xd("bg-2.xd")
+    catalog.deduce_set_seqnum(xd)
+    assert xd.get_header("Number") == "2"
+
+
+def test_deduce_set_seqnum_trailing_letter_variant():
+    # Optional single-letter variant suffix (e.g. "bg-002a") still extracts Number.
+    xd = _make_xd("bg-002a.xd")
+    catalog.deduce_set_seqnum(xd)
+    assert xd.get_header("Number") == "2"
+
+
+def test_deduce_set_seqnum_date_wins_over_number():
+    # Date heuristic runs first; even if digits are present, Date should be set.
+    xd = _make_xd("nytimes/2015/nyt2015-03-22.xd")
+    catalog.deduce_set_seqnum(xd)
+    assert xd.get_header("Date")
+    assert not xd.get_header("Number")

@@ -197,8 +197,11 @@ def deduce_set_seqnum(xd):
     if dt:
         xd.set_header("Date", dt)
     else:
-        # check for number in full path (eltana dir had number)
-        m = re.search(r'(\d+)', xd.filename)
+        # Number is the trailing digit run of the basename, optionally followed
+        # by a single letter variant marker (e.g. "bg-002a"). Embedded digits
+        # like year fragments ("wp92bms") or directory indices aren't sequence
+        # numbers and shouldn't be guessed at.
+        m = re.search(r'(\d+)[a-zA-Z]?$', base)
         if m:
             xd.set_header("Number", int(m.group(1)))
 
@@ -251,7 +254,6 @@ def get_shelf_path(xd, pubid, mdtext, strict=False):
             return None
         extsrc, _, _ = _parse_mdtext(mdtext)
         xdid = _provisional_xdid(mdtext)
-        utils.warn("could not resolve pubid for '%s'; assigning provisional xdid %s" % (xd.filename, xdid))
         return "unshelved/%s/%s" % (extsrc or "unknown", xdid)
 
     publisher = publ.PublisherAbbr
@@ -268,6 +270,5 @@ def get_shelf_path(xd, pubid, mdtext, strict=False):
     if strict:
         return None
     xdid = _provisional_xdid(mdtext, pubid=pubid)
-    utils.warn("neither Number nor Date for '%s'; assigning provisional xdid %s" % (xd.filename, xdid))
     return "%s/unshelved/%s" % (publisher or pubid, xdid)
 
