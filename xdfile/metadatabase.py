@@ -2,6 +2,7 @@
 import atexit
 import os.path
 import codecs
+import re
 from collections import namedtuple
 
 from .utils import COLSEP, EOL
@@ -233,11 +234,33 @@ def _receipts_by_xdid():
 
 
 def latest_receipt_for_xdid(xdid):
-    """Return the most recent receipt for a given xdid, or None."""
+    """Return the most recent receipt for a given xdid, or None.
+
+    Doubles as the canonical-claimant rule: receipts are append-only and
+    every state change writes a new row, so the most-recent receipt mapping
+    a SourceFilename to xdid is its current canonical claim. Displacement
+    works because the displaced source's *new* receipt has a different xdid
+    (the variant), so it drops out of this query — leaving the promoted
+    source's new row as the latest for xdid.
+    """
     rows = _receipts_by_xdid().get(xdid, [])
     if not rows:
         return None
     return max(rows, key=lambda r: r.ReceivedTime)
+
+
+def variants_of_xdid(base_xdid):
+    """Return list of receipts whose xdid is a single-letter variant of base_xdid.
+
+    e.g. for base_xdid='nys2007-03-27' returns receipts with xdid in
+    {'nys2007-03-27a', 'nys2007-03-27b', ...} that exist on disk.
+    """
+    pattern = re.compile(r'^' + re.escape(base_xdid) + r'[a-z]$')
+    out = []
+    for xdid, rows in _receipts_by_xdid().items():
+        if pattern.match(xdid):
+            out.extend(rows)
+    return out
 
 
 def xd_sources_row(SourceFilename, ExternalSource, DownloadTime):

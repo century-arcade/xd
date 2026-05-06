@@ -131,19 +131,67 @@ def lookup_xdid_override(extsrc, source_filename):
     return _load_overrides().get((extsrc, source_filename))
 
 
+_VARIANT_LETTERS = "abcdefghijklmnopqrstuvwxyz"
+
+
+def mint_variant_xdid(base_xdid, ExternalSource, SourceFilename, in_run_claimed=None):
+    """Mint a stable variant xdid (e.g. 'nys2007-03-27a') for a source that
+    diverges from the canonical claimant of base_xdid.
+
+    Stability across reimports: if a receipt already maps this
+    (ExternalSource, SourceFilename) to a variant of base_xdid, reuse it.
+    Letters are permanent once assigned, so processing-order changes don't
+    reshuffle which source got which letter.
+
+    First-time assignment picks the lowest letter not already claimed in
+    receipts.tsv or in this run (via in_run_claimed, a set/iterable of
+    fully-formed variant xdids written earlier in the same run).
+
+    Returns None if base_xdid has no recognized shelf format or all 26
+    letter slots are taken.
+    """
+    if shelf_path_from_xdid(base_xdid) is None:
+        return None
+
+    base_pattern = re.compile(r'^' + re.escape(base_xdid) + r'[a-z]$')
+
+    for r in metadb.check_already_received(ExternalSource, SourceFilename):
+        if r.xdid and base_pattern.match(r.xdid):
+            return r.xdid
+
+    claimed_letters = set()
+    for r in metadb.variants_of_xdid(base_xdid):
+        claimed_letters.add(r.xdid[-1])
+    if in_run_claimed:
+        for v in in_run_claimed:
+            if base_pattern.match(v):
+                claimed_letters.add(v[-1])
+
+    for letter in _VARIANT_LETTERS:
+        if letter not in claimed_letters:
+            return base_xdid + letter
+    return None
+
+
 def shelf_path_from_xdid(xdid):
     """Derive shelf path (without .xd extension) from a real xdid string.
-    Returns None if the xdid format isn't recognized."""
-    # Date format: <pubid>YYYY-MM-DD
-    m = re.match(r'^([a-z]+)\d{4}-\d{2}-\d{2}$', xdid)
+    Returns None if the xdid format isn't recognized.
+
+    A trailing single-letter suffix marks a variant (same canonical date/number
+    keyed under multiple SourceFilenames that produce divergent .xd content).
+    Variants shelve next to their base on disk: nys2007-03-27a sits in
+    nysun/2007/ alongside nys2007-03-27.
+    """
+    # Date format with optional letter variant: <pubid>YYYY-MM-DD[a-z]
+    m = re.match(r'^([a-z]+)(\d{4})-\d{2}-\d{2}[a-z]?$', xdid)
     if m:
         pubid = m.group(1)
         publ = metadb.xd_publications().get(pubid)
         publisher = publ.PublisherAbbr if publ else pubid
-        year = xdid[len(pubid):len(pubid) + 4]
+        year = m.group(2)
         return "%s/%s/%s" % (publisher, year, xdid)
-    # Number format: <pubid>-NNN
-    m = re.match(r'^([a-z]+)-\d+$', xdid)
+    # Number format with optional letter variant: <pubid>-NNN[a-z]
+    m = re.match(r'^([a-z]+)-\d+[a-z]?$', xdid)
     if m:
         pubid = m.group(1)
         publ = metadb.xd_publications().get(pubid)
