@@ -1724,14 +1724,24 @@ _ORPHAN_QUOTE_TRAILER_RE = re.compile(r'"[\x9c\x9d]')
 @fixer("XD009")
 def _(text):
     """UTF-8 latin-supplement misread as latin-1: 'Ã' + cont-byte (and 'Â'
-    + cont-byte) re-decoded through latin-1 -> UTF-8 round-trip."""
+    + cont-byte) re-decoded through latin-1 -> UTF-8 round-trip.
+
+    Special case: 'Ã\\x82' (puz bytes \\xc3\\x82) is a known stray-mojibake
+    artifact in the corpus -- not real text. Stripped rather than re-decoded,
+    which would produce a literal 'Â' (U+00C2) sitting in the middle of clue
+    text. Mirrors the explicit strip in xdfile/puz2xd.py decode().
+    """
     count = 0
     def repl(m):
         nonlocal count
+        s = m.group(0)
+        if s == '\xc3\x82':
+            count += 1
+            return ''
         try:
-            replacement = m.group(0).encode('latin-1').decode('utf-8')
+            replacement = s.encode('latin-1').decode('utf-8')
         except UnicodeDecodeError:
-            return m.group(0)
+            return s
         count += 1
         return replacement
     return _LATIN1_UTF8_RE.sub(repl, text), count

@@ -32,6 +32,12 @@ def decode(s):
     # UTF-8 NBSP read as latin-1 surfaces as 'Â\xa0'; collapse to space.
     s = s.replace('\xc2\xa0', ' ')
     s = s.replace('\xa0', ' ')
+    # Stray 'Ã\x82' (puz bytes \xc3\x82 read as latin-1) is a known mojibake
+    # artifact in this corpus -- not real text. The 2016-era decode() stripped
+    # it explicitly; without that, clean_latin1_utf8_mojibake below would re-
+    # decode it as 'Â' (U+00C2), inserting a literal capital-A-circumflex in
+    # the middle of clue text. Strip before the systematic mojibake pass.
+    s = s.replace('\xc3\x82', '')
     # \xc3\xa8 = UTF-8 byte sequence for U+00E8 (è) misread as latin-1 ('Ã¨').
     # Targeted because real 'Ã¨' is unusual in puzzle text.
     s = s.replace('Ã¨', 'è')

@@ -145,3 +145,16 @@ def test_decode_collapses_nbsp():
     # \xc2\xa0 = UTF-8 NBSP read as latin-1; \xa0 = bare NBSP. Both -> space.
     assert decode("foo\xc2\xa0bar") == "foo bar"
     assert decode("foo\xa0bar") == "foo bar"
+
+
+def test_decode_strips_c3_82_mojibake_artifact():
+    # Bytes \xc3\x82 in the puz file (puzpy reads as 'Ã\x82') aren't real
+    # text -- they're a stray mojibake artifact left over from upstream
+    # encoding round-trips. Without an explicit strip, clean_latin1_utf8_
+    # mojibake re-decodes them as 'Â' (U+00C2), inserting a literal capital
+    # A-circumflex in the middle of clue text.
+    # Regression: gxd/universal/2015/up2015-10-16.xd D10 "Cleo's slayer ~ ASP"
+    # — puz had bytes \xc3\x82 between "Cleo" and "'s", producing "CleoÂ's".
+    assert decode("Cleo\xc3\x82's slayer") == "Cleo's slayer"
+    # Combine with adjacent legit mojibake — strip applies only to \xc3\x82.
+    assert decode("Cafe\xc3\x82 Caf\xc3\xa9") == "Cafe Café"
