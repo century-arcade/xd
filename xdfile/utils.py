@@ -5,6 +5,7 @@ import functools
 import stat
 import sys
 import zipfile
+import tarfile
 import io
 import csv
 import string
@@ -260,6 +261,25 @@ def generate_zip_files(data):
         error("generate_zip_files(): %s" % str(e))
 
 
+def generate_tar_files(data):
+    try:
+        tf = tarfile.open(fileobj=io.BytesIO(data), mode='r:*')
+        members = sorted((m for m in tf.getmembers() if m.isfile()), key=lambda m: m.name)
+        for m in members:
+            f = tf.extractfile(m)
+            if f is None:
+                continue
+            yield m.name, f.read(), m.mtime
+    except tarfile.TarError as e:
+        error("generate_tar_files(): %s" % str(e))
+
+
+def _is_tar_path(path):
+    p = path.lower()
+    return p.endswith('.tar') or p.endswith('.tgz') or p.endswith('.tar.gz') \
+        or p.endswith('.tar.bz2') or p.endswith('.tar.xz')
+
+
 # walk all 'paths' recursively and yield (filename, contents) for non-hidden files
 def find_files_with_time(*paths, **kwargs):
     ext = kwargs.get("ext")
@@ -277,6 +297,12 @@ def find_files_with_time(*paths, **kwargs):
                             if ext and not zipfn.endswith(ext):
                                 continue
                             yield fn + ":" + zipfn, zipdata, zipdt
+
+                    elif _is_tar_path(fn):
+                        for tarfn, tardata, tardt in generate_tar_files(open(fullfn, 'rb').read()):
+                            if ext and not tarfn.endswith(ext):
+                                continue
+                            yield fn + ":" + tarfn, tardata, tardt
 
                     elif ext and not fn.endswith(ext):  # only looking for one particular ext, don't log
                         continue
@@ -301,6 +327,18 @@ def find_files_with_time(*paths, **kwargs):
                     zipfn = strip_toplevel(zipfn)
 
                 yield zipfn, zipdata, zipdt
+
+        elif _is_tar_path(path):
+            for tarfn, tardata, tardt in generate_tar_files(open(path, 'rb').read()):
+                if ext and not tarfn.endswith(ext):
+                    continue
+
+                progress(tarfn)
+
+                if should_strip_toplevel:
+                    tarfn = strip_toplevel(tarfn)
+
+                yield tarfn, tardata, tardt
 
         else:
             if ext and not path.endswith(ext):
