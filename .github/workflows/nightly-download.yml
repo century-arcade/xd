@@ -23,6 +23,15 @@ jobs:
     if: github.repository == 'century-arcade/xd'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      # contents:read overrides the workflow-level permission so it isn't
+      # implicitly dropped by adding id-token below.
+      contents: read
+      # id-token:write is required for OIDC: GitHub mints a short-lived JWT
+      # that aws-actions/configure-aws-credentials exchanges for temporary
+      # AWS credentials. Scoped to this one job; other jobs (if added later)
+      # would need to opt in explicitly.
+      id-token: write
     env:
       # Mirrors the Makefile's `export PYTHONPATH=.` so the scripts can
       # find the in-repo xdfile/ package when invoked directly.
@@ -85,6 +94,34 @@ jobs:
           echo "new .xd files:      $n_new_xd"
           echo "modified .xd files: $n_mod_xd"
           git diff --cached --diff-filter=AM --stat | tail -40
+
+      - name: Configure AWS credentials (OIDC)
+        # Skip cleanly when AWS_S3_BUCKET is unset (forks, debugging branches).
+        # always() so we still try to archive logs from a failed run.
+        if: ${{ always() && vars.AWS_S3_BUCKET != '' }}
+        uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6.1.1
+        with:
+          role-to-assume: ${{ vars.AWS_IAM_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Upload source zip to S3
+        # The log is already inside the zip (OutputZipFile writes a .log entry
+        # on close), so we don't upload it separately.
+        if: ${{ always() && vars.AWS_S3_BUCKET != '' }}
+        env:
+          BUCKET: ${{ vars.AWS_S3_BUCKET }}
+        run: |
+          # WWWZIP is set by the download step; on early failures it may be empty.
+          if [ -z "$WWWZIP" ]; then
+            echo "WWWZIP not set — nothing to upload"
+            exit 0
+          fi
+          if [ ! -f "$WWWZIP" ]; then
+            echo "no source zip on disk; skipping upload"
+            exit 0
+          fi
+          year=$(date -u +%Y)
+          aws s3 cp "$WWWZIP" "${BUCKET}/${year}/$(basename "$WWWZIP")"
 
       - name: Upload artifacts
         if: always()
