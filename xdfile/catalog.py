@@ -209,9 +209,11 @@ def find_pubid(rowstr):
 
     Returns None if no match, or if the winning stage produces multiple matches.
     '''
+    # Anchor every pattern to a word boundary so prefix-style entries
+    # (e.g. `ut\d`) don't match mid-token like the "ut1" in "PutOut15".
     explicit = set()
     for r in _load_pubregex():
-        if re.search(r['regex'], rowstr, flags=re.IGNORECASE):
+        if re.search(r'\b' + r['regex'], rowstr, flags=re.IGNORECASE):
             explicit.add(r['pubid'])
 
     if len(explicit) == 1:
@@ -222,7 +224,7 @@ def find_pubid(rowstr):
 
     implicit = set()
     for pubid in metadb.xd_publications().keys():
-        if re.search(r'%s(\d|-)' % re.escape(pubid), rowstr, flags=re.IGNORECASE):
+        if re.search(r'\b%s(\d|-)' % re.escape(pubid), rowstr, flags=re.IGNORECASE):
             implicit.add(pubid)
 
     if len(implicit) == 1:
