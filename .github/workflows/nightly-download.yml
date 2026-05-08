@@ -86,13 +86,20 @@ jobs:
           echo "modified .xd files: $n_mod_xd"
           git diff --cached --diff-filter=AM --stat | tail -40
 
-      - name: Upload artifacts
+      - name: Upload import log
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: nightly-${{ github.run_id }}
-          path: |
-            *-www.zip
-            import.log
+          name: import-log-${{ github.run_id }}
+          path: import.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload source zip
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: source-zip-${{ github.run_id }}
+          path: '*-www.zip'
           if-no-files-found: warn
           retention-days: 30
