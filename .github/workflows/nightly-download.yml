@@ -1,18 +1,17 @@
 name: Nightly download
 
-# Shadow-runs the droplet's nightly puzzle download/convert pipeline so we
-# can compare its output against what the droplet commits to gxd, before
-# cutting the droplet off. Produces the raw source zip + import log as
-# artifacts. No push to gxd, no S3 upload yet.
+# Downloads yesterday's puzzles from each configured publisher and uploads
+# the raw source zip + import log as artifacts. Runs alongside the droplet's
+# nightly cron — does not commit to gxd, does not update recent-downloads.tsv,
+# does not push anywhere. Currently a comparison tool for verifying parity
+# with the droplet's output before decommissioning it; longer-term plan is
+# for this to become the authoritative job.
 
 on:
   schedule:
-    # Droplet's cron is `3 0 * * *` Pacific → 08:03 UTC (PST) / 07:03 UTC (PDT).
-    # GH cron is fixed UTC (no DST). We run at 12:00 UTC, ~4-5h after the
-    # droplet, deliberately late: the droplet sometimes misses puzzles that
-    # aren't published until a few hours after midnight Pacific. The
-    # interesting signal from this job is what shows up in the source zip
-    # and the import summary — those are publishers the droplet missed.
+    # 12:00 UTC daily. Because we fetch *yesterday's* puzzles, timing
+    # relative to the droplet doesn't matter — by the time we run, all of
+    # yesterday's content is settled regardless of when each publisher posted.
     - cron: '0 12 * * *'
   workflow_dispatch: {}
 
@@ -43,29 +42,35 @@ jobs:
       - name: Partial+sparse clone of gxd
         # Avoids materializing the ~94k existing .xd files. cone-mode sparse
         # checks out only the root TSVs (publications.tsv, receipts.tsv, etc.)
-        # which is all `make import` reads; new .xd files are written into
+        # which is all the downloader reads; new .xd files are written into
         # subdirs and picked up later via `git add --sparse`.
         run: |
           git clone --filter=blob:none --depth=1 --no-checkout https://gitlab.com/rabidrat/gxd.git gxd
           (cd gxd && git sparse-checkout init --cone && git checkout HEAD)
 
-      - name: Run make import
-        # SRC_DIR override: the droplet copies the raw source zip into a
-        # separate gxd-sources repo. That repo is empty in practice; here we
-        # send the zip to /tmp and stage it for artifact upload below.
+      - name: Download yesterday's puzzles
+        # Range mode (--start/--end) bypasses the recent-downloads.tsv cursor
+        # that download_today() consults. Without this the droplet's same-day
+        # update would mark every pubid as already-fetched and we'd download
+        # nothing. Range mode also intentionally does NOT write back to
+        # recent-downloads.tsv, so this run leaves the droplet's cursor untouched.
         run: |
-          mkdir -p /tmp/gxd-sources
-          make import SRC_DIR=/tmp/gxd-sources 2>&1 | tee import.log
+          yesterday=$(date -u -d 'yesterday' +%Y-%m-%d)
+          WWWZIP="$GITHUB_WORKSPACE/$(date -u +%Y%m%dT%H%M%SZ)-www.zip"
+          echo "WWWZIP=$WWWZIP" >> "$GITHUB_ENV"
+          echo "Fetching puzzles for $yesterday"
+          scripts/11-download-puzzles.py -o "$WWWZIP" --start "$yesterday" --end "$yesterday" 2>&1 | tee import.log
+
+      - name: Convert downloads to .xd
+        run: scripts/18-convert2xd.py -o gxd/ "$WWWZIP" 2>&1 | tee -a import.log
 
       - name: Summarize import
         run: |
-          # Sanity check that the downloader actually ran. 11-download-puzzles.py
-          # logs and swallows per-publication errors, but a complete crash before
-          # zip-write would leave /tmp empty. We do NOT fail on zero new .xd:
-          # since this job runs after the droplet, an empty result means the
-          # droplet caught everything — the parity-success signal.
-          if ! ls /tmp/*-www.zip >/dev/null 2>&1; then
-            echo "FAIL: no source zip produced by make import" >&2
+          # Sanity check the downloader actually wrote something. Per-publication
+          # errors are logged and swallowed inside 11-download-puzzles.py, so a
+          # job where every source failed could otherwise reach here cleanly.
+          if [ ! -s "$WWWZIP" ]; then
+            echo "FAIL: no source zip produced by downloader" >&2
             exit 1
           fi
           cd gxd
@@ -76,13 +81,6 @@ jobs:
           echo "new .xd files:      $n_new_xd"
           echo "modified .xd files: $n_mod_xd"
           git diff --cached --diff-filter=AM --stat | tail -40
-
-      - name: Stage source zip
-        # Move the zip from /tmp into the workspace so upload-artifact's
-        # common-prefix logic produces a flat artifact (otherwise we get
-        # nested tmp/ directories in the downloaded zip).
-        if: always()
-        run: cp /tmp/*-www.zip . 2>/dev/null || true
 
       - name: Upload artifacts
         if: always()
