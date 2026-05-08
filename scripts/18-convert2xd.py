@@ -15,6 +15,7 @@ from xdfile import IncompletePuzzleParse
 from xdfile.utils import warn, debug, error
 from xdfile.utils import find_files_with_time, parse_pathname, replace_ext, strip_toplevel
 from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_output, progress
+from xdfile.utils import parse_pubid
 
 from xdfile import metadatabase as metadb
 
@@ -49,6 +50,34 @@ def _accept_path(path, includes, excludes):
     if excludes and any(fnmatch.fnmatch(path, pat) for pat in excludes):
         return False
     return True
+
+
+_DRYRUN_HEADER = '\t'.join((
+    'status', 'pubid', 'xdid', 'shelf_path', 'prev_xdid',
+    'ExternalSource', 'SourceFilename', 'Title', 'Author',
+))
+
+
+def _safe_parse_pubid(xdid):
+    """parse_pubid raises AttributeError on unparseable input; never propagate."""
+    try:
+        return parse_pubid(xdid or '') or ''
+    except AttributeError:
+        return ''
+
+
+def _emit_dryrun(args, status, pubid, xdid, path, prev_xdid,
+                 ExternalSource, SourceFilename, xd=None):
+    if not args.dry_run:
+        return
+    title = xd.get_header('Title') if xd is not None else ''
+    author = xd.get_header('Author') if xd is not None else ''
+    def _clean(s):
+        return (s or '').replace('\t', ' ').replace('\n', ' ')
+    print('\t'.join(_clean(s) for s in (
+        status, pubid, xdid, path, prev_xdid,
+        ExternalSource, SourceFilename, title, author,
+    )))
 
 
 def main():
@@ -94,12 +123,26 @@ def main():
                    help='Glob (fnmatch) pattern; SourceFilenames matching any --exclude are skipped. May be repeated.')
     p.add_argument('--excludes-file', action='append', default=None,
                    help='File of exclude patterns/paths, one per line (or TSV; first column). May be repeated.')
+    p.add_argument('-n', '--dry-run', action='store_true',
+                   help='Run all parse/deduce/conflict logic but skip every disk write '
+                        '(no .xd output, no receipts.tsv append, no provisional cleanup). '
+                        'Prints a TSV line per processed file to stdout.')
+    p.add_argument('--filter-pubid', default=None,
+                   help='Comma-separated pubids; only process files whose computed pubid '
+                        'matches one of these (case-insensitive). Applies after parse.')
     args = get_args(parser=p)
 
     includes = list(args.include or [])
     excludes = list(args.exclude or [])
     for fpath in args.excludes_file or []:
         excludes.extend(_load_excludes_file(fpath))
+
+    filter_pubids = None
+    if args.filter_pubid:
+        filter_pubids = {p.strip().lower() for p in args.filter_pubid.split(',') if p.strip()}
+
+    if args.dry_run:
+        print(_DRYRUN_HEADER)
 
     outf = open_output()
 
@@ -176,6 +219,11 @@ def main():
                 # everything.
                 if prev_xdid and not catalog.is_provisional(prev_xdid) and not args.reimport:
                     debug("already shelved as %s, skipping: %s:%s" % (prev_xdid, ExternalSource, SourceFilename))
+                    if args.dry_run:
+                        prev_pubid = _safe_parse_pubid(prev_xdid)
+                        if not filter_pubids or prev_pubid.lower() in filter_pubids:
+                            _emit_dryrun(args, 'SKIPPED_RECEIVED', prev_pubid, '', '',
+                                         prev_xdid, ExternalSource, SourceFilename)
                     continue
 
                 # try each parser by extension
@@ -185,7 +233,8 @@ def main():
                 progress(fn)
 
                 if ext == ".xd":
-                    outf.write_file(fn, contents.decode('utf-8'), dt)
+                    if not args.dry_run:
+                        outf.write_file(fn, contents.decode('utf-8'), dt)
                 elif not possible_parsers:
                     rejected = "no parser"
                 else:
@@ -217,16 +266,26 @@ def main():
                             # automatic resolution. Use the pinned xdid for both the receipt
                             # and the shelf path; pubid is derived from the xdid format.
                             override_xdid = catalog.lookup_xdid_override(ExternalSource, SourceFilename)
+
+                            # Resolve pubid up front so --filter-pubid can gate both override
+                            # and non-override paths. Same value gets passed down to
+                            # deduce_xdid / get_shelf_path so resolution stays consistent.
+                            if override_xdid:
+                                pubid = _safe_parse_pubid(override_xdid)
+                            else:
+                                pubid = args.pubid or catalog.resolve_pubid(xd, mdtext)
+
+                            if filter_pubids and (pubid or '').lower() not in filter_pubids:
+                                debug("filter excluded pubid %r: %s" % (pubid, SourceFilename))
+                                # xdid stays empty -> receipt-append branch is a no-op
+                                break
+
                             if override_xdid:
                                 xdid = override_xdid
                                 path = catalog.shelf_path_from_xdid(override_xdid)
                                 if not path:
                                     raise xdfile.NoShelfError("override xdid %s is not a recognized shelf format" % override_xdid)
                             else:
-                                # Resolve pubid once and pass it down — keeps deduce_xdid and
-                                # get_shelf_path consistent and avoids triple-resolution per file.
-                                pubid = args.pubid or catalog.resolve_pubid(xd, mdtext)
-
                                 # Strict deduction for the relocation comparison: ignore the
                                 # provisional fallback, only flag real-vs-real divergences.
                                 deduced_xdid_strict = catalog.deduce_xdid(xd, pubid, mdtext, strict=True)
@@ -286,6 +345,7 @@ def main():
                                         canonical_owner_label = (latest.ExternalSource, latest.SourceFilename)
 
                             is_equal_provenance = False
+                            conflict_status = None  # set by the conflict branches below
                             if not am_canonical:
                                 # Compare loser's converted bytes to the canonical-slot bytes.
                                 # Equal -> silent provenance receipt; different -> dispatch
@@ -311,6 +371,8 @@ def main():
                                         warn("xdid %s claimed by (%s, %s); could not mint variant for (%s, %s) (all letter slots used)" % (
                                             xdid, canonical_owner_label[0], canonical_owner_label[1],
                                             ExternalSource, SourceFilename))
+                                        _emit_dryrun(args, 'OWNED', pubid or '', xdid, path, prev_xdid,
+                                                     ExternalSource, SourceFilename, xd=xd)
                                         owned_by_other = True
                                         rejected = ""
                                         break
@@ -324,6 +386,7 @@ def main():
                                     variants_minted_this_run.add(variant)
                                     am_canonical = True
                                     canonical_owner_label = None
+                                    conflict_status = 'RENAMED'
                                 elif args.conflict_mode == 'replace':
                                     # Demote the prior canonical claimant to a variant: write
                                     # their disk bytes to a freshly-minted variant path and
@@ -337,6 +400,8 @@ def main():
                                         warn("xdid %s claimed by (%s, %s); cannot displace (no variant slots left); dropping (%s, %s)" % (
                                             xdid, old_extsrc, old_sourcefilename,
                                             ExternalSource, SourceFilename))
+                                        _emit_dryrun(args, 'OWNED', pubid or '', xdid, path, prev_xdid,
+                                                     ExternalSource, SourceFilename, xd=xd)
                                         owned_by_other = True
                                         rejected = ""
                                         break
@@ -347,8 +412,9 @@ def main():
                                         xdid, old_extsrc, old_sourcefilename, variant,
                                         ExternalSource, SourceFilename))
                                     if canonical_bytes is not None:
-                                        outf.write_file(variant_path + ".xd",
-                                                        canonical_bytes.decode('utf-8'), dt)
+                                        if not args.dry_run:
+                                            outf.write_file(variant_path + ".xd",
+                                                            canonical_bytes.decode('utf-8'), dt)
                                     else:
                                         warn("canonical .xd missing on disk for %s; demotion receipt only, %s.xd will materialize on next reimport of (%s, %s)" % (
                                             xdid, variant_path, old_extsrc, old_sourcefilename))
@@ -375,6 +441,7 @@ def main():
                                     paths_written_this_run[variant_path] = (old_extsrc, old_sourcefilename)
                                     am_canonical = True
                                     canonical_owner_label = None
+                                    conflict_status = 'REPLACED'
                                 elif args.conflict_mode == 'overwrite':
                                     # Newcomer's bytes replace the canonical-slot bytes.
                                     # Both source files remain mapped to xdid in receipts;
@@ -385,11 +452,14 @@ def main():
                                         ExternalSource, SourceFilename))
                                     am_canonical = True
                                     canonical_owner_label = None
+                                    conflict_status = 'OVERWRITE'
                                 else:
                                     # conflict_mode == 'skip' (default): warn and drop the loser.
                                     warn("xdid %s claimed by (%s, %s); not writing (%s, %s) (use --conflict-mode=rename/replace/overwrite to keep the new content)" % (
                                         xdid, canonical_owner_label[0], canonical_owner_label[1],
                                         ExternalSource, SourceFilename))
+                                    _emit_dryrun(args, 'OWNED', pubid or '', xdid, path, prev_xdid,
+                                                 ExternalSource, SourceFilename, xd=xd)
                                     owned_by_other = True
                                     rejected = ""
                                     break
@@ -416,9 +486,22 @@ def main():
                             if not is_equal_provenance:
                                 paths_written_this_run[path] = own_key
 
+                            # Status precedence for dry-run reporting:
+                            # equal-bytes provenance > conflict outcome > unchanged > write
+                            if is_equal_provenance:
+                                status = 'EQUAL_BYTES'
+                            elif conflict_status:
+                                status = conflict_status
+                            elif unchanged:
+                                status = 'UNCHANGED'
+                            else:
+                                status = 'WRITE'
+                            _emit_dryrun(args, status, pubid or '', xdid, path, prev_xdid,
+                                         ExternalSource, SourceFilename, xd=xd)
+
                             if unchanged:
                                 debug("unchanged, skipping: %s" % (path + ".xd"))
-                            else:
+                            elif not args.dry_run:
                                 outf.write_file(path + ".xd", xdstr, dt)
 
                             # Promotion cleanup: a previously-provisional shelving
@@ -427,7 +510,8 @@ def main():
                             # disk stay in sync.
                             if (catalog.is_provisional(prev_xdid)
                                     and prev_xdid != xdid
-                                    and not unchanged):
+                                    and not unchanged
+                                    and not args.dry_run):
                                 try:
                                     old_relpath = catalog.provisional_path(prev_xdid, ExternalSource) + ".xd"
                                     full_old = os.path.join(outf.toplevel, old_relpath)
@@ -476,8 +560,9 @@ def main():
                             xdid
                         ])
 
-            for r in receipts:
-                metadb.append_row('gxd/receipts', r)
+            if not args.dry_run:
+                for r in receipts:
+                    metadb.append_row('gxd/receipts', r)
 
         except Exception as e:
             error(str(e))
