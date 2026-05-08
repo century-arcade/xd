@@ -1,0 +1,91 @@
+name: Nightly download (shadow)
+
+# Shadow-runs the droplet's nightly puzzle download/convert pipeline so we
+# can compare its output against what the droplet commits to gxd, before
+# cutting the droplet off. Produces a patch + raw source zip + log as
+# artifacts only — no push to gxd, no S3 upload yet.
+
+on:
+  schedule:
+    # Droplet's cron is `3 0 * * *` Pacific → 08:03 UTC (PST) / 07:03 UTC (PDT).
+    # GH cron is fixed UTC (no DST). We run at 12:00 UTC, ~4-5h after the
+    # droplet, deliberately late: the droplet sometimes misses puzzles that
+    # aren't published until a few hours after midnight Pacific. The
+    # interesting signal from this job is which publishers/days produce a
+    # non-empty patch — those are the cases the droplet missed by running early.
+    - cron: '0 12 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  download:
+    if: github.repository == 'century-arcade/xd'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install system deps
+        # libxml2/libxslt headers are needed by lxml when it falls back to a
+        # source build on this runner image.
+        run: sudo apt-get update -qq && sudo apt-get install -qq -y libxml2-dev libxslt1-dev
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Partial+sparse clone of gxd
+        # Avoids materializing the ~94k existing .xd files. cone-mode sparse
+        # checks out only the root TSVs (publications.tsv, receipts.tsv, etc.)
+        # which is all `make import` reads; new .xd files are written into
+        # subdirs and picked up later via `git add --sparse`.
+        run: |
+          git clone --filter=blob:none --depth=1 --no-checkout https://gitlab.com/rabidrat/gxd.git gxd
+          (cd gxd && git sparse-checkout init --cone && git checkout HEAD)
+
+      - name: Run make import
+        # SRC_DIR override: the droplet copies the raw source zip into a
+        # separate gxd-sources repo. That repo is empty in practice; here we
+        # send the zip to /tmp and upload it as a workflow artifact instead.
+        run: |
+          mkdir -p /tmp/gxd-sources
+          make import SRC_DIR=/tmp/gxd-sources 2>&1 | tee /tmp/import.log
+
+      - name: Summarize and produce patch
+        run: |
+          # Sanity check that the downloader actually ran. 11-download-puzzles.py
+          # logs and swallows per-publication errors, but a complete crash before
+          # zip-write would leave /tmp empty. (We do NOT fail on zero new .xd:
+          # since this job runs after the droplet, an empty patch means the
+          # droplet caught everything — the parity-success signal.)
+          if ! ls /tmp/*-www.zip >/dev/null 2>&1; then
+            echo "FAIL: no source zip produced by make import" >&2
+            exit 1
+          fi
+          cd gxd
+          git add --sparse -A
+          n_new_xd=$(git diff --cached --diff-filter=A --name-only | grep -c '\.xd$' || true)
+          n_mod_xd=$(git diff --cached --diff-filter=M --name-only | grep -c '\.xd$' || true)
+          echo "=== import summary ==="
+          echo "new .xd files:      $n_new_xd"
+          echo "modified .xd files: $n_mod_xd"
+          git diff --cached --diff-filter=AM > "$GITHUB_WORKSPACE/nightly.patch"
+          git diff --cached --diff-filter=AM --stat | tail -40
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-${{ github.run_id }}
+          path: |
+            nightly.patch
+            /tmp/*-www.zip
+            /tmp/import.log
+          if-no-files-found: warn
+          retention-days: 30
