@@ -80,6 +80,10 @@ def decode(s):
     # UTF-8 NBSP read as latin-1 -> 'Â\xa0'; then any remaining NBSPs.
     s = s.replace('\xc2\xa0', ' ')
     s = s.replace('\xa0', ' ')
+    # Stray 'Ã\x82' (puz bytes \xc3\x82 read as latin-1) is known mojibake
+    # garbage in this corpus -- not real text. Strip before
+    # clean_latin1_utf8_mojibake, which would otherwise re-decode it as 'Â'.
+    s = s.replace('\xc3\x82', '')
     # \xc3\xa8 UTF-8 (è) misread as latin-1 -> 'Ã¨'. Targeted replacement.
     s = s.replace('Ã¨', 'è')
     # MacRoman left/right curly double quotes.
