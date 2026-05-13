@@ -1008,7 +1008,7 @@ class TestFeatureDetectionRules:
 
     def test_simple_emits_no_feature_findings(self):
         for code in ("XD301", "XD302", "XD303", "XD304", "XD305",
-                     "XD306", "XD307"):
+                     "XD306", "XD307", "XD309"):
             assert run_rule(code, SIMPLE) == [], f"{code} fired on SIMPLE"
 
     def test_xd301_uses_rebus(self):
@@ -1074,6 +1074,85 @@ class TestFeatureDetectionRules:
         )
         f = run_rule("XD307", text)
         assert len(f) == 1
+
+    # XD309: cryptic detection. Lattice grid: 3-row, 5-col with all middle
+    # row blocked. 6 across singletons + 6 down singletons = 12 grid signal.
+    _CRYPTIC_GRID = (
+        "Title: T\nDate: 2024-01-01\n\n\n"
+        "A#B#C\n#####\nD#E#F\n\n\n"
+    )
+    # Dense 5x5 grid with no singletons (5 across slots of length 5, same for
+    # down). Used to isolate the clue-signal path.
+    _DENSE_GRID = (
+        "Title: T\nDate: 2024-01-01\n\n\n"
+        "ABCDE\nFGHIJ\nKLMNO\nPQRST\nUVWXY\n\n\n"
+    )
+
+    def test_xd309_high_confidence_cryptic(self):
+        """Both signals strong: lattice grid + cryptic length annotations."""
+        text = self._CRYPTIC_GRID + (
+            "A1. anagram (1) ~ A\n"
+            "A2. clue body (3,4) ~ B\n"
+            "A3. clue body (5) ~ C\n"
+            "A4. clue body (2) ~ D\n"
+            "A5. clue body (4) ~ E\n"
+            "A6. clue body (6) ~ F\n"
+        )
+        f = run_rule("XD309", text)
+        assert len(f) == 1
+        assert "high" in f[0].message
+        assert "grid_singletons=12" in f[0].message
+
+    def test_xd309_grid_signal_only_review(self):
+        """Lattice grid but no length-annotated clues -> review."""
+        text = self._CRYPTIC_GRID + (
+            "A1. plain clue ~ A\n"
+            "A2. plain clue ~ B\n"
+            "A3. plain clue ~ C\n"
+            "A4. plain clue ~ D\n"
+            "A5. plain clue ~ E\n"
+            "A6. plain clue ~ F\n"
+        )
+        f = run_rule("XD309", text)
+        assert len(f) == 1
+        assert "review" in f[0].message
+
+    def test_xd309_clue_signal_only_review(self):
+        """Regular dense grid + cryptic-style length annotations -> review."""
+        text = self._DENSE_GRID + (
+            "A1. one (5) ~ ABCDE\n"
+            "A6. two (5) ~ FGHIJ\n"
+            "A7. three (5) ~ KLMNO\n"
+            "A8. four (5) ~ PQRST\n"
+            "A9. five (5) ~ UVWXY\n"
+        )
+        f = run_rule("XD309", text)
+        assert len(f) == 1
+        assert "review" in f[0].message
+
+    def test_xd309_no_flag_when_signals_below_threshold(self):
+        """A few singletons or hints below the threshold should not flag."""
+        # 2x2 grid with just one singleton; one length-annotated clue.
+        text = (
+            "Title: T\nDate: 2024-01-01\n\n\n"
+            "A#\n#B\n\n\n"
+            "A1. plain (1) ~ A\n"
+        )
+        assert run_rule("XD309", text) == []
+
+    def test_xd309_year_annotation_not_counted_as_length_hint(self):
+        """Clues ending in '(YYYY)' (publication year etc.) must NOT count
+        as cryptic length hints; the regex caps numbers at 2 digits."""
+        text = self._DENSE_GRID + (
+            "A1. memoir (2010) ~ ABCDE\n"
+            "A6. memoir (1984) ~ FGHIJ\n"
+            "A7. memoir (2018) ~ KLMNO\n"
+            "A8. memoir (2003) ~ PQRST\n"
+            "A9. memoir (1978) ~ UVWXY\n"
+        )
+        # Dense grid -> grid_signal = 0; year annotations -> clue_signal = 0.
+        # No flag.
+        assert run_rule("XD309", text) == []
 
 
 class TestSeverityChanges:

@@ -1466,6 +1466,79 @@ def _(ctx):
             break
 
 
+# Cryptic crossword detection (adapted from scripts/91-find-cryptics in
+# alexdej/wip). Two near-orthogonal signals: (1) lattice grids have many
+# 1-cell across/down slots, very rare in American-style puzzles; (2) cryptic
+# clues conventionally end with an answer-length annotation like "(5)" or
+# "(3,4)". Both signals together → high confidence. One alone → suspect.
+# Cryptic length annotations are word-length tallies (1-2 digits, e.g.
+# "(5)" or "(3,4)"). Years like "(2010)" at the end of a clue are NOT
+# cryptic hints; capping at 2 digits filters those out.
+_CRYPTIC_LEN_RE = re.compile(r"\(\d{1,2}(?:[,\s]+\d{1,2})*\)\s*$")
+_CRYPTIC_GRID_THRESHOLD = 5
+_CRYPTIC_CLUE_THRESHOLD = 5
+
+
+def _count_singleton_slots(grid):
+    """Return (across_singletons, down_singletons) where a singleton is a
+    non-block cell with blocks (or edges) on both sides along that axis."""
+    h = len(grid)
+    if h == 0:
+        return 0, 0
+    w = max(len(r.cells) for r in grid)
+
+    def cell(y, x):
+        if y < 0 or y >= h or x < 0 or x >= w:
+            return "#"
+        row = grid[y].cells
+        return row[x] if x < len(row) else "#"
+
+    across = 0
+    for y in range(h):
+        for x in range(w):
+            c = cell(y, x)
+            if c == "#":
+                continue
+            if cell(y, x - 1) == "#" and cell(y, x + 1) == "#":
+                across += 1
+    down = 0
+    for y in range(h):
+        for x in range(w):
+            c = cell(y, x)
+            if c == "#":
+                continue
+            if cell(y - 1, x) == "#" and cell(y + 1, x) == "#":
+                down += 1
+    return across, down
+
+
+@rule("XD309", Severity.INFO, "likely-cryptic")
+def _(ctx):
+    """File looks like a cryptic crossword (lattice grid + length-annotated
+    clues). Emits one finding per file with the confidence and signal counts."""
+    grid = ctx.parsed.grid
+    if not grid:
+        return
+    across, down = _count_singleton_slots(grid)
+    grid_signal = across + down
+    clue_signal = sum(
+        1 for c in ctx.parsed.clues if _CRYPTIC_LEN_RE.search(c.body)
+    )
+    if (grid_signal >= _CRYPTIC_GRID_THRESHOLD
+            and clue_signal >= _CRYPTIC_CLUE_THRESHOLD):
+        confidence = "high"
+    elif (grid_signal >= _CRYPTIC_GRID_THRESHOLD
+          or clue_signal >= _CRYPTIC_CLUE_THRESHOLD):
+        confidence = "review"
+    else:
+        return
+    yield finding(
+        "XD309", Severity.INFO, 1,
+        f"likely cryptic ({confidence}): grid_singletons={grid_signal} "
+        f"(A={across},D={down}), clue_length_hints={clue_signal}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Rules - info
 # ---------------------------------------------------------------------------
