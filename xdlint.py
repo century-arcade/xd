@@ -949,6 +949,7 @@ def _(ctx):
 
 
 _ISO_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
+_PLAUSIBLE_YEAR_RE = re.compile(r"\b(19\d{2}|20\d{2})\b")
 
 
 @rule("XD701", Severity.WARNING, "filename-date-mismatch")
@@ -970,6 +971,44 @@ def _(ctx):
         yield finding("XD701", Severity.WARNING, line,
                       f"filename date {fn_match.group(1)} doesn't match "
                       f"Date header {hdr_match.group(1)}")
+
+
+@rule("XD702", Severity.WARNING, "date-metadata-mismatch")
+def _(ctx):
+    """Date header year disagrees with year(s) named in Title or
+    Copyright. Common cause: Date was imputed from the filename but
+    the puzzle's own metadata names a different year (e.g.
+    wp241012.puz read as 2024-10-12 when the title/copyright say
+    1924). Sibling of XD701: where XD701 cross-checks filename vs.
+    Date, XD702 cross-checks Date vs. in-file metadata.
+
+    Allows ±1 year tolerance — Copyright and publication dates
+    sometimes straddle a calendar boundary. Only considers 4-digit
+    years in 1900-2099, so themed titles mentioning small numbers
+    don't trip it."""
+    hdr_date = get_header(ctx.parsed, "Date") or ""
+    m = _ISO_DATE_RE.search(hdr_date)
+    if not m:
+        return  # XD105/XD106 cover missing/malformed Date
+    date_year = int(m.group(1)[:4])
+    disagreeing = []
+    for field in ("Title", "Copyright"):
+        val = get_header(ctx.parsed, field) or ""
+        years = [int(y) for y in _PLAUSIBLE_YEAR_RE.findall(val)]
+        if not years:
+            continue
+        if any(abs(y - date_year) <= 1 for y in years):
+            continue
+        disagreeing.append((field, years))
+    if not disagreeing:
+        return
+    line = next((h.line for h in ctx.parsed.headers
+                 if h.key.lower() == "date"), 0)
+    parts = "; ".join(f"{f} has {','.join(str(y) for y in ys)}"
+                      for f, ys in disagreeing)
+    yield finding("XD702", Severity.WARNING, line,
+                  f"Date year {date_year} disagrees with metadata "
+                  f"({parts})")
 
 
 @rule("XD703", Severity.WARNING, "deprecated-rebus-inline-embed")

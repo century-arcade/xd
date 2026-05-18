@@ -531,6 +531,58 @@ class TestErrorRules:
         f = run_rule("XD701", SIMPLE, filename="puz2024-01-01.xd")
         assert f == []
 
+    def test_xd702_title_year_disagrees_with_date(self):
+        # Models the wp241012.puz case: filename-imputed Date (2024)
+        # contradicts a vintage year named in the Title/Copyright.
+        text = SIMPLE.replace(
+            "Title: T",
+            "Title: Cross Word Puzzle (Sun, Oct 12, 1924)"
+        ).replace(
+            "Author: A",
+            "Author: A\nCopyright: © 1924 Metropolitan Newspaper Service"
+        )
+        f = run_rule("XD702", text)
+        assert any("2024" in x.message and "1924" in x.message for x in f)
+        # One finding, aggregated across fields, anchored on Date line.
+        assert len(f) == 1
+
+    def test_xd702_silent_when_years_agree(self):
+        text = SIMPLE.replace(
+            "Title: T",
+            "Title: Tribute (2024 Edition)"
+        ).replace(
+            "Author: A",
+            "Author: A\nCopyright: © 2024 Some Publisher"
+        )
+        f = run_rule("XD702", text)
+        assert f == []
+
+    def test_xd702_allows_one_year_tolerance(self):
+        # Copyright year often lags publication date by one year at the
+        # calendar boundary.
+        text = SIMPLE.replace(
+            "Author: A",
+            "Author: A\nCopyright: © 2023 Some Publisher"
+        )
+        f = run_rule("XD702", text)
+        assert f == []
+
+    def test_xd702_silent_when_no_year_in_metadata(self):
+        # Title/Copyright without any 4-digit plausible year shouldn't
+        # produce false positives.
+        text = SIMPLE.replace(
+            "Title: T",
+            "Title: A Themeless Outing"
+        )
+        f = run_rule("XD702", text)
+        assert f == []
+
+    def test_xd702_silent_when_date_missing(self):
+        # No Date header → XD106 fires, not XD702.
+        text = SIMPLE.replace("Date: 2024-01-01\n", "")
+        f = run_rule("XD702", text)
+        assert f == []
+
     def test_xd010_c1_codepoint(self):
         text = SIMPLE.replace("Title: T", "Title: Tfoo")
         f = run_rule("XD010", text)
