@@ -51,7 +51,7 @@ def clean_author(author, editor):
             while author.lower().startswith("by "):
                 author = author[3:]
 
-            while author[-1] in ",.":
+            while author and author[-1] in ",.":
                 author = author[:-1]
         else:
             author = ""
@@ -64,7 +64,7 @@ def clean_author(author, editor):
         while editor.lower().startswith("by "):
             editor = editor[3:]
 
-        while editor[-1] in ",.":
+        while editor and editor[-1] in ",.":
             editor = editor[:-1]
 
     author = author.strip()
