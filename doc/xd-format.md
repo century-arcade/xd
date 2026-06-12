@@ -148,6 +148,10 @@ Minimal markup is available.  An example clue line:
 
     A51. {/Italic/}, {*bold*}, {_underscore_}, or {-strike-thru-} ~ MARKUP
 
+Markup is available only in clue text.  Headers and notes are plain text;
+markup syntax appearing in them is not interpreted.  [The markup represents
+the rendered form, as it appeared in the original medium.]
+
 The clue is separated from the answer by a tilde with spaces on both sides (' ~ ').
 
 The full answer should be provided, including rebus expansion.  [This makes clue/answer lines independently useful.]
