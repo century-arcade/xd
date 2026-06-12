@@ -1,15 +1,18 @@
+import os
 import re
 import time
 from collections import Counter
-import xdfile
 from calendar import HTMLCalendar
 from datetime import date
 from xdfile import utils
 
-from queries.similarity import grid_similarity
+# site identity: overridable via build env for rebrand/staging
+SITE_NAME = os.getenv('SITE_NAME', 'xd')
+CONTACT_EMAIL = os.getenv('CONTACT_EMAIL', 'xd@saul.pw')
+SITE_ATTRIBUTION = os.getenv('SITE_ATTRIBUTION', 'saul.pw')
 
 
-def year_widget(dow_dict, total, fill_class=None):
+def year_widget(dow_dict, _total, fill_class=None):
     # Generate SVG based widget for day of week dispersion for year
     fill_class = fill_class or 'white'
     b = []
@@ -59,9 +62,9 @@ class GridCalendar(HTMLCalendar):
             return self.day_cell(cssclass, day)
         return self.day_cell('noday', '&nbsp;')
 
-    def formatmonth(self, year, month, withyear=False):
-        self.year, self.month = year, month
-        return super(GridCalendar, self).formatmonth(year, month, withyear)
+    def formatmonth(self, theyear, themonth, withyear=False):
+        self.year, self.month = theyear, themonth
+        return super(GridCalendar, self).formatmonth(theyear, themonth, withyear)
 
     def day_cell(self, cssclass, body):
         text = []
@@ -101,24 +104,30 @@ class GridCalendar(HTMLCalendar):
         return ''.join(v)
 
 navbar_items = [
-      ('Home','/'),
-      ('About', '/about'),
-      ('Data', '/data'),
+      ('Home', '/'),
+      ('About', '/about/'),
+      ('Data', '/data/'),
+      ('Grid map', '/pub/'),
       ('Most Popular', [
-              ('Words','/words'),
-              ('Clues','/clues'),
+              ('Words', '/word/'),
+              ('Clues', '/clue/'),
       ]),
 ]
 
 #todo: output navbar_items like in https://codepen.io/philhoyt/pen/ujHzd
+def _samepage(dest, current_url):
+    return current_url and isinstance(dest, str) and dest.rstrip('/') == current_url.rstrip('/')
+
 def navbar_helper(item, current_url):
     r = '<ul>'
     for name, dest in item:
-        if dest == current_url:
+        if _samepage(dest, current_url):
             r += '<li class="current-menu-item">'
         else:
             r += '<li>'
         if isinstance(dest, list):
+            # dropdown CSS needs a parent anchor as hover target
+            r += '<a href="#">%s</a>' % name
             r += navbar_helper(dest, current_url)
         else:
             r += '<a href="%s">%s</a>' % (dest, name)
@@ -126,21 +135,18 @@ def navbar_helper(item, current_url):
     r += '</ul>'
     return r
 
-def html_header(current_url=None, title='xd page'):
+def html_header(current_url=None, title=''):
+    import xdfile
     npuzzles = len(xdfile.g_corpus)
+    title = title or SITE_NAME
 
-    h = """
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
-<html>
+    h = """<!DOCTYPE html>
+<html lang="en">
 
 <head>
-    <meta http-equiv="Content-Type"
-          content="text/html; charset=ISO-8859-1" />
+    <meta charset="utf-8">
     <title>{title}</title>
-    <LINK href="/style.css" rel="stylesheet" type="text/css">
-  </HEAD>
+    <link href="/style.css" rel="stylesheet" type="text/css">
 </head>
 
 <body>
@@ -166,11 +172,11 @@ def html_footer():
   <hr style="clear:both;"/>
 <small><i>Generated on {date}</i>
 <br>
-a <a href="mailto:xd@saul.pw">saul.pw</a> project
+a <a href="mailto:{email}">{attribution}</a> project
 </small>
 </body>
 </html>
-""".format(date=dt)
+""".format(date=dt, email=CONTACT_EMAIL, attribution=SITE_ATTRIBUTION)
 
 
 def redirect_page(url):
@@ -392,6 +398,7 @@ def headers_to_html(xd):
 
 def grid_to_html(xd, compare_with=None):
     "htmlify this puzzle's grid"
+    import xdfile
 
     grid_html = '<div class="xdgrid">'
     for r, row in enumerate(xd.grid):
@@ -419,6 +426,7 @@ def grid_to_html(xd, compare_with=None):
 
 
 def grid_diff_html(xd, compare_with=None):
+    from queries.similarity import grid_similarity
     if compare_with:
         r = mktag('div', tagclass='fullgrid')
     else:
