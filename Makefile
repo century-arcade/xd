@@ -55,17 +55,19 @@ website: website-static
 	#zip -q -r ${WWW_DIR}/xd-puzzles.zip `cat ${GXD_DIR}/pubs.txt`
 	git -C ${GXD_DIR} log --diff-filter=d --pretty="format:" --since="1 day ago" --name-only | grep '\.xd$$' | sort -u | sed 's,^,${GXD_DIR}/,' > ${RECENT_XDS_FILE}
 	@echo "INFO: found $$(wc -l < ${RECENT_XDS_FILE}) new or modified .xd files in the last day"
-	scripts/37-pubyear-svg.py -o ${WWW_DIR}/ # /pub/ index
-	scripts/33-mkwww-words.py -c ${GXD_DIR} -o ${WWW_DIR}/ # /pub/word/<ANSWER>
-	scripts/34-mkwww-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/ --inputs-from ${RECENT_XDS_FILE} # /pub/clue/<boiledclue>
+	scripts/37-pubyear-svg.py -o ${WWW_DIR}/ # /pub/ map + /pub/<pubid>/
+	scripts/33-mkwww-words.py -c ${GXD_DIR} -o ${WWW_DIR}/ # /word/<ANSWER>
+	scripts/34-mkwww-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/ --inputs-from ${RECENT_XDS_FILE} # /clue/<boiledclue>
 	scripts/35-mkwww-diffs.py -c ${GXD_DIR} -o ${WWW_DIR}/ # /pub/<xdid>
-	scripts/36-mkwww-deepclues.py -c ${GXD_DIR} -o ${WWW_DIR}/ --inputs-from ${RECENT_XDS_FILE} # /pub/clue/<xdid>
+	scripts/36-mkwww-deepclues.py -c ${GXD_DIR} -o ${WWW_DIR}/ --inputs-from ${RECENT_XDS_FILE} # /pub/deep/<xdid>
 
 website-static:
-	mkdir -p ${WWW_DIR}
+	mkdir -p ${WWW_DIR}/about ${WWW_DIR}/data
 	cp -r scripts/html/* ${WWW_DIR}
-	pandoc www/about.md | scripts/wwwify.py 'About' > ${WWW_DIR}/about.html
-	pandoc www/data.md | scripts/wwwify.py 'Data' > ${WWW_DIR}/data.html
+	pandoc www/index.md | scripts/wwwify.py '' '/' > ${WWW_DIR}/index.html
+	pandoc www/about.md | scripts/wwwify.py 'About' '/about/' > ${WWW_DIR}/about/index.html
+	pandoc www/data.md | scripts/wwwify.py 'Data' '/data/' > ${WWW_DIR}/data/index.html
+	echo '<p>Page not found. Try the <a href="/">front page</a> or the <a href="/pub/">grid map</a>.</p>' | scripts/wwwify.py '404 Not Found' > ${WWW_DIR}/404.html
 
 commit:
 	(cd ${GXD_DIR} && \
