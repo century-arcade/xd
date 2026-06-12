@@ -1,38 +1,23 @@
-# Contributing to xdfile
+# Contributing to xd
 
-## setting up the environment
+## Setting up the environment
 
-Install dependencies:
+```
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+pip install pytest
+```
 
-        $ pip install puzpy crossword 
-        $ pip install pytest tox flake8
+## Running tests
 
-Setup tox:
+```
+pytest xdfile/tests/
+```
 
-        $ tox setup
+## Validating .xd files
 
-This creates a virtualenv and runs tests against the package. A couple points:
+`xdlint.py` is the authoritative validator for the .xd format (stdlib-only). See the [README](README.md#validating-xd-files) for usage.
 
-* Eventually, **pip install -e dev** will get all dependencies.
-* tox requires MANIFEST.in to locate files to copy into the virtualenv test environments.
-
-## running tests
-
-To execute everything for packaging and testing:
-
-        $ tox
-
-To just run unit tests:
-
-        $ python -m pytest
-
-## code style
+## Code style
 
 The xd project mostly follows the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html).
-
-## packaging and setup
-
-Test the setup with a dry run:
-
-        $ python setup.py install -n
-

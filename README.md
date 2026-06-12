@@ -17,10 +17,9 @@ See [`doc/rebus-conventions.md`](doc/rebus-conventions.md) for the rebus / quant
 
 - python 3.7+
 - git
-- markdown (to build website)
+- pandoc (to build website)
 - sqlite (for grid comparison)
 - gcc (to build sqlite plugin)
-- aws-cli (to deploy)
 
 # Running the pipeline
 
