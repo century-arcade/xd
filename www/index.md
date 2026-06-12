@@ -8,15 +8,15 @@ The xd [design](/doc) is intentionally textpunk and therefore platform-agnostic.
 
 ## Browse
 
-- a [map of all crosswords](/pub) in the corpus
-- the [most popular clues](/pub/clue)
-- the [most popular words](/pub/word) (answers)
+- a [map of all crosswords](/pub/) in the corpus
+- the [most popular clues](/clue/)
+- the [most popular words](/word/) (answers)
 - [/pub/usa2016-03-05](/pub/usa2016-03-05) a specific puzzle, in this case from USAToday on the Saturday that [#gridgate](https://twitter.com/search?q=%23gridgate) blew up
 
 ## Download
 
-- [xd-tsv.zip](/pub/xd-tsv.zip[xd-tsv.zip): all xd metadata in [.tsv format](/doc/format#tsv)
-- [xd-public.zip](/pub/xd-public.zip): all publicly released puzzles in [.xd format](/doc/format#xd)
+- [xd-metadata.zip](/xd-metadata.zip): all xd metadata in .tsv format
+- [xd-clues.zip](/xd-clues.zip): all clues and answers in .tsv format
 
 ## Contribute
 

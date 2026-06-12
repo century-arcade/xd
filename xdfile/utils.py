@@ -1,4 +1,5 @@
 from collections import namedtuple, OrderedDict
+from typing import Any, Optional
 import re
 import os
 import functools
@@ -9,7 +10,6 @@ import tarfile
 import io
 import csv
 import string
-import codecs
 import datetime
 import time
 import argparse
@@ -19,14 +19,14 @@ COLSEP = '\t'
 COLUMN_SEPARATOR = COLSEP
 
 g_logs = []   # get with get_log()
-g_args = None  # get with args()
+g_args: Any = None  # get with args()
 g_currentProgress = None
 g_numProgress = 0
 
 g_logfp = sys.stderr
 
 # save on start to auto-log at end
-g_scriptname = None
+g_scriptname: Optional[str] = None
 
 WEEKDAYS = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
 
@@ -395,8 +395,15 @@ def parse_pathname(path):
     return nt(path=path, base=base, ext=ext, filename=fn)
 
 
+def url_from_pathname(fn):
+    # 'pub/index.html' -> '/pub/'; 'index.html' -> '/'
+    p = parse_pathname(fn).path
+    return '/' + (p + '/' if p else '')
+
+
 def parse_pubid(fn):
     m = re.search("(^[A-Za-z0-9][A-Za-z]*)", parse_pathname(fn).base)
+    assert m, fn
     return m.group(1).lower()
 
 
@@ -468,7 +475,10 @@ class AttrDict(dict):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
 
-    def __hash__(self):
+    def __getattr__(self, name: str) -> Any:
+        raise AttributeError(name)
+
+    def __hash__(self):  # pyright: ignore[reportIncompatibleVariableOverride]
         return hash(tuple(sorted(self.items())))
 
 #class AttrDict(dict):
@@ -505,7 +515,7 @@ def parse_tsv_data(contents, objname=None):
 
 def parse_tsv(fn, objname=None):
     try:
-        fp = codecs.open(fn, encoding='utf-8')
+        fp = open(fn, encoding='utf-8')
         rows = parse_tsv_data(fp.read(), objname)
         return dict((r[0], r) for r in rows)
     except FileNotFoundError:
@@ -520,7 +530,7 @@ def parse_tsv(fn, objname=None):
 
 def parse_tsv_rows(fn, objname=None):
     try:
-        fp = codecs.open(fn, encoding='utf-8')
+        fp = open(fn, encoding='utf-8')
         return [r for r in parse_tsv_data(fp.read(), objname)]
     except FileNotFoundError:
         info("parse_tsv_rows('%s'): file does not exist yet" % fn)
@@ -544,24 +554,24 @@ class OutputZipFile(zipfile.ZipFile):
 
         fullfn = os.path.join(self.toplevel, fn)
 
-        zi = zipfile.ZipInfo(fullfn, datetime.datetime.fromtimestamp(timet).timetuple())
+        zi = zipfile.ZipInfo(fullfn, datetime.datetime.fromtimestamp(timet).timetuple()[:6])
         zi.external_attr = 0o444 << 16
         zi.compress_type = zipfile.ZIP_DEFLATED
         self.writestr(zi, contents)
         if g_args.debug:
             debug("wrote %s to %s" % (fullfn, self.filename))
 
-    def write(self, data):
+    def write(self, data):  # pyright: ignore[reportIncompatibleMethodOverride]
         raise Exception("can't write directly to .zip")
 
     def __del__(self):
         if self.log:
-            self.write_file(g_scriptname + ".log", get_log().encode('utf-8'))
+            self.write_file((g_scriptname or 'script') + ".log", get_log().encode('utf-8'))
         zipfile.ZipFile.__del__(self)
 
 
 class OutputFile:
-    def __init__(self, outfp=None):
+    def __init__(self, outfp: Any = None):
         self.toplevel = "xd"
         self.outfp = outfp
 
@@ -578,8 +588,7 @@ class OutputFile:
     def write_html(self, fn, innerhtml, title=""):
         from .html import html_header, html_footer
 
-        basepagename = parse_pathname(fn).path
-        htmlstr = html_header(current_url=basepagename, title=title) + innerhtml + html_footer()
+        htmlstr = html_header(current_url=url_from_pathname(fn), title=title) + innerhtml + html_footer()
         self.write(htmlstr.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
 
 
@@ -629,7 +638,7 @@ class OutputDirectory:
         except Exception:
             pass  # log("%s: %s" % (type(e), str(e)))
 
-        f = codecs.open(fullfn, mode, encoding='utf-8')
+        f = open(fullfn, mode, encoding='utf-8')
         if mode[0] == 'a':
             self.files[fn] = f
         elif mode[0] == 'w':
@@ -648,7 +657,7 @@ class OutputDirectory:
     def write_html(self, fn, innerhtml, title=""):
         from .html import html_header, html_footer
 
-        htmlstr = html_header(title=title) + innerhtml + html_footer()
+        htmlstr = html_header(current_url=url_from_pathname(fn), title=title) + innerhtml + html_footer()
         self.write_file(fn, htmlstr.encode("ascii", 'xmlcharrefreplace').decode("ascii"))
 
 
@@ -663,7 +672,7 @@ class OutputDirectory:
         fp.write(COLUMN_SEPARATOR.join(str(x) for x in values) + EOL)
 
 
-def open_output(fnout=None):
+def open_output(fnout=None) -> Any:
     assert g_args
     # global g_logfp
 
@@ -683,7 +692,7 @@ def open_output(fnout=None):
             os.makedirs(parse_pathname(fnout).path)
         except Exception:
             pass  # log("%s: %s" % (type(e), str(e)))
-        outf = OutputFile(codecs.open(fnout, 'w', encoding="utf-8"))
+        outf = OutputFile(open(fnout, 'w', encoding="utf-8"))
 
     return outf
 

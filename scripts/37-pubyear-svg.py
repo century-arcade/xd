@@ -180,7 +180,7 @@ def pubyear_svg(rows, height=svg_h, width=svg_w, pubid='', year=''):
 #        w = pixel_postxd
 #        rects += rect(x, y, w, h, 'postxd')
         rects += '</g>'
-    href = "/pub/%s%s/index.html" % (pubid, year)
+    href = "/pub/%s%s/" % (pubid, year)
     ret = html.mkhref(pys.format(w=width,h=height,classes=bgclass,body=rects), href, svgtitle)
     return ret
 
@@ -255,7 +255,7 @@ def td_for_pubyear(pubyears, pub, year):
             # Emulate 7 rows per decade
             if row_id[0] in wd_dict:
                 decade.append(wd_dict)
-        return pubyear_svg(decade, width=svg_w*decade_scale,year=year,pubid=pub) if decade else None
+        return pubyear_svg(decade, width=int(svg_w*decade_scale),year=year,pubid=pub) if decade else None
 
     return ''
 
@@ -371,7 +371,7 @@ def pubyear_html(pub, year):
 
 def main():
     p = utils.args_parser(desc="generate pubyear svg and pubyear pages")
-    p.add_argument('-p', '--pubonly', action="store_true", default=False, help='only output root map')
+    p.add_argument('-p', '--pubonly', action="store_true", default=False, help='only output the /pub/ map page')
     args = utils.get_args(parser=p)
     outf = utils.open_output()
 
@@ -421,13 +421,15 @@ def main():
         else:
             pubname = pub
         utils.info("rendering %s (%d puzzles)..." % (pub, pubs_total[pub]))
-        html_out.append('<tr><td class="header">{}</td>'.format(html.mkhref(pubname, 'pub/' + pub)))
+        html_out.append('<tr><td class="header">{}</td>'.format(html.mkhref(pubname, '/pub/' + pub)))
 
+        pub_years = []
         for year in sorted(allyears):
             html_out.append('<td class="year_widget">')
             py_td = td_for_pubyear(pubyears, pub, year)
             if py_td:
                 html_out.append(py_td)
+                pub_years.append(year)
                 if not args.pubonly:
                     outpath = 'pub/{pub}{year}/index.html'.format(**locals())
                     utils.progress(outpath)
@@ -442,14 +444,22 @@ def main():
 
         # Add totals + publishers
         html_out.append('<td class="header">{}</td>'.format(pubs_total[pub]))
-        html_out.append('<td class="header">{}</td>'.format(html.mkhref(pubname, 'pub/' + pub)))
+        html_out.append('<td class="header">{}</td>'.format(html.mkhref(pubname, '/pub/' + pub)))
         html_out.append('</tr>')
 
+        if not args.pubonly:
+            pub_h = '<p>%d puzzles in the corpus.</p>' % pubs_total[pub]
+            pub_h += '<ul class="pubyears">'
+            for year in pub_years:
+                pub_h += '<li>%s</li>' % html.mkhref(year, '/pub/%s%s/' % (pub, year))
+            pub_h += '</ul>'
+            pub_h += '<p>%s</p>' % html.mkhref('Back to the grid map', '/pub/')
+            outf.write_html('pub/%s/index.html' % pub, pub_h, title=pubname)
 
     html_out.extend(year_header)
     html_out.append('</table>')
     total_xd = len(metadb.xd_puzzles())
-    outf.write_html('index.html', "".join(html_out), "Comparison of %s published crossword grids" % total_xd)
+    outf.write_html('pub/index.html', "".join(html_out), "Grid map of %s published crossword grids" % total_xd)
 
 
 if __name__ == "__main__":

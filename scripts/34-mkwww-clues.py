@@ -90,13 +90,13 @@ def main():
     nwritten = 0
     for bc in cluepages_to_make:
         # boiled clue is used as a directory name; skip ones that would blow past
-        # Windows MAX_PATH (260 chars) when combined with the wwwroot/pub/clue/.../index.html prefix
+        # Windows MAX_PATH (260 chars) when combined with the wwwroot/clue/.../index.html prefix
         if len(bc) > 200:
             warn("skipping clue page (boiled clue too long, %d chars): %s..." % (len(bc), bc[:60]))
             continue
         contents = mkwww_cluepage(bc)
         if contents:
-            outpath = 'pub/clue/%s/index.html' % bc
+            outpath = 'clue/%s/index.html' % bc
             progress(outpath, every=10)
             outf.write_html(outpath, contents, title=bc)
             nwritten += 1
@@ -104,7 +104,7 @@ def main():
     info("wrote %d per-clue pages, done" % nwritten)
 
     info("writing clue index page...")
-    outf.write_html('pub/clue/index.html', biggest_clues + most_ambig, title="Clues")
+    outf.write_html('clue/index.html', biggest_clues + most_ambig, title="Clues")
     info("clue index page, done")
 
 

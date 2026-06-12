@@ -137,7 +137,7 @@ def main():
 
             prev = prev_uses(pub_uses, mainxd, mainclue)
             if prev:
-                deepcl_html.append('<a href="/pub/clue/%s">%s [x%s]</a>' % (boil(mainclue), mainclue, len(prev)))
+                deepcl_html.append('<a href="/clue/%s">%s [x%s]</a>' % (boil(mainclue), mainclue, len(prev)))
                 nstaleclues += 1
             else:
                 deepcl_html.append(mainclue)

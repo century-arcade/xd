@@ -1,0 +1,35 @@
+# Netlify redirects: first match wins, static files beat non-forced rules.
+# Every URL ever minted keeps working — a real page or a redirect, forever.
+
+# old navbar paths + human guesses
+/words              /word/              301
+/words/             /word/              301
+/clues              /clue/              301
+/clues/             /clue/              301
+
+# clue pages moved out of /pub/ (2026-06)
+/pub/clue           /clue/              301
+/pub/clue/*         /clue/:splat        301
+
+# prose pages moved to directory form
+/about.html         /about/             301
+/data.html          /data/              301
+/error.html         /404.html           301
+
+# S3-era inbound (Google Search Console-confirmed)
+/xdiffs             /pub/               301
+/xdiffs/*           /pub/               301
+/pubs/*             /pub/               301
+/logs.html          /                   301
+/logs/*             /                   301
+/xd-xdiffs.zip      /xd-metadata.zip    301
+/pub/xd-tsv.zip     /xd-metadata.zip    301
+/pub/xd-public.zip  /data/              302
+
+# .xd format spec: GitHub until the /format/ page lands
+/doc                https://github.com/century-arcade/xd/tree/master/doc          302
+/doc/*              https://github.com/century-arcade/xd/blob/master/doc/:splat   302
+
+# editable-sheets redirects (from gxd/redirects.tsv)
+/puzzles/view/*     https://docs.google.com/spreadsheets/d/1s8TJ4XwXnkN1TWJ4Esa0tJQtvxRDoao6OI_spoYahyU/edit  302
+/pub/edit/*         https://docs.google.com/spreadsheets/d/1cFW07AGw_vOsAq7x0gU2TdY1S6z9AXR4xgHQnNpTiaw/edit  302
