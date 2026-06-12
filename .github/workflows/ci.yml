@@ -58,12 +58,27 @@ jobs:
             gxd-
 
       - name: Clone or update gxd
-        run: make setup-gxd
+        # credential helper: keeps the token out of cached gxd/.git/config
+        env:
+          GXD_USER: ${{ secrets.GXD_DEPLOY_USER }}
+          GXD_TOKEN: ${{ secrets.GXD_DEPLOY_TOKEN }}
+        run: |
+          if [ -n "$GXD_TOKEN" ]; then
+            git config --global credential.helper '!f() { echo "username=$GXD_USER"; echo "password=$GXD_TOKEN"; }; f'
+            make setup-gxd
+          elif [ -d gxd ]; then
+            echo "::notice::no gxd deploy token (fork PR?); analyzing cached gxd as-is"
+          else
+            echo "::warning::no gxd deploy token and no cached gxd; skipping analyze"
+            echo "SKIP_ANALYZE=1" >> "$GITHUB_ENV"
+          fi
 
       - name: Install Python deps
+        if: env.SKIP_ANALYZE != '1'
         run: pip install -r requirements.txt
 
       - name: Run make analyze
+        if: env.SKIP_ANALYZE != '1'
         run: make analyze
 
       - name: Upload artifacts

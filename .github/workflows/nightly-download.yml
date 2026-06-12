@@ -57,7 +57,12 @@ jobs:
         # checks out only the root TSVs (publications.tsv, receipts.tsv, etc.)
         # which is all the downloader reads; new .xd files are written into
         # subdirs and picked up later via `git add --sparse`.
+        # credential helper: gxd is private; token stays out of .git/config
+        env:
+          GXD_USER: ${{ secrets.GXD_DEPLOY_USER }}
+          GXD_TOKEN: ${{ secrets.GXD_DEPLOY_TOKEN }}
         run: |
+          git config --global credential.helper '!f() { echo "username=$GXD_USER"; echo "password=$GXD_TOKEN"; }; f'
           git clone --filter=blob:none --depth=1 --no-checkout https://gitlab.com/rabidrat/gxd.git gxd
           (cd gxd && git sparse-checkout init --cone && git checkout HEAD)
 
