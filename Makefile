@@ -4,6 +4,8 @@ GXD_GIT=https://gitlab.com/rabidrat/gxd.git
 GXD_DIR=gxd
 SRC_GIT=git@github.com:saulpw/gxd-sources
 SRC_DIR=gxd-sources
+XDFORMAT_GIT=https://github.com/century-arcade/xdformat.git
+XDFORMAT_DIR=xdformat
 WWW_DIR=wwwroot
 PUB_DIR=pub
 NOW=$(shell date +"%Y%m%d-%H%M%S")
@@ -23,14 +25,18 @@ netlify: setup-gxd analyze website
 
 deps:
 	pip install --upgrade -r requirements.txt
+	[ -d ${XDFORMAT_DIR} ] && pip install -e ${XDFORMAT_DIR} || true
 
-setup: setup-gxd setup-src
+setup: setup-gxd setup-src setup-xdformat
 
 setup-gxd:
 	[ ! -d ${GXD_DIR} ] && git clone ${GXD_GIT} ${GXD_DIR} || (cd ${GXD_DIR} && git pull)
 
 setup-src:
 	[ ! -d ${SRC_DIR} ] && git clone ${SRC_GIT} ${SRC_DIR} || (cd ${SRC_DIR} && git pull)
+
+setup-xdformat:
+	[ ! -d ${XDFORMAT_DIR} ] && git clone ${XDFORMAT_GIT} ${XDFORMAT_DIR} || (cd ${XDFORMAT_DIR} && git pull)
 
 import:
 	scripts/11-download-puzzles.py -o ${WWWZIP}
