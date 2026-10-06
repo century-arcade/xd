@@ -538,18 +538,25 @@ class OutputZipFile(zipfile.ZipFile):
         self.toplevel = toplevel
         self.log = log
 
-    def write_file(self, fn, contents, timet=None):
+    def _zipinfo(self, fn, timet=None):
         if not timet:
             timet = time.time()
 
-        fullfn = os.path.join(self.toplevel, fn)
-
-        zi = zipfile.ZipInfo(fullfn, datetime.datetime.fromtimestamp(timet).timetuple())
+        zi = zipfile.ZipInfo(os.path.join(self.toplevel, fn),
+                             datetime.datetime.fromtimestamp(timet).timetuple())
         zi.external_attr = 0o444 << 16
         zi.compress_type = zipfile.ZIP_DEFLATED
+        return zi
+
+    def write_file(self, fn, contents, timet=None):
+        zi = self._zipinfo(fn, timet)
         self.writestr(zi, contents)
         if g_args.debug:
-            debug("wrote %s to %s" % (fullfn, self.filename))
+            debug("wrote %s to %s" % (zi.filename, self.filename))
+
+    def open_file(self, fn, timet=None):
+        # streaming member: for contents too big to hold in memory as one string
+        return self.open(self._zipinfo(fn, timet), 'w')
 
     def write(self, data):
         raise Exception("can't write directly to .zip")
