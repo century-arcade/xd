@@ -26,8 +26,10 @@ deps:
 
 setup: setup-gxd setup-src
 
+GXD_GIT_ENV=$(if ${GXD_TOKEN},GIT_TERMINAL_PROMPT=0 GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0='!f() { echo username=$$GXD_USER; echo password=$$GXD_TOKEN; }; f',)
+
 setup-gxd:
-	[ ! -d ${GXD_DIR} ] && git clone ${GXD_GIT} ${GXD_DIR} || (cd ${GXD_DIR} && git pull)
+	[ ! -d ${GXD_DIR} ] && ${GXD_GIT_ENV} git clone ${GXD_GIT} ${GXD_DIR} || (cd ${GXD_DIR} && ${GXD_GIT_ENV} git pull)
 
 setup-src:
 	[ ! -d ${SRC_DIR} ] && git clone ${SRC_GIT} ${SRC_DIR} || (cd ${SRC_DIR} && git pull)
