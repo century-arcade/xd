@@ -94,16 +94,25 @@ def added_receipts_rows(base, head, receipts):
     return rows
 
 
-def added_xd_paths(base, head):
-    """Paths of *.xd files added in this diff."""
-    out = git("diff", "--name-only", "--diff-filter=A", f"{base}..{head}")
+def xdid_of(path):
+    return os.path.basename(path)[:-3]
+
+
+def changed_xd_paths(base, head, diff_filter):
+    out = git("diff", "--name-only", "--no-renames", f"--diff-filter={diff_filter}", f"{base}..{head}")
     return [p for p in out.splitlines() if p.endswith(".xd")]
+
+
+def added_xd_paths(base, head):
+    """Paths of *.xd files whose xdid is new in this diff (moves don't count)."""
+    before = tree_xdids(base)
+    return [p for p in changed_xd_paths(base, head, "A") if xdid_of(p) not in before]
 
 
 def deleted_xd_paths(base, head):
-    """Paths of *.xd files deleted in this diff."""
-    out = git("diff", "--name-only", "--diff-filter=D", f"{base}..{head}")
-    return [p for p in out.splitlines() if p.endswith(".xd")]
+    """Paths of *.xd files whose xdid is gone at head (moves don't count)."""
+    after = tree_xdids(head)
+    return [p for p in changed_xd_paths(base, head, "D") if xdid_of(p) not in after]
 
 
 def receipts_latest_xdids(head, receipts):
@@ -132,7 +141,7 @@ def receipts_latest_xdids(head, receipts):
 def tree_xdids(head):
     """Set of xdids present in the head tree (basename of every *.xd file)."""
     out = git("ls-tree", "-r", "--name-only", head)
-    return {os.path.basename(p)[:-3] for p in out.splitlines() if p.endswith(".xd")}
+    return {xdid_of(p) for p in out.splitlines() if p.endswith(".xd")}
 
 
 def receipts_xdids_by_key(head, receipts):
@@ -196,7 +205,7 @@ def main():
     if new_xd_paths:
         receipts = receipts_xdids(args.head, args.receipts)
         for path in new_xd_paths:
-            xdid = os.path.basename(path)[:-3]
+            xdid = xdid_of(path)
             if xdid not in receipts:
                 errors.append(
                     f"{path} was added but no {args.receipts} row has xdid {xdid!r}"
@@ -205,7 +214,7 @@ def main():
     if deleted_xds:
         latest_xdids = receipts_latest_xdids(args.head, args.receipts)
         for path in deleted_xds:
-            xdid = os.path.basename(path)[:-3]
+            xdid = xdid_of(path)
             if xdid in latest_xdids:
                 errors.append(
                     f"{path} was deleted but xdid {xdid!r} is still the latest authoritative "
