@@ -600,6 +600,9 @@ def dow_from_date(dt):
 
 
 class ClueAnswer:
+    # __slots__: the corpus makes ~8.9M of these, and a per-instance dict doubles each
+    __slots__ = ('pubid', 'date', 'answer', 'clue')
+
     def __init__(self, pubid, dt, answer, clue):
         self.pubid = pubid
         self.date = dt
