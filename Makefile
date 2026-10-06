@@ -13,7 +13,7 @@ WWWZIP=/tmp/${NOW}-www.zip
 S3_REGION=us-west-2
 S3_WWW=s3://xd.saul.pw
 
-.PHONY: gxd.sqlite clean clean-cache
+.PHONY: gxd.sqlite clean clean-cache trigger-build
 
 all: analyze gridmatches website
 
@@ -64,6 +64,11 @@ website-static:
 	cp -r scripts/html/* ${WWW_DIR}
 	pandoc www/about.md | scripts/wwwify.py 'About' > ${WWW_DIR}/about.html
 	pandoc www/data.md | scripts/wwwify.py 'Data' > ${WWW_DIR}/data.html
+
+trigger-build:
+	@[ -n "${NETLIFY_BUILD_HOOK}" ] || { echo "ERROR: NETLIFY_BUILD_HOOK unset (Netlify build hook URL)" >&2; exit 1; }
+	@curl -fsS -X POST -d {} "${NETLIFY_BUILD_HOOK}" >/dev/null
+	@echo "INFO: website rebuild triggered"
 
 commit:
 	(cd ${GXD_DIR} && \
