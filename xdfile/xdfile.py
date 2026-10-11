@@ -425,11 +425,20 @@ class xdfile:
     def _parse_explicit_sections(self, lines):
         """File with `## Name` headings: each heading starts a section, in any
         order; blank lines do not change sections.  Unknown section names are
-        ignored.  Lines before the first heading are kept as notes."""
-        section = "notes"  # preamble before any heading; not expected, but don't lose it
+        ignored.
+
+        Lines before the first heading are read the headingless way (metadata,
+        grid, clues, notes, advancing on 2+ blank lines), so an old-style file
+        with e.g. `## Notes` appended still parses; content under a later
+        heading for the same section appends to it.  (Same rule as xdlint and
+        crossref.)"""
+        first_heading = next((i for i, l in enumerate(lines) if HEADING_RE.match(l)), len(lines))
+        self._parse_implicit_sections(lines[:first_heading])
+
+        section = None
         design_lines = []
 
-        for rawline in lines:
+        for rawline in lines[first_heading:]:
             # leading whitespace is decorative
             line = rawline.strip()
 

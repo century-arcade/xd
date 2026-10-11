@@ -267,3 +267,29 @@ def test_explicit_file_with_design_keeps_full_headings():
     assert xd.explicit_sections is True
     headings = [l for l in xd.to_unicode().splitlines() if l.startswith('## ')]
     assert headings == ['## Metadata', '## Grid', '## Clues', '## Design']
+
+
+# Lines before the first heading are read the headingless way.
+
+def test_headingless_file_with_notes_heading_appended():
+    text = HEADINGLESS + "\n## Notes\n\nAppended note.\n"
+    xd = parse(text)
+    assert xd.explicit_sections is True
+    assert_standard(xd)
+    # the implicit notes section and the `## Notes` section both count
+    assert xd.notes == 'Some notes here.\nAppended note.\n'
+
+
+def test_metadata_preamble_then_grid_heading():
+    text = ("Title: Test Puzzle\nAuthor: Test Author\nDate: 2024-01-01\n"
+            "## Grid\n" + GRID_TEXT + "## Clues\n" + CLUES_TEXT)
+    xd = parse(text)
+    assert xd.explicit_sections is True
+    assert_standard(xd)
+    assert xd.notes == ''
+
+
+def test_later_heading_appends_to_preamble_section():
+    text = ("Title: Test Puzzle\n\n\nABC\n## Metadata\nAuthor: Test Author\n"
+            "Date: 2024-01-01\n## Grid\nD#E\nFGH\n## Clues\n" + CLUES_TEXT)
+    assert_standard(parse(text))
