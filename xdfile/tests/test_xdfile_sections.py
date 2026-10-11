@@ -205,3 +205,65 @@ def test_set_header_updates_existing_key_case_insensitively():
 def test_repeated_key_in_different_case_is_a_repeat():
     xd = parse("Title: A\ntitle: B\n\n\nAB\n\n\nA1. x ~ AB\n")
     assert xd.headers == {'Title': ['A', 'B']}
+
+
+# Hybrid form: headingless metadata/grid/clues/notes, then a trailing
+# `## Design`.  A design heading alone does not make a file explicit.
+
+HYBRID_DESIGN = """\
+O { background: circle }
+
+S {
+  background: shaded;
+}
+
+
+O..
+.#S
+..O
+"""
+
+
+def test_hybrid_parse():
+    text = HEADINGLESS + "\n\n## Design\n\n" + HYBRID_DESIGN
+    xd = parse(text)
+    assert xd.explicit_sections is False
+    assert_standard(xd)
+    assert xd.notes == 'Some notes here.\n'
+    # blank lines inside the design (even two in a row) don't end it
+    assert xd.design == HYBRID_DESIGN
+
+
+def test_hybrid_design_heading_any_case_without_notes():
+    no_notes = HEADINGLESS.replace("\n\nSome notes here.\n", "")
+    xd = parse(no_notes + "\n## dEsIgN\n" + HYBRID_DESIGN)
+    assert xd.explicit_sections is False
+    assert_standard(xd)
+    assert xd.notes == ''
+    assert xd.design == HYBRID_DESIGN
+
+
+def test_hybrid_roundtrip():
+    xd = parse(HEADINGLESS + "\n\n## Design\n\n" + HYBRID_DESIGN)
+    out = xd.to_unicode()
+    # headingless body exactly as without a design, then the Design section
+    plain = parse(HEADINGLESS).to_unicode()
+    assert out.startswith(plain)
+    assert out[len(plain):] == "\n## Design\n\n" + HYBRID_DESIGN
+    assert [l for l in out.splitlines() if l.startswith('## ')] == ['## Design']
+
+    xd2 = parse(out)
+    assert xd2.explicit_sections is False
+    assert_standard(xd2)
+    assert xd2.notes == xd.notes
+    assert xd2.design == HYBRID_DESIGN
+    assert xd2.to_unicode() == out
+
+
+def test_explicit_file_with_design_keeps_full_headings():
+    text = ("## Metadata\n" + METADATA + "## Grid\n" + GRID_TEXT +
+            "## Clues\n" + CLUES_TEXT + "## Design\n" + DESIGN_TEXT)
+    xd = parse(text)
+    assert xd.explicit_sections is True
+    headings = [l for l in xd.to_unicode().splitlines() if l.startswith('## ')]
+    assert headings == ['## Metadata', '## Grid', '## Clues', '## Design']
