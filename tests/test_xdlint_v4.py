@@ -279,6 +279,21 @@ class TestDesignParsing:
     def test_headed_file_no_xd410(self):
         assert codes(headed(CLEAN_DESIGN), {"XD410"}) == []
 
+    def test_text_before_first_heading_read_headingless(self):
+        text = SIMPLE + "\n\n## Notes\n\nA note.\n"
+        p = xdlint.parse(text)
+        assert p.section_mode == "explicit"
+        assert [h.key for h in p.headers] == ["Title", "Author", "Date"]
+        assert len(p.grid) == 3 and len(p.clues) == 4
+        assert p.notes_text == "A note."
+        assert codes(text, {"XD019", "XD020"}) == []
+
+    def test_metadata_before_grid_heading(self):
+        text = "Title: T\nAuthor: A\n\n## Grid" + HEADED.split("## Grid", 1)[1]
+        p = xdlint.parse(text)
+        assert [h.key for h in p.headers] == ["Title", "Author"]
+        assert len(p.grid) == 3 and len(p.clues) == 4
+
     def test_design_heading_case_insensitive(self):
         p = xdlint.parse(headed(CLEAN_DESIGN).replace("## Design", "## DESIGN"))
         assert p.design_line > 0

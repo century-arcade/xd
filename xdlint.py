@@ -206,12 +206,10 @@ def parse(text: str) -> ParsedXd:
             section_mode = "explicit"
             break
 
-    # Pass 2: classify each line for implicit-mode auto-recovery. Skipped
-    # in explicit mode (markers handle section transitions explicitly).
-    line_class = (
-        [_classify_line(raw) for raw in lines]
-        if section_mode == "implicit" else []
-    )
+    # Pass 2: classify each line for implicit-mode auto-recovery. Explicit
+    # files need it too: lines before their first heading are read the
+    # headingless way (e.g. an old-style file with '## Notes' appended).
+    line_class = [_classify_line(raw) for raw in lines]
 
     headers: List[Header] = []
     grid: List[GridRow] = []
@@ -226,6 +224,9 @@ def parse(text: str) -> ParsedXd:
     started = False
     last_clue: Optional[Clue] = None
     implicit_order = ["metadata", "grid", "clues", "notes"]
+    # Blank-line section order applies to a headingless file throughout, and
+    # to an explicit file until its first heading.
+    reading_implicitly = True
 
     def advance_implicit():
         nonlocal section
@@ -241,6 +242,7 @@ def parse(text: str) -> ParsedXd:
         if section_mode == "explicit":
             m = EXPLICIT_HEADER_RE.match(raw)
             if m:
+                reading_implicitly = False
                 raw_name = m.group(1)
                 name = raw_name.lower()
                 if name in EXPLICIT_SECTIONS:
@@ -276,7 +278,7 @@ def parse(text: str) -> ParsedXd:
             # Implicit-mode section advance: 2+ blank lines, but only after
             # we've seen real content (otherwise leading blanks would skip
             # past metadata).
-            if (section_mode == "implicit" and started and blank_run == 2
+            if (reading_implicitly and started and blank_run == 2
                     and section != "design"):
                 advance_implicit()
                 last_clue = None
@@ -288,9 +290,9 @@ def parse(text: str) -> ParsedXd:
         # Implicit-mode auto-recovery: if the current line's shape doesn't
         # match the current section, advance the section and let the
         # dispatch below process the line in the right place. Only fires
-        # in implicit mode (explicit '## Section' markers handle transitions
+        # while reading implicitly ('## Section' markers handle transitions
         # unambiguously). Emits XD019 to record the structural violation.
-        if section_mode == "implicit":
+        if reading_implicitly:
             cls = line_class[lineno0]
             if section == "metadata" and cls == "grid":
                 # Lookahead guards against single-word stray metadata lines:
