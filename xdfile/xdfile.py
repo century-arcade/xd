@@ -432,7 +432,7 @@ class xdfile:
         with e.g. `## Notes` appended still parses; content under a later
         heading for the same section appends to it.  (Same rule as xdlint and
         crossref.)"""
-        first_heading = next((i for i, l in enumerate(lines) if HEADING_RE.match(l)), len(lines))
+        first_heading = next((i for i, line in enumerate(lines) if HEADING_RE.match(line)), len(lines))
         self._parse_implicit_sections(lines[:first_heading])
 
         section = None

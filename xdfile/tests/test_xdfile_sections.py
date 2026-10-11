@@ -250,7 +250,7 @@ def test_hybrid_roundtrip():
     plain = parse(HEADINGLESS).to_unicode()
     assert out.startswith(plain)
     assert out[len(plain):] == "\n## Design\n\n" + HYBRID_DESIGN
-    assert [l for l in out.splitlines() if l.startswith('## ')] == ['## Design']
+    assert [ln for ln in out.splitlines() if ln.startswith('## ')] == ['## Design']
 
     xd2 = parse(out)
     assert xd2.explicit_sections is False
@@ -265,7 +265,7 @@ def test_explicit_file_with_design_keeps_full_headings():
             "## Clues\n" + CLUES_TEXT + "## Design\n" + DESIGN_TEXT)
     xd = parse(text)
     assert xd.explicit_sections is True
-    headings = [l for l in xd.to_unicode().splitlines() if l.startswith('## ')]
+    headings = [ln for ln in xd.to_unicode().splitlines() if ln.startswith('## ')]
     assert headings == ['## Metadata', '## Grid', '## Clues', '## Design']
 
 
