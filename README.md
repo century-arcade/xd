@@ -10,6 +10,10 @@ The xd project includes a [text format for crossword puzzles](doc/xd-format.md) 
     xdlint.py --base BASE [--head HEAD]    # lint files changed in a git diff
     xdlint.py --list-rules                 # print the rule catalog
     xdlint.py --no-experimental ...        # skip rules interpreting unspec'd extensions
+    xdlint.py --report-version path ...    # print each file's detected format version
+    xdlint.py --only-version v4 path ...   # lint only files of a given version
+
+xdlint also accepts features from the [v4 draft spec](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format-v4.md): the `## Design` section (validated by XD410-XD414, with `x-` properties accepted for features the spec hasn't settled), the new clue markup, and repeated rebus keys. It infers each file's version from the features it uses: `v4`, `v3` (uses something v4 drops, such as `Special:`), `mixed`, or `common` (neither). v4 features are allowed by default and reported at info level as XD401; `--warn-v4` raises them to warnings, and `--warn-deprecated` does the same for v3-only features (XD402). The v4 answer rules (splitting at the first ` ~ `, several answers per clue line) and `.` as a block are not implemented yet.
 
 See [`doc/rebus-conventions.md`](doc/rebus-conventions.md) for the rebus / quantum / Schrödinger conventions the linter recognizes (these are extensions to the spec, not yet formalized).
 
