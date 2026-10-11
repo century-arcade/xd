@@ -54,6 +54,13 @@ SECTION_SEP = EOL + EOL
 HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'number', 'date',
                 'relation', 'special', 'rebus', 'cluegroup', 'description', 'notes']
 
+# Explicit section headings (`## Name`, case-insensitive; spec v2.0+).  'notes'
+# is not in the spec but is the gxd/xdlint convention for the notes section.
+KNOWN_SECTIONS = ('metadata', 'grid', 'clues', 'notes', 'design')
+# Whitespace after '##' is required so a grid row like '##GRID' is never a heading.
+HEADING_RE = re.compile(r'^\s*##\s+(\S.*?)\s*$')
+KNOWN_HEADING_RE = re.compile(r'^\s*##\s+(%s)\s*$' % '|'.join(KNOWN_SECTIONS), re.IGNORECASE)
+
 def parse(fn):
     return xdfile(open(fn).read(), filename=fn)
 
@@ -65,6 +72,7 @@ class xdfile:
         self.grid = []  # list of string rows
         self.clues = []  # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
         self.notes = ""
+        self.design = ""  # raw text of the `## Design` section, uninterpreted
 
         if filename:
             self._publication_id = pubid or parse_pubid(filename)
@@ -129,8 +137,24 @@ class xdfile:
     def diffs(self, other):
         return [(a, b) for a, b in self.iterdiffs(other)]
 
+    def _header_key(self, fieldname):
+        """Return the key under which `fieldname` is stored in self.headers.
+
+        Metadata keys are case-insensitive (xd v4), so `title` finds a stored
+        `Title` and vice versa.  An exact match wins; otherwise the first
+        case-insensitive match; otherwise `fieldname` itself.  Stored keys keep
+        whatever spelling the file used, so writing is unchanged.
+        """
+        if fieldname in self.headers:
+            return fieldname
+        lower = fieldname.lower()
+        for k in self.headers:
+            if k.lower() == lower:
+                return k
+        return fieldname
+
     def get_header(self, fieldname):
-        v = self.headers.get(fieldname)
+        v = self.headers.get(self._header_key(fieldname))
         assert v is None or isinstance(v, str), v
         return (v or "").strip()
 
@@ -138,6 +162,10 @@ class xdfile:
 #        if fieldname in self.headers:
 #            if newvalue != self.headers.get(fieldname, None):
 #                log("%s[%s] '%s' -> '%s'" % (self.filename, fieldname, self.headers[fieldname], newvalue))
+
+        # update an existing key spelled in a different case, rather than
+        # adding a second copy of the same field
+        fieldname = self._header_key(fieldname)
 
         if newvalue:
             newvalue = str(newvalue).strip()
@@ -150,6 +178,7 @@ class xdfile:
                 del self.headers[fieldname]
 
     def add_header(self, fieldname, value):
+        fieldname = self._header_key(fieldname)
         if fieldname in self.headers:
             assert isinstance(self.headers[fieldname], list)
             self.headers[fieldname].append(value)
@@ -272,6 +301,55 @@ class xdfile:
                 return answer
 
     def parse_xd(self, xd_contents):
+        lines = xd_contents.splitlines()
+        if any(KNOWN_HEADING_RE.match(line) for line in lines):
+            self._parse_explicit_sections(lines)
+        else:
+            self._parse_implicit_sections(lines)
+
+    def _parse_header_line(self, line):
+        if ":" in line:
+            k, v = line.split(":", 1)
+            k, v = k.strip(), v.strip()
+
+            # keys are case-insensitive: 'title:' after 'Title:' is a repeat
+            k = self._header_key(k)
+            if k in self.headers:
+                if isinstance(self.headers[k], str):
+                    self.headers[k] = [self.headers[k], v]
+                else:
+                    self.headers[k].append(v)
+            else:
+                self.set_header(k, v)
+        else:
+            self.notes += line + "\n"
+
+    def _parse_clue_line(self, line):
+        # across or down clues
+        answer_idx = line.rfind("~")
+        if answer_idx > 0:
+            clue = line[:answer_idx]
+            answer = line[answer_idx + 1:]
+        else:
+            clue, answer = line, ""
+
+        clue_idx = clue.find(".")
+
+        assert clue_idx > 0, "no clue number: " + clue
+        pos = clue[:clue_idx].strip()
+        clue = clue[clue_idx + 1:]
+
+        try:
+            cluedir = pos[0]
+            cluenum = int(pos[1:])
+        except Exception:
+            cluedir = ""
+            cluenum = pos  # fallback to strings for non-numeric clue "numbers"
+        self.clues.append(((cluedir, cluenum), clue.strip(), answer.strip()))
+
+    def _parse_implicit_sections(self, lines):
+        """Headingless file: sections are separated by 2+ blank lines and come
+        in fixed order: metadata, grid, clues, then notes."""
         # placeholders, actual numbering starts at 1
         section = 0
         subsection = 0
@@ -279,7 +357,7 @@ class xdfile:
         # fake blank line at top to allow leading actual blank lines before headers
         nblanklines = 2
 
-        for line in xd_contents.splitlines():
+        for line in lines:
             # leading whitespace is decorative
             line = line.strip()
 
@@ -298,49 +376,60 @@ class xdfile:
 
             if section == 1:
                 # headers first
-                if ":" in line:
-                    k, v = line.split(":", 1)
-                    k, v = k.strip(), v.strip()
-
-                    if k in self.headers:
-                        if isinstance(self.headers[k], str):
-                            self.headers[k] = [self.headers[k], v]
-                        else:
-                            self.headers[k].append(v)
-                    else:
-                        self.set_header(k, v)
-                else:
-                    self.notes += line + "\n"
-
+                self._parse_header_line(line)
             elif section == 2:
                 assert self.headers, "no headers"
                 # grid second
                 self.grid.append(line)
             elif section == 3:
-                # across or down clues
-                answer_idx = line.rfind("~")
-                if answer_idx > 0:
-                    clue = line[:answer_idx]
-                    answer = line[answer_idx + 1:]
-                else:
-                    clue, answer = line, ""
-
-                clue_idx = clue.find(".")
-
-                assert clue_idx > 0, "no clue number: " + clue
-                pos = clue[:clue_idx].strip()
-                clue = clue[clue_idx + 1:]
-
-                try:
-                    cluedir = pos[0]
-                    cluenum = int(pos[1:])
-                except Exception:
-                    cluedir = ""
-                    cluenum = pos  # fallback to strings for non-numeric clue "numbers"
-                self.clues.append(((cluedir, cluenum), clue.strip(), answer.strip()))
+                self._parse_clue_line(line)
             else:  # anything remaining
                 if line:
                     self.notes += line + EOL
+
+    def _parse_explicit_sections(self, lines):
+        """File with `## Name` headings: each heading starts a section, in any
+        order; blank lines do not change sections.  Unknown section names are
+        ignored.  Lines before the first heading are kept as notes."""
+        section = "notes"  # preamble before any heading; not expected, but don't lose it
+        design_lines = []
+
+        for rawline in lines:
+            # leading whitespace is decorative
+            line = rawline.strip()
+
+            m = HEADING_RE.match(line)
+            if m:
+                section = m.group(1).strip().lower()
+                if section == "design" and design_lines:
+                    design_lines.append("")  # keep repeated Design sections apart
+                continue
+
+            if section == "design":
+                # kept raw, uninterpreted
+                design_lines.append(rawline.rstrip())
+                continue
+
+            if not line:
+                continue
+
+            if section == "metadata":
+                self._parse_header_line(line)
+            elif section == "grid":
+                self.grid.append(line)
+            elif section == "clues":
+                self._parse_clue_line(line)
+            elif section == "notes":
+                self.notes += line + EOL
+            # else: unknown section, ignored
+
+        # trim leading/trailing blank lines from the raw design text
+        while design_lines and not design_lines[0].strip():
+            design_lines.pop(0)
+        while design_lines and not design_lines[-1].strip():
+            design_lines.pop()
+        if design_lines:
+            self.design = EOL.join(design_lines) + EOL
 
 
     def iterheaders(self):
@@ -355,19 +444,12 @@ class xdfile:
 
 
     def to_unicode(self, emit_clues=True):
+        if self.design:
+            return self._to_unicode_with_headings(emit_clues)
+
         # headers (section 1)
 
-        r = ""
-
-        if self.headers:
-            for k, v in self.iterheaders():
-                assert isinstance(v, str), v
-
-                r += "%s: %s" % (k, v)
-                r += EOL
-        else:
-            r += "Title: %s" % parse_pathname(self.filename).base
-            r += EOL
+        r = self._headers_text()
 
         r += SECTION_SEP
 
@@ -377,21 +459,7 @@ class xdfile:
 
         # clues (section 3)
         if emit_clues:
-            prevdir = None
-            for pos, clue, answer in self.clues:
-                if not answer:
-                    r += EOL
-                    continue
-
-                cluedir, cluenum = pos
-                if prevdir and prevdir != cluedir: # Blank line between cluedirs
-                    r += EOL
-                prevdir = cluedir
-
-                cluetext = (clue or "[XXX]").strip()
-                cluetext = " ".join(cluetext.splitlines())
-                r += "%s%s. %s ~ %s" % (cluedir, cluenum, cluetext, answer)
-                r += EOL
+            r += self._clues_text()
 
             if self.notes:
                 r += EOL + EOL
@@ -399,6 +467,66 @@ class xdfile:
 
         r += EOL
 
+        return self._clean_output(r)
+
+    def _to_unicode_with_headings(self, emit_clues=True):
+        """Explicit-section form, used when there is a Design section (which
+        has no place in the implicit section order)."""
+        r = "## Metadata" + EOL + EOL
+        r += self._headers_text()
+        r += EOL + "## Grid" + EOL + EOL
+        r += EOL.join(self.grid) + EOL
+
+        if emit_clues:
+            r += EOL + "## Clues" + EOL + EOL
+            r += self._clues_text()
+
+        if self.notes and emit_clues:
+            r += EOL + "## Notes" + EOL + EOL
+            r += self.notes.rstrip(EOL) + EOL
+
+        r = self._clean_output(r)
+
+        # design text is kept raw: no character cleanup
+        r += EOL + "## Design" + EOL + EOL
+        r += self.design.rstrip(EOL) + EOL
+
+        return r
+
+    def _headers_text(self):
+        r = ""
+        if self.headers:
+            for k, v in self.iterheaders():
+                assert isinstance(v, str), v
+
+                r += "%s: %s" % (k, v)
+                r += EOL
+        else:
+            r += "Title: %s" % parse_pathname(self.filename).base
+            r += EOL
+        return r
+
+    def _clues_text(self):
+        r = ""
+        prevdir = None
+        for pos, clue, answer in self.clues:
+            if not answer:
+                r += EOL
+                continue
+
+            cluedir, cluenum = pos
+            if prevdir and prevdir != cluedir: # Blank line between cluedirs
+                r += EOL
+            prevdir = cluedir
+
+            cluetext = (clue or "[XXX]").strip()
+            cluetext = " ".join(cluetext.splitlines())
+            r += "%s%s. %s ~ %s" % (cluedir, cluenum, cluetext, answer)
+            r += EOL
+        return r
+
+    @staticmethod
+    def _clean_output(r):
         # some Postscript CE encodings can be caught here
         r = r.replace('\x91', "'")
         r = r.replace('\x92', "'")
