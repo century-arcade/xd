@@ -51,6 +51,11 @@ ASIAN_OPEN_CHAR = '＿'  # U+FF3F
 NON_ANSWER_CHARS = [BLOCK_CHAR, OPEN_CHAR, ASIAN_BLOCK_CHAR, ASIAN_OPEN_CHAR]  # UNKNOWN_CHAR is a wildcard answer character
 EOL = '\n'
 SECTION_SEP = EOL + EOL
+
+# Spec 2.0: a '## [Section Name]' line declares the lines after it as that
+# section.  Names are case-insensitive; sections other than these are ignored.
+SECTION_HEADING_RE = re.compile(r'^\s*##\s+(.+?)\s*$')
+SECTION_NUMBERS = {'metadata': 1, 'grid': 2, 'clues': 3}
 HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'number', 'date',
                 'relation', 'special', 'rebus', 'cluegroup', 'description', 'notes']
 
@@ -271,15 +276,26 @@ class xdfile:
             if clueid == posdir + str(n):
                 return answer
 
-    def parse_xd(self, xd_contents):
+    @staticmethod
+    def _heading_section(line):
+        """Section number (1-3) for a '## Metadata/Grid/Clues' heading line,
+        0 for any other heading, None if the line isn't a heading."""
+        m = SECTION_HEADING_RE.match(line)
+        if not m:
+            return None
+        return SECTION_NUMBERS.get(m.group(1).lower(), 0)
+
+    @staticmethod
+    def _implicit_sections(lines):
+        """Yield (section, line) for a file without headings: sections are
+        delineated by two or more blank lines, in a fixed order."""
         # placeholders, actual numbering starts at 1
         section = 0
-        subsection = 0
 
         # fake blank line at top to allow leading actual blank lines before headers
         nblanklines = 2
 
-        for line in xd_contents.splitlines():
+        for line in lines:
             # leading whitespace is decorative
             line = line.strip()
 
@@ -287,15 +303,39 @@ class xdfile:
             if not line:
                 nblanklines += 1
                 continue
-            else:
-                if nblanklines >= 2:
-                    section += 1
-                    subsection = 1
-                    nblanklines = 0
-                elif nblanklines == 1:
-                    subsection += 1
-                    nblanklines = 0
+            if nblanklines >= 2:
+                section += 1
+            nblanklines = 0
+            yield section, line
 
+    @classmethod
+    def _explicit_sections(cls, lines):
+        """Yield (section, line) for a file with '## Section' headings.
+        Order in the file is unimportant, so metadata is yielded first, then
+        grid, then clues.  Lines under other headings, and lines before the
+        first heading, are ignored."""
+        by_section = {1: [], 2: [], 3: []}
+        section = 0
+        for line in lines:
+            heading = cls._heading_section(line)
+            if heading is not None:
+                section = heading
+                continue
+            line = line.strip()
+            if line and section:
+                by_section[section].append(line)
+        for section in (1, 2, 3):
+            for line in by_section[section]:
+                yield section, line
+
+    def parse_xd(self, xd_contents):
+        lines = xd_contents.splitlines()
+        if any(self._heading_section(line) for line in lines):
+            sectioned = self._explicit_sections(lines)
+        else:
+            sectioned = self._implicit_sections(lines)
+
+        for section, line in sectioned:
             if section == 1:
                 # headers first
                 if ":" in line:
