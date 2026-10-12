@@ -1395,8 +1395,13 @@ def _(ctx):
             break
 
 
-# Spec markup forms: {/italic/}, {*bold*}, {_underscore_}, {-strike-}.
-_CLUE_MARKUP_RE = re.compile(r"\{[/*_-][^/*_\-{}]+[/*_-]\}")
+# Spec markup forms: {/italic/}, {*bold*}, {_underscore_}, {-strike-}, and
+# from the v4 draft {~subscript~}, {^superscript^}, {=small caps=},
+# {@link | href: ...@}, {!image | src: ...!}, {\literal\} and {#color#}.
+# A span opens with '{' and a type character and closes with the same type
+# character and '}'; spans may nest, and {\\} (an empty literal) is a line
+# break.
+_CLUE_MARKUP_RE = re.compile(r"\{([/*_\-~^=@!\\#])(.*?)\1\}")
 
 
 @rule("XD304", Severity.INFO, "uses-clue-markup")

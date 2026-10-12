@@ -1041,6 +1041,43 @@ class TestFeatureDetectionRules:
         f = run_rule("XD304", text)
         assert len(f) == 1 and "{/italic/}" in f[0].message
 
+    @pytest.mark.parametrize("body,span", [
+        ("{*bold*} clue", "{*bold*}"),
+        ("H{~2~}O", "{~2~}"),
+        ("E=mc{^2^}", "{^2^}"),
+        ("{=Small caps=}", "{=Small caps=}"),
+        ("See {@this | href: https://example.com@}", "{@this | href: https://example.com@}"),
+        ("{!Whale | src: 'data:image/png;base64,AA=='!}", "{!Whale | src: 'data:image/png;base64,AA=='!}"),
+        (r"What {\~\} means", r"{\~\}"),
+        (r"One{\\}two", r"{\\}"),
+        ("Captain in {/{*Moby-Dick*}/}", "{/{*Moby-Dick*}/}"),
+    ])
+    def test_xd304_v4_markup(self, body, span):
+        text = SIMPLE.replace("A1. First ~ ABC", f"A1. {body} ~ ABC")
+        f = run_rule("XD304", text)
+        assert len(f) == 1 and repr(span) in f[0].message
+
+    @pytest.mark.parametrize("body", ["Open {^ brace", "{/mismatched*}", "{ spaced }"])
+    def test_xd304_not_markup(self, body):
+        text = SIMPLE.replace("A1. First ~ ABC", f"A1. {body} ~ ABC")
+        assert run_rule("XD304", text) == []
+
+    def test_v4_markup_raises_no_warnings(self):
+        """v4-draft clue markup is accepted: no rule warns on it."""
+        bodies = [
+            "H{~2~}O and E=mc{^2^}", "{=Small caps=}",
+            "See {@the notes | href: https://example.com/a?b=1@}",
+            "Pictured: {!A whale | src: 'data:image/png;base64,iVBORw0KGgo='; display: block!}",
+            r"What {\~\} means in {\{}\}{\\}next line",
+            "The {#red | x-color: #c00000#} planet", "Captain in {/{*Moby-Dick*}/}",
+        ]
+        for body in bodies:
+            text = SIMPLE.replace("A1. First ~ ABC", f"A1. {body} ~ ABC")
+            ctx = make_ctx(text, filename="src2024-01-01.xd")
+            loud = [f for f in xdlint.run_checks(ctx, None)
+                    if f.severity.rank >= xdlint.Severity.WARNING.rank]
+            assert loud == [], (body, loud)
+
     def test_xd305_uses_cluegroup_via_header(self):
         text = SIMPLE.replace(
             "Author: A\n",
