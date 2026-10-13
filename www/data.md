@@ -1,9 +1,11 @@
 
 ## Download crossword data
 
-All public data from xd is available in two .zip archives:
+All public data from xd is available in three .zip archives:
 
 - [xd-metadata.zip](/xd-metadata.zip)  (2MB), metadata and similarity for all puzzles in the corpus, public and private
+
+- [xd-puzzles.zip](https://github.com/century-arcade/xd/releases/download/puzzles-pre1965/xd-puzzles.zip)  (12MB), all 5,688 puzzles in the corpus published before 1965, in [.xd format](https://github.com/century-arcade/xd): 5,633 from the New York Times (1942-1964), 50 from the first Simon & Schuster crossword books (1924), and a handful of early newspaper puzzles
 
 - [xd-clues.zip](/xd-clues.zip)  (67MB), over 6,000,000 answer/clue usages, grouped by publication-year
 

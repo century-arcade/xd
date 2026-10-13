@@ -53,7 +53,6 @@ analyze:
 
 website: website-static
 	mkdir -p ${WWW_DIR}/pub/gxd
-	#zip -q -r ${WWW_DIR}/xd-puzzles.zip `cat ${GXD_DIR}/pubs.txt`
 	scripts/37-pubyear-svg.py -o ${WWW_DIR}/ # /pub/ index
 	scripts/33-mkwww-words.py -c ${GXD_DIR} -o ${WWW_DIR}/ # /pub/word/<ANSWER>
 	scripts/34-mkwww-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/ # /pub/clue/<boiledclue>
