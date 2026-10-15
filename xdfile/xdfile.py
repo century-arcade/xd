@@ -96,7 +96,7 @@ class xdfile:
     def xdid(self):
         num = self.get_header("Number")
         if num:
-            return '%s-%03d' % (self._publication_id, int(num))
+            return '%s-%s' % (self._publication_id, number_slug(num))
 
         assert self.date()
         return '%s%s' % (self._publication_id, self.date())
@@ -583,6 +583,13 @@ def corpus_contents():
         xdid = xdid_from_path(fullfn)
         ret[xdid.lower()] = contents
     return ret
+
+
+def number_slug(num):
+    num = str(num).strip()
+    if num.isdigit():
+        return '%03d' % int(num)
+    return re.sub(r'[^A-Za-z0-9]', '_', num)
 
 
 def year_from_date(dt):

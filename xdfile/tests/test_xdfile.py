@@ -77,3 +77,17 @@ def test_to_unicode_collapses_newlines_in_clues():
     # Verify the output parses cleanly
     xd2 = XDFile(output, filename='test2024-01-01.xd')
     assert xd2.get_answer('A1') == 'ABC'
+
+
+def test_number_slug():
+    from xdfile.xdfile import number_slug
+    assert number_slug('7') == '007'
+    assert number_slug(1234) == '1234'
+    assert number_slug('219.5') == '219_5'
+    assert number_slug('12-B') == '12_B'
+
+
+def test_xdid_non_integer_number():
+    xd = XDFile('Title: T\nNumber: 219.5\n\n\nAB\nCD\n\n\nA1. x ~ AB\n',
+                'gxd/indie/nediger/nediger-219_5.xd')
+    assert xd.xdid() == 'nediger-219_5'
