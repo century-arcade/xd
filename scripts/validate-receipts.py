@@ -2,14 +2,16 @@
 """
 validate-receipts.py — GitLab CI check for gxd/.
 
-Invariants checked against the diff between --base and --head:
+Invariants checked against the diff between --base and --head, on
+receipts.jsonl if --head has it, else receipts.tsv (gxd/scripts/receipts.py
+checks that the two agree while both exist):
 
-  1. Every newly-added receipts.tsv row with a non-empty xdid belongs to an
+  1. Every newly-added receipts row with a non-empty xdid belongs to an
      (ExternalSource, SourceFilename) key for which *some* xdid in receipts at --head
      has a matching *.xd file in the tree. This tolerates pure modifications and
      stale-row rewrites: as long as the key still maps to an existing .xd via any
      of its receipts, the row passes.
-  2. Every newly-added *.xd file has a receipts.tsv row at --head whose xdid column
+  2. Every newly-added *.xd file has a receipts row at --head whose xdid column
      matches the file's basename.
   3. Every deleted *.xd file is OK to remove: its xdid is NOT the latest non-empty
      xdid (by ReceivedTime) for any (ExternalSource, SourceFilename) key. Stale
@@ -22,6 +24,7 @@ Requires no working-tree checkout; uses `git ls-tree` and `git show` against the
 --head sha. Runs fine with GIT_STRATEGY=fetch.
 """
 import argparse
+import json
 import os
 import re
 import subprocess
@@ -36,6 +39,7 @@ INT_COL = 3
 SRC_COL = 4
 XDID_COL = 5
 NCOLS = 6
+COLUMNS = ["CaptureTime", "ReceivedTime", "ExternalSource", "InternalSource", "SourceFilename", "xdid"]
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 XDID_RE = re.compile(r"^[a-z0-9._-]+$")
@@ -45,25 +49,59 @@ def git(*args):
     return subprocess.check_output(["git", *args], text=True)
 
 
+def parse_line(line, receipts):
+    """Column list for one line of a receipts file (untrimmed), or None for the
+    TSV header.  A receipts.jsonl line that isn't a JSON object gives []."""
+    if receipts.endswith(".jsonl"):
+        try:
+            obj = json.loads(line)
+        except ValueError:
+            return []
+        if not isinstance(obj, dict) or not all(isinstance(obj.get(k, ""), str) for k in COLUMNS):
+            return []
+        return [obj.get(k, "") for k in COLUMNS]
+    fields = line.split("\t")
+    if len(fields) > XDID_COL and fields[XDID_COL].strip() == "xdid":
+        return None  # header line
+    return fields
+
+
+def default_receipts(head):
+    """receipts.jsonl if --head has it, else receipts.tsv."""
+    has_jsonl = subprocess.run(["git", "cat-file", "-e", f"{head}:receipts.jsonl"],
+                               capture_output=True).returncode == 0
+    return "receipts.jsonl" if has_jsonl else "receipts.tsv"
+
+
+def iter_rows_at(head, receipts):
+    """Column lists for every row of the receipts file at head."""
+    for line in git("show", f"{head}:{receipts}").splitlines():
+        fields = parse_line(line, receipts)
+        if fields is not None:
+            yield fields
+
+
 def iter_added_rows(base, head, receipts):
     """Yield (raw_body, fields) for every `+` line in the receipts diff, skipping the
     header row. `raw_body` is the line without the leading `+`; `fields` is the
-    tab-split column list (untrimmed)."""
+    column list (untrimmed)."""
     diff = git("diff", "--unified=0", "--no-color", f"{base}..{head}", "--", receipts)
     for line in diff.splitlines():
         if not line.startswith("+") or line.startswith("+++"):
             continue
         body = line[1:]
-        fields = body.split("\t")
-        if len(fields) > XDID_COL and fields[XDID_COL].strip() == "xdid":
-            continue  # header line
+        fields = parse_line(body, receipts)
+        if fields is None:
+            continue
         yield body, fields
 
 
 def check_row_format(fields):
-    """Return list of human-readable problems with `fields` as a receipts.tsv row.
+    """Return list of human-readable problems with `fields` as a receipts row.
     Empty list means well-formed. Empty xdid is allowed (rejected/unfinished puzzles);
     every other column must be non-empty, and dates/xdid must match expected shape."""
+    if not fields:
+        return ["not a JSON object with string values"]
     if len(fields) != NCOLS:
         return [f"expected {NCOLS} tab-separated columns, got {len(fields)}"]
     capture, received, ext, internal, src, xdid = (f.strip() for f in fields)
@@ -120,12 +158,8 @@ def receipts_latest_xdids(head, receipts):
     (ExternalSource, SourceFilename) key in receipts at head. These are the xdids
     actively claimed by receipts; deleting their .xd files would create a dangling claim.
     """
-    out = git("show", f"{head}:{receipts}")
     by_key = {}
-    for i, line in enumerate(out.splitlines()):
-        if i == 0:
-            continue
-        fields = line.split("\t")
+    for fields in iter_rows_at(head, receipts):
         if len(fields) <= XDID_COL:
             continue
         key = (fields[EXT_COL], fields[SRC_COL])
@@ -146,12 +180,8 @@ def tree_xdids(head):
 
 def receipts_xdids_by_key(head, receipts):
     """{(ExternalSource, SourceFilename): set(xdids)} from receipts at head."""
-    out = git("show", f"{head}:{receipts}")
     by_key = {}
-    for i, line in enumerate(out.splitlines()):
-        if i == 0:
-            continue
-        fields = line.split("\t")
+    for fields in iter_rows_at(head, receipts):
         if len(fields) <= XDID_COL:
             continue
         key = (fields[EXT_COL], fields[SRC_COL])
@@ -169,8 +199,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base", required=True, help="Diff base ref/sha (e.g. MR base or prior HEAD)")
     ap.add_argument("--head", default="HEAD", help="Diff head ref/sha (default: HEAD)")
-    ap.add_argument("--receipts", default="receipts.tsv", help="Path to receipts TSV (default: receipts.tsv)")
+    ap.add_argument("--receipts", default=None,
+                    help="Path to receipts file, .jsonl or .tsv (default: receipts.jsonl if --head has it, else receipts.tsv)")
     args = ap.parse_args()
+    args.receipts = args.receipts or default_receipts(args.head)
 
     errors = []
 

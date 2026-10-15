@@ -18,7 +18,11 @@ DEBUG=''
 cd $GXD
 git checkout -f master && git pull && git clean -df && git reset HEAD . && cd ..
 
-numtsv=$(cat $GXD/receipts.tsv | grep -vi CaptureTime | wc -l)
+count_receipts() {
+	if [ -f $GXD/receipts.jsonl ]; then wc -l < $GXD/receipts.jsonl; else grep -vci CaptureTime $GXD/receipts.tsv; fi
+}
+
+numtsv=$(count_receipts)
 echo "amount of receipts before run: $numtsv" | tee > $SUMMARYLOG
 
 cd $GXD
@@ -32,6 +36,6 @@ else
 	$python scripts/18-convert2xd.py ${DEBUG} "$INPUT" -o "$GXD/" --extsrc "$EXTSRC"
 fi
 
-num=$(cat $GXD/receipts.tsv | grep -vi CaptureTime | wc -l)
+num=$(count_receipts)
 echo "amount of receipts after run: $num" | tee > $SUMMARYLOG
 

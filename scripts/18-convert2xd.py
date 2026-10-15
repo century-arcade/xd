@@ -3,7 +3,7 @@
 # Usage: $0 [-o <output-xd.zip>] <input>
 #
 #   Converts file in <input> to .xd, maintaining the original directory structure.
-#   Appends to receipts.tsv
+#   Appends to receipts.jsonl and (until it's retired) receipts.tsv
 #
 
 import fnmatch
@@ -562,7 +562,7 @@ def main():
 
             if not args.dry_run:
                 for r in receipts:
-                    metadb.append_row('gxd/receipts', r)
+                    metadb.append_receipt(r)
 
         except Exception as e:
             error(str(e))

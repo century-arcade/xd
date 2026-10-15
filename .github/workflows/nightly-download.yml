@@ -54,7 +54,7 @@ jobs:
 
       - name: Partial+sparse clone of gxd
         # Avoids materializing the ~94k existing .xd files. cone-mode sparse
-        # checks out only the root TSVs (publications.tsv, receipts.tsv, etc.)
+        # checks out only the root files (publications.tsv, receipts.tsv, receipts.jsonl, etc.)
         # which is all the downloader reads; new .xd files are written into
         # subdirs and picked up later via `git add --sparse`.
         # credential helper: gxd is private; token stays out of .git/config

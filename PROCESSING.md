@@ -37,6 +37,10 @@ When introducing a new publication/pubid, add the row to `gxd/publications.tsv` 
 
 ## How to check receipts.tsv for duplicate values
 
+`gxd/receipts.jsonl` is replacing `receipts.tsv` (format and transition in `gxd/RECEIPTS.md`).
+While both exist they hold the same rows, so the commands below still work on `receipts.tsv`;
+afterwards, `gxd/scripts/receipts.py to-tsv` prints `receipts.jsonl` in the same TSV form.
+
 ### filter out duplicates based on InternalSource & Filename
 
         awk 'BEGIN {FS="\t"} {c[$5$6]++} {if (c[$5$6] == 1) print $0}' receipts.tsv

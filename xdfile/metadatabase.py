@@ -2,6 +2,7 @@
 import atexit
 import os.path
 import codecs
+import json
 import re
 from collections import namedtuple
 
@@ -11,6 +12,7 @@ from xdfile import utils
 
 
 RECEIPTS_TSV = "gxd/receipts.tsv"
+RECEIPTS_JSONL = "gxd/receipts.jsonl"   # successor to RECEIPTS_TSV; see gxd/RECEIPTS.md
 SIMILAR_TSV = "gxd/similar.tsv"
 PUBLICATIONS_TSV = "gxd/publications.tsv"
 PUZZLE_SOURCES_TSV = "gxd/sources.tsv"
@@ -102,6 +104,13 @@ xddb_headers = {
 }
 
 
+RECEIPT_COLUMNS = xd_receipts_header.split()
+
+# Optional receipts.jsonl fields, in the order they're written after the six
+# columns.  gxd/scripts/receipts.py (which CI runs) defines and checks them.
+RECEIPT_OPTIONAL = ["event", "supersedes", "method", "source_id", "xd_sha256", "disposition"]
+
+
 # yields dict corresponding to each row of receipts.tsv, in sequential order
 @utils.memoize
 def xd_receipts():
@@ -110,7 +119,40 @@ def xd_receipts():
 
 @utils.memoize
 def xd_receipts_rows():
-    return utils.parse_tsv_rows(RECEIPTS_TSV, "Receipt")
+    return receipts_rows()
+
+
+def _count_lines(path):
+    with open(path, 'rb') as fp:
+        return sum(chunk.count(b'\n') for chunk in iter(lambda: fp.read(1 << 20), b''))
+
+
+@utils.memoize
+def receipts_rows():
+    """Every receipt, in order, as AttrDicts with at least the six receipts.tsv
+    columns.  Reads receipts.jsonl when present, else receipts.tsv.
+
+    While both files exist they hold the same rows.  If receipts.tsv has more
+    (someone appended to it alone and hasn't run gxd/scripts/receipts.py sync),
+    read it instead, so nothing already received is missed."""
+    if not os.path.exists(RECEIPTS_JSONL):
+        return read_rows('gxd/receipts')
+
+    rows = []
+    with open(RECEIPTS_JSONL, encoding='utf-8', newline='') as fp:
+        for line in fp:
+            obj = json.loads(line)
+            for k in RECEIPT_COLUMNS:
+                obj.setdefault(k, '')
+            rows.append(utils.AttrDict(obj))
+
+    if os.path.exists(RECEIPTS_TSV):
+        ntsv = _count_lines(RECEIPTS_TSV) - 1   # header
+        if ntsv > len(rows):
+            utils.warn("%s has %d rows, %s only %d; reading %s. Run gxd/scripts/receipts.py sync." % (
+                RECEIPTS_TSV, ntsv, RECEIPTS_JSONL, len(rows), RECEIPTS_TSV))
+            return read_rows('gxd/receipts')
+    return rows
 
 
 @utils.memoize
@@ -180,12 +222,45 @@ def append_row(tablename, row):
     if tablename not in _open_tables:
         tsvpath = tablename + ".tsv"
         addhdr = not os.path.exists(tsvpath)
-        fp = open(tsvpath, 'a', encoding='utf-8')
+        # newline='': EOL is '\n' on every platform (text mode wrote CRLF on Windows)
+        fp = open(tsvpath, 'a', encoding='utf-8', newline='')
         if addhdr:
             fp.write(COLSEP.join(xddb_headers[tablename].split()) + EOL)
         _open_tables[tablename] = fp
 
     _open_tables[tablename].write(COLSEP.join(["" if x is None else str(x) for x in row]) + EOL)
+
+
+def receipt_jsonl_line(row, **extra):
+    """The canonical receipts.jsonl line for a receipts.tsv-style row (six
+    values) plus any optional fields; must match gxd/scripts/receipts.py dumps()."""
+    obj = dict(zip(RECEIPT_COLUMNS, ("" if x is None else str(x) for x in row)))
+    obj.update((k, extra[k]) for k in RECEIPT_OPTIONAL if extra.get(k) not in (None, ''))
+    return json.dumps(obj, ensure_ascii=False, separators=(',', ':')) + EOL
+
+
+def append_receipt(row, **extra):
+    """Append one receipt.  During the receipts.tsv -> receipts.jsonl transition
+    it goes to both files: the six columns to receipts.tsv, and those plus any
+    optional fields (RECEIPT_OPTIONAL) to receipts.jsonl.  A file that doesn't
+    exist yet is only created when the other doesn't exist either, so a corpus
+    without receipts.jsonl never gets one holding just the new rows."""
+    has_tsv = os.path.exists(RECEIPTS_TSV) or 'gxd/receipts' in _open_tables
+    has_jsonl = os.path.exists(RECEIPTS_JSONL)
+    if has_tsv or not has_jsonl:
+        append_row('gxd/receipts', row)
+    if has_jsonl or not has_tsv:
+        if RECEIPTS_JSONL not in _open_tables:
+            # make sure an existing file ends in a newline before appending
+            needs_eol = False
+            if os.path.exists(RECEIPTS_JSONL) and os.path.getsize(RECEIPTS_JSONL):
+                with open(RECEIPTS_JSONL, 'rb') as f:
+                    f.seek(-1, os.SEEK_END)
+                    needs_eol = f.read(1) != b'\n'
+            _open_tables[RECEIPTS_JSONL] = open(RECEIPTS_JSONL, 'a', encoding='utf-8', newline='')
+            if needs_eol:
+                _open_tables[RECEIPTS_JSONL].write(EOL)
+        _open_tables[RECEIPTS_JSONL].write(receipt_jsonl_line(row, **extra))
 
 
 def get_last_receipt_id():
@@ -215,7 +290,7 @@ def xd_receipts_row(CaptureTime="", ReceivedTime="", ExternalSource="", Internal
 @utils.memoize
 def _receipts_by_source():
     d = {}
-    for r in read_rows('gxd/receipts'):
+    for r in receipts_rows():
         key = (r.ExternalSource, r.SourceFilename)
         d.setdefault(key, []).append(r)
     return d
@@ -228,7 +303,7 @@ def check_already_received(ExternalSource, SourceFilename):
 @utils.memoize
 def _receipts_by_xdid():
     d = {}
-    for r in read_rows('gxd/receipts'):
+    for r in receipts_rows():
         d.setdefault(r.xdid, []).append(r)
     return d
 
