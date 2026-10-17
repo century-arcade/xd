@@ -18,6 +18,7 @@ from xdfile.utils import args_parser, get_args, parse_tsv_data, iso8601, open_ou
 from xdfile.utils import parse_pubid
 
 from xdfile import metadatabase as metadb
+from xdfile.sourcearchive import MANIFEST, is_manifest, is_archive_metadata, read_manifest
 
 from xdfile.ccxml2xd import parse_ccxml
 from xdfile.uxml2xd import parse_uxml
@@ -160,8 +161,17 @@ def main():
             # collect receipts
             receipts = []
 
+            # gxd source-archive MANIFEST.tsv rows, keyed like innerfn below
+            manifest_files = {}
+
             for fn, contents, dt in find_files_with_time(input_source, ext='.tsv'):
                 progress(fn)
+                if is_manifest(fn):
+                    prefix = fn[:-len(MANIFEST)]
+                    for mfn, mrow in read_manifest(contents).items():
+                        manifest_files[(prefix + mfn).replace('\\', '/')] = mrow
+                        manifest_files.setdefault(strip_toplevel(prefix + mfn).replace('\\', '/'), mrow)
+                    continue
                 for row in parse_tsv_data(contents.decode('utf-8'), "Source"):
                     innerfn = strip_toplevel(row.SourceFilename).replace('\\', '/')
                     if innerfn in source_files:
@@ -174,7 +184,7 @@ def main():
             #  conflict); filename is a tiebreaker so the winner is stable
             #  across runs even when mtimes are equal.
             for fn, contents, dt in sorted(find_files_with_time(input_source, strip_toplevel=False), reverse=True, key=lambda x: (x[2], x[0])):
-                if fn.endswith(".tsv") or fn.endswith(".log"):
+                if is_archive_metadata(fn):  # .tsv, .log, MANIFEST.tsv, NOTES.md
                     continue
 
                 if not contents:  # 0-length files
@@ -193,8 +203,11 @@ def main():
                     SourceFilename = innerfn
                 else:
                     debug("%s not in sources.tsv" % innerfn)
-                    CaptureTime = iso8601(dt)
-                    ExternalSource = args.extsrc or parse_pathname(input_source).filename
+                    # MANIFEST.tsv fields, when present and non-empty, beat the
+                    # fallbacks (zip name, zip-entry mtime) used for older zips.
+                    mrow = manifest_files.get(innerfn, {})
+                    CaptureTime = mrow.get('fetched_at') or iso8601(dt)
+                    ExternalSource = args.extsrc or mrow.get('source_url') or parse_pathname(input_source).filename
                     SourceFilename = innerfn
 
                 ReceivedTime = iso8601(time.time())
