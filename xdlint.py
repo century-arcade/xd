@@ -30,6 +30,12 @@ Rule selection:
     --disable XD###[,XD###...]
     --enable-only XD###[,XD###...]
 
+Format version (v3 / v4 draft):
+    --report-version                       print each file's detected version
+    --only-version v4[,mixed,...]          lint only files of those versions
+    --warn-v4                              v4 features (XD401) as warnings
+    --warn-deprecated                      v3-only features (XD402) as warnings
+
 Add a new rule:
     @rule("XD###", Severity.WARNING, "rule-name")
     def _(ctx):
@@ -115,6 +121,10 @@ class ParsedXd:
     # Spec says ignore the section, but XD207 surfaces them so unexpected
     # sections (typos, tool-specific extensions) don't go unnoticed.
     unknown_sections: List[Tuple[int, str]] = field(default_factory=list)
+    # '## Design' section (v4): non-blank lines as (line, raw text), and the
+    # line of the heading itself (0 when the file has no design section).
+    design: List[Tuple[int, str]] = field(default_factory=list)
+    design_line: int = 0
 
 
 @dataclass
@@ -135,7 +145,12 @@ class Ctx:
 # of downstream findings (XD001/XD002/XD004/...) about misclassified rows.
 
 EXPLICIT_HEADER_RE = re.compile(r"^\s*##\s+([A-Za-z][A-Za-z0-9_-]*)")
-EXPLICIT_SECTIONS = {"metadata": "metadata", "grid": "grid", "clues": "clues", "notes": "notes"}
+EXPLICIT_SECTIONS = {"metadata": "metadata", "grid": "grid", "clues": "clues",
+                     "notes": "notes", "design": "design"}
+# A '## Design' heading alone doesn't switch a file to explicit mode: a
+# headingless file may end with a design section (v4 preview convention),
+# and its other sections are still read by blank-line order.
+MODE_SECTIONS = {"metadata", "grid", "clues", "notes"}
 CLUE_META_RE = re.compile(r"^([A-Za-z][\w-]*)\s+\^([A-Za-z][\w-]*)\s*:\s*(.*)$")
 CLUE_POS_RE = re.compile(r"^([A-Za-z])(\d+)$")
 _AUTO_CLUE_RE = re.compile(r"^[A-Za-z]?\d+\.\s")
@@ -187,28 +202,31 @@ def parse(text: str) -> ParsedXd:
     section_mode = "implicit"
     for raw in lines:
         m = EXPLICIT_HEADER_RE.match(raw)
-        if m and m.group(1).lower() in EXPLICIT_SECTIONS:
+        if m and m.group(1).lower() in MODE_SECTIONS:
             section_mode = "explicit"
             break
 
-    # Pass 2: classify each line for implicit-mode auto-recovery. Skipped
-    # in explicit mode (markers handle section transitions explicitly).
-    line_class = (
-        [_classify_line(raw) for raw in lines]
-        if section_mode == "implicit" else []
-    )
+    # Pass 2: classify each line for implicit-mode auto-recovery. Explicit
+    # files need it too: lines before their first heading are read the
+    # headingless way (e.g. an old-style file with '## Notes' appended).
+    line_class = [_classify_line(raw) for raw in lines]
 
     headers: List[Header] = []
     grid: List[GridRow] = []
     clues: List[Clue] = []
     notes_lines: List[str] = []
     unknown_sections: List[Tuple[int, str]] = []
+    design: List[Tuple[int, str]] = []
+    design_line = 0
 
     section = "metadata"
     blank_run = 0
     started = False
     last_clue: Optional[Clue] = None
     implicit_order = ["metadata", "grid", "clues", "notes"]
+    # Blank-line section order applies to a headingless file throughout, and
+    # to an explicit file until its first heading.
+    reading_implicitly = True
 
     def advance_implicit():
         nonlocal section
@@ -224,10 +242,13 @@ def parse(text: str) -> ParsedXd:
         if section_mode == "explicit":
             m = EXPLICIT_HEADER_RE.match(raw)
             if m:
+                reading_implicitly = False
                 raw_name = m.group(1)
                 name = raw_name.lower()
                 if name in EXPLICIT_SECTIONS:
                     section = EXPLICIT_SECTIONS[name]
+                    if section == "design" and not design_line:
+                        design_line = lineno
                     started = True
                     blank_run = 0
                     last_clue = None
@@ -240,12 +261,25 @@ def parse(text: str) -> ParsedXd:
                     unknown_sections.append((lineno, raw_name))
                 continue
 
+        # '## Design' in a headingless file: everything after it is design.
+        if section_mode == "implicit":
+            m = EXPLICIT_HEADER_RE.match(raw)
+            if m and m.group(1).lower() == "design":
+                section = "design"
+                if not design_line:
+                    design_line = lineno
+                started = True
+                blank_run = 0
+                last_clue = None
+                continue
+
         if not stripped:
             blank_run += 1
             # Implicit-mode section advance: 2+ blank lines, but only after
             # we've seen real content (otherwise leading blanks would skip
             # past metadata).
-            if section_mode == "implicit" and started and blank_run == 2:
+            if (reading_implicitly and started and blank_run == 2
+                    and section != "design"):
                 advance_implicit()
                 last_clue = None
             continue
@@ -256,9 +290,9 @@ def parse(text: str) -> ParsedXd:
         # Implicit-mode auto-recovery: if the current line's shape doesn't
         # match the current section, advance the section and let the
         # dispatch below process the line in the right place. Only fires
-        # in implicit mode (explicit '## Section' markers handle transitions
+        # while reading implicitly ('## Section' markers handle transitions
         # unambiguously). Emits XD019 to record the structural violation.
-        if section_mode == "implicit":
+        if reading_implicitly:
             cls = line_class[lineno0]
             if section == "metadata" and cls == "grid":
                 # Lookahead guards against single-word stray metadata lines:
@@ -367,6 +401,8 @@ def parse(text: str) -> ParsedXd:
 
         elif section == "notes":
             notes_lines.append(stripped)
+        elif section == "design":
+            design.append((lineno, raw))
         # else: section == "_unknown" — per spec, ignored entirely.
 
     return ParsedXd(
@@ -374,6 +410,7 @@ def parse(text: str) -> ParsedXd:
         headers=headers, grid=grid, clues=clues,
         notes_text="\n".join(notes_lines), parse_errors=parse_errors,
         unknown_sections=unknown_sections,
+        design=design, design_line=design_line,
     )
 
 
@@ -490,7 +527,16 @@ def parse_rebus_header(value: str) -> Dict[str, RebusExpansion]:
         k = k.strip()
         if len(k) != 1:
             continue
-        out[k] = parse_rebus_value(v)
+        exp = parse_rebus_value(v)
+        if k in out:
+            # v4 draft: a key given more than once ('1=O 1=A') accepts any
+            # of its values, the same as '1=O|A'.
+            prev = out[k]
+            exp = RebusExpansion(
+                across=prev.across + [a for a in exp.across if a not in prev.across],
+                down=prev.down + [d for d in exp.down if d not in prev.down],
+            )
+        out[k] = exp
     return out
 
 
@@ -929,7 +975,11 @@ _HTML_ENTITY_RE = re.compile(r"&(?:[a-zA-Z]{1,8}|#\d+|#x[0-9a-fA-F]+);")
 
 @rule("XD011", Severity.ERROR, "html-entity")
 def _(ctx):
+    # Design lines hold CSS-like values (image URLs) where '&...;' is data.
+    design_lines = {ln for ln, _raw in ctx.parsed.design}
     for i, line in enumerate(ctx.parsed.lines, 1):
+        if i in design_lines:
+            continue
         m = _HTML_ENTITY_RE.search(line)
         if m:
             yield finding("XD011", Severity.ERROR, i,
@@ -1225,6 +1275,7 @@ def _(ctx):
 HEADER_ORDER = [
     "title", "author", "editor", "copyright", "number", "date",
     "relation", "special", "rebus", "cluegroup", "description", "notes",
+    "xdversion",
 ]
 CANONICAL_HEADERS = set(HEADER_ORDER)
 
@@ -1545,6 +1596,377 @@ def _(ctx):
 
 
 # ---------------------------------------------------------------------------
+# Format version detection (v3 / v4)
+# ---------------------------------------------------------------------------
+# The v4 draft (xdformat doc/xd-format-v4.md) adds syntax that v3 files never
+# use, and drops some v3 syntax. A file's version is inferred from which of
+# those it uses: 'v4' (v4-only features), 'v3' (features v4 drops), 'mixed'
+# (both), or 'common' (neither, which is most of the corpus). The parser
+# reads every file the same way; detection only drives reporting
+# (--report-version), filtering (--only-version) and the XD40x rules.
+#
+# Not covered yet: the v4 answer rules (first ' ~ ' splits, first word is the
+# answer, several answers per line) and '.' as a block. Those change how
+# existing files read, so they wait for the spec to settle.
+
+# Closed xdown spans whose type character is new in v4.
+_V4_SPAN_TYPES = {
+    "~": "subscript", "^": "superscript", "=": "small-caps",
+    "@": "link", "!": "image", "\\": "literal", "#": "color",
+}
+_V4_SPAN_RE = re.compile(r"\{([~^=@!\\#])(.*?)\1\}")
+# v3 text spans ({/italic/} etc.) in a metadata value: v4 allows markup there.
+_V3_SPAN_RE = re.compile(r"\{([/*_-])(.+?)\1\}")
+_XDVERSION_RE = re.compile(r"^v?\d+(?:\.\d+)*(?:-[A-Za-z0-9.]+)?$")
+
+
+@dataclass
+class VersionInfo:
+    label: str                  # 'v3' | 'v4' | 'mixed' | 'common'
+    v4: Dict[str, int]          # v4 feature -> first line using it
+    v3: Dict[str, int]          # v3-only feature -> first line using it
+    declared: Optional[str]     # XdVersion header value, if any
+    declared_line: int
+
+
+VERSION_LABELS = ("v3", "v4", "mixed", "common")
+
+
+def _rebus_has_repeated_key(value: str) -> bool:
+    seen = set()
+    for part in re.split(r"[,\s]+", value.strip()):
+        k, eq, _ = part.partition("=")
+        k = k.strip()
+        if not eq or len(k) != 1:
+            continue
+        if k in seen:
+            return True
+        seen.add(k)
+    return False
+
+
+def detect_version(parsed: ParsedXd) -> VersionInfo:
+    v4: Dict[str, int] = {}
+    v3: Dict[str, int] = {}
+
+    def note(d, feat, line):
+        if feat not in d:
+            d[feat] = line
+
+    if parsed.design_line:
+        note(v4, "design-section", parsed.design_line)
+    for clue in parsed.clues:
+        for m in _V4_SPAN_RE.finditer(clue.body):
+            note(v4, _V4_SPAN_TYPES[m.group(1)], clue.line)
+    declared, declared_line = None, 0
+    for h in parsed.headers:
+        k = h.key.lower()
+        if k == "xdversion":
+            declared, declared_line = h.value, h.line
+            continue
+        for m in _V4_SPAN_RE.finditer(h.value):
+            note(v4, _V4_SPAN_TYPES[m.group(1)], h.line)
+        if _V3_SPAN_RE.search(h.value):
+            note(v4, "metadata-markup", h.line)
+        if k == "rebus" and _rebus_has_repeated_key(h.value):
+            note(v4, "rebus-repeated-key", h.line)
+        if k == "special":
+            note(v3, "special-header", h.line)
+        if k == "cluegroup":
+            note(v3, "cluegroup", h.line)
+    for clue in parsed.clues:
+        if clue.direction and clue.direction not in ("A", "D"):
+            note(v3, "cluegroup", clue.line)
+            break
+    for row in parsed.grid:
+        if WILDCARD_CHAR in row.cells:
+            note(v3, "dot-cell", row.line)
+            break
+
+    if v4 and v3:
+        label = "mixed"
+    elif v4:
+        label = "v4"
+    elif v3:
+        label = "v3"
+    elif declared and declared.lower().lstrip("v").startswith("4"):
+        label = "v4"
+    else:
+        label = "common"
+    return VersionInfo(label, v4, v3, declared, declared_line)
+
+
+def version_for(ctx: Ctx) -> VersionInfo:
+    info = getattr(ctx, "_version", None)
+    if info is None:
+        info = detect_version(ctx.parsed)
+        ctx._version = info
+    return info
+
+
+_V3_REPLACEMENT = {
+    "special-header": "v4 marks cells in a '## Design' section",
+    "cluegroup": "v4 drops the Cluegroup field",
+    "dot-cell": "'.' is a block in v4",
+}
+
+
+@rule("XD401", Severity.INFO, "uses-v4-feature")
+def _(ctx):
+    """One finding per v4-only feature the file uses. Informational by
+    default, so v4 files pass; --warn-v4 raises these to warnings."""
+    info = version_for(ctx)
+    for feat, line in info.v4.items():
+        yield finding("XD401", Severity.INFO, line,
+                      f"uses v4 feature '{feat}' (file reads as {info.label})")
+
+
+@rule("XD402", Severity.INFO, "uses-v3-only-feature")
+def _(ctx):
+    """One finding per feature that v4 drops or redefines. Informational by
+    default; --warn-deprecated raises these to warnings."""
+    info = version_for(ctx)
+    for feat, line in info.v3.items():
+        yield finding("XD402", Severity.INFO, line,
+                      f"uses '{feat}', which changes in v4 "
+                      f"({_V3_REPLACEMENT[feat]})")
+
+
+@rule("XD403", Severity.WARNING, "bad-xdversion-value")
+def _(ctx):
+    """XdVersion header whose value isn't a version ('4', 'v4', 'v4-exp')."""
+    info = version_for(ctx)
+    if info.declared is not None and not _XDVERSION_RE.match(info.declared):
+        yield finding("XD403", Severity.WARNING, info.declared_line,
+                      f"XdVersion {info.declared!r} is not a version "
+                      f"(e.g. 'v4' or 'v4-exp')")
+
+
+# ---------------------------------------------------------------------------
+# Design section (v4)
+# ---------------------------------------------------------------------------
+# Style definitions ('O { background: circle }'), then a design grid the
+# size of the puzzle grid marking styled cells by style character and
+# unstyled cells with '.'. Properties named 'x-...' are reserved for
+# not-yet-specified features and are accepted without checks.
+
+_DESIGN_RULE_START_RE = re.compile(r"\s*([^\s{},;:]\s*(?:,\s*[^\s{},;:]\s*)*)\{")
+_DESIGN_VALUES = {
+    "background": re.compile(r"^(circle|shaded)$"),
+    "background-image": re.compile(r"""^url\((['"]).*\1\)$""", re.S),
+    "background-size": re.compile(r"^[1-9]\d*\s+[1-9]\d*$"),
+    "bar-top": re.compile(r"^(true|false)$"),
+    "bar-left": re.compile(r"^(true|false)$"),
+}
+
+
+@dataclass
+class Design:
+    styles: Dict[str, Dict[str, Tuple[int, str]]]   # char -> prop -> (line, value)
+    grid: List[GridRow]
+    errors: List[Tuple[int, str]]                    # (line, message)
+
+
+def _split_outside_quotes(s: str, sep: str) -> Optional[List[str]]:
+    """Split on sep outside '...' or "..." quotes. None if a quote is
+    left open."""
+    parts, cur, quote = [], [], None
+    for ch in s:
+        if quote:
+            cur.append(ch)
+            if ch == quote:
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+            cur.append(ch)
+        elif ch == sep:
+            parts.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+    if quote:
+        return None
+    parts.append("".join(cur))
+    return parts
+
+
+def parse_design(lines: List[Tuple[int, str]]) -> Design:
+    """Parse design-section lines (as stored on ParsedXd.design) into
+    styles, the design grid, and syntax errors."""
+    styles: Dict[str, Dict[str, Tuple[int, str]]] = {}
+    errors: List[Tuple[int, str]] = []
+    if not lines:
+        return Design(styles, [], errors)
+    text = "\n".join(raw for _ln, raw in lines)
+    offsets = []  # (start offset in text, file line) per stored line
+    off = 0
+    for ln, raw in lines:
+        offsets.append((off, ln))
+        off += len(raw) + 1
+
+    def line_at(pos):
+        line = offsets[0][1]
+        for o, ln in offsets:
+            if o > pos:
+                break
+            line = ln
+        return line
+
+    pos = 0
+    while True:
+        m = _DESIGN_RULE_START_RE.match(text, pos)
+        if not m:
+            break
+        start_line = line_at(m.start(1))
+        chars = [c.strip() for c in m.group(1).split(",")]
+        label = ", ".join(chars)
+        # Find the closing '}' outside quotes.
+        i, quote = m.end(), None
+        while i < len(text):
+            ch = text[i]
+            if quote:
+                if ch == quote:
+                    quote = None
+            elif ch in "'\"":
+                quote = ch
+            elif ch == "}":
+                break
+            i += 1
+        if i >= len(text):
+            errors.append((start_line, f"style for {label} has no closing '}}'"))
+            return Design(styles, [], errors)
+        body = text[m.end():i]
+        pos = i + 1
+        decls = _split_outside_quotes(body, ";")
+        if decls is None:
+            errors.append((start_line, f"unclosed quote in style for {label}"))
+            continue
+        for decl in decls:
+            if not decl.strip():
+                continue
+            key, colon, value = decl.partition(":")
+            key, value = key.strip(), value.strip()
+            if not colon or not key:
+                errors.append((start_line, f"declaration {decl.strip()!r} "
+                                           f"in style for {label} has no 'key: value'"))
+                continue
+            commas = _split_outside_quotes(value, ",")
+            if commas is not None and len(commas) > 1:
+                errors.append((start_line, f"comma in {key!r} value {value!r} "
+                                           f"(separate counts with a space)"))
+                continue
+            for c in chars:
+                styles.setdefault(c, {})[key.lower()] = (start_line, value)
+
+    grid = []
+    for o, ln in offsets:
+        raw = text[o:o + len(text[o:].split("\n", 1)[0])]
+        if o >= pos:
+            if raw.strip():
+                grid.append(GridRow(line=ln, cells=raw.strip()))
+        elif o + len(raw) >= pos and raw[pos - o:].strip():
+            errors.append((ln, f"text after the last style's closing '}}': "
+                               f"{raw[pos - o:].strip()!r}"))
+    return Design(styles, grid, errors)
+
+
+def design_for(ctx: Ctx) -> Optional[Design]:
+    if not ctx.parsed.design_line:
+        return None
+    d = getattr(ctx, "_design", None)
+    if d is None:
+        d = parse_design(ctx.parsed.design)
+        ctx._design = d
+    return d
+
+
+@rule("XD410", Severity.INFO, "design-in-headingless-file")
+def _(ctx):
+    """A '## Design' section in a file whose other sections have no
+    headings. The v4 draft requires headings for a design section; gxd
+    accepts a trailing design section as a preview convention."""
+    if ctx.parsed.design_line and ctx.parsed.section_mode == "implicit":
+        yield finding("XD410", Severity.INFO, ctx.parsed.design_line,
+                      "'## Design' in a file without section headings "
+                      "(v4 expects '## Metadata', '## Grid', '## Clues')")
+
+
+@rule("XD411", Severity.WARNING, "design-syntax")
+def _(ctx):
+    d = design_for(ctx)
+    if d is None:
+        return
+    for line, msg in d.errors:
+        yield finding("XD411", Severity.WARNING, line, f"design: {msg}")
+    if not d.styles and not d.grid and not d.errors:
+        yield finding("XD411", Severity.WARNING, ctx.parsed.design_line,
+                      "design section is empty")
+
+
+@rule("XD412", Severity.WARNING, "design-grid-shape")
+def _(ctx):
+    """The design grid must match the puzzle grid row for row."""
+    d = design_for(ctx)
+    if d is None or not ctx.parsed.grid:
+        return
+    if not d.grid:
+        if d.styles:
+            yield finding("XD412", Severity.WARNING, ctx.parsed.design_line,
+                          "design has styles but no design grid")
+        return
+    want_h = len(ctx.parsed.grid)
+    if len(d.grid) != want_h:
+        yield finding("XD412", Severity.WARNING, d.grid[0].line,
+                      f"design grid has {len(d.grid)} row(s), "
+                      f"puzzle grid has {want_h}")
+    for drow, prow in zip(d.grid, ctx.parsed.grid):
+        if len(drow.cells) != len(prow.cells):
+            yield finding("XD412", Severity.WARNING, drow.line,
+                          f"design row width {len(drow.cells)} != puzzle row "
+                          f"width {len(prow.cells)}")
+
+
+@rule("XD413", Severity.WARNING, "design-undefined-style")
+def _(ctx):
+    d = design_for(ctx)
+    if d is None:
+        return
+    seen = set()
+    for row in d.grid:
+        for col, ch in enumerate(row.cells, 1):
+            if ch == "." or ch in d.styles or ch in seen:
+                continue
+            seen.add(ch)
+            yield finding("XD413", Severity.WARNING, row.line,
+                          f"design grid uses {ch!r} at col {col}, "
+                          f"which has no style")
+
+
+@rule("XD414", Severity.WARNING, "design-bad-property")
+def _(ctx):
+    """Unknown design property, or a known one with a value the v4 draft
+    doesn't define. 'x-' properties are accepted as-is."""
+    d = design_for(ctx)
+    if d is None:
+        return
+    reported = set()
+    for _ch, props in d.styles.items():
+        for key, (line, value) in props.items():
+            if key.startswith("x-") or (line, key, value) in reported:
+                continue
+            reported.add((line, key, value))
+            pat = _DESIGN_VALUES.get(key)
+            if pat is None:
+                yield finding("XD414", Severity.WARNING, line,
+                              f"unknown design property {key!r} (prefix "
+                              f"not-yet-specified ones with 'x-')")
+            elif not pat.match(value):
+                yield finding("XD414", Severity.WARNING, line,
+                              f"design property {key!r} has value {value!r}, "
+                              f"not one the v4 draft defines")
+
+
+# ---------------------------------------------------------------------------
 # Rules - info
 # ---------------------------------------------------------------------------
 
@@ -1695,9 +2117,10 @@ def _(ctx):
     """Run of 2+ ASCII spaces between non-space characters. puz2xd's
     decode() collapses these on import (re.sub(r'\\s+', ' ', s)); files
     that escaped the collapse retain them. Skips grid rows."""
-    grid_lines = {row.line for row in ctx.parsed.grid}
+    skip = ({row.line for row in ctx.parsed.grid}
+            | {ln for ln, _raw in ctx.parsed.design})
     for i, line in enumerate(ctx.parsed.lines, 1):
-        if i in grid_lines:
+        if i in skip:
             continue
         m = _MULTI_SPACE_RE.search(line)
         if m:
@@ -1889,7 +2312,13 @@ def _(text):
         if out != s:
             count += 1
         return out
-    return _HTML_ENTITY_RE.sub(repl, text), count
+    if "## " not in text:
+        return _HTML_ENTITY_RE.sub(repl, text), count
+    design_lines = {ln for ln, _raw in parse(text).design}
+    out = []
+    for i, line in enumerate(text.splitlines(keepends=True), 1):
+        out.append(line if i in design_lines else _HTML_ENTITY_RE.sub(repl, line))
+    return "".join(out), count
 
 
 @fixer("XD208")
@@ -1908,11 +2337,12 @@ def _(text):
     """Collapse interior runs of 2+ spaces to a single space, on every line
     except grid rows. Mirrors the trailing whitespace-collapse in decode()."""
     parsed = parse(text)
-    grid_lines = {row.line for row in parsed.grid}
+    skip = ({row.line for row in parsed.grid}
+            | {ln for ln, _raw in parsed.design})
     count = 0
     out = []
     for i, line in enumerate(text.splitlines(keepends=True), 1):
-        if i in grid_lines:
+        if i in skip:
             out.append(line)
             continue
         new, n = _MULTI_SPACE_RE.subn(" ", line)
@@ -2786,8 +3216,16 @@ def _progress_enabled(arg: str, stream=None) -> bool:
 # Main
 # ---------------------------------------------------------------------------
 
-def run_checks(ctx: Ctx, active_codes):
-    """Yield findings from the parser plus all active rules."""
+def run_checks(ctx: Ctx, active_codes, promote=None):
+    """Yield findings from the parser plus all active rules. promote maps
+    a rule code to the severity its findings are raised to (--warn-v4)."""
+    for f in _run_checks(ctx, active_codes):
+        if promote and f.code in promote and promote[f.code].rank > f.severity.rank:
+            f = Finding(f.code, promote[f.code], f.line, f.message)
+        yield f
+
+
+def _run_checks(ctx: Ctx, active_codes):
     for f in ctx.parsed.parse_errors:
         if active_codes is None or f.code in active_codes:
             yield f
@@ -2804,6 +3242,32 @@ def run_checks(ctx: Ctx, active_codes):
 def format_finding(path, f: Finding) -> str:
     loc = f"{path}:{f.line}" if f.line else path
     return f"{loc}\t{f.severity.value}\t{f.code}\t{f.message}"
+
+
+def _report_versions(source, total, args):
+    """--report-version: one line per file, 'path<TAB>version<TAB>v4
+    features<TAB>v3-only features', then a count per version on stderr."""
+    counts = {label: 0 for label in VERSION_LABELS}
+    progress = _Progress(total, _progress_enabled(args.progress))
+    for path, ctx in source:
+        progress.tick(path)
+        info = version_for(ctx)
+        counts[info.label] += 1
+        v4 = ",".join(info.v4) or "-"
+        v3 = ",".join(info.v3) or "-"
+        declared = f"\tXdVersion={info.declared}" if info.declared is not None else ""
+        print(f"{path}\t{info.label}\tv4={v4}\tv3={v3}{declared}")
+    progress.done()
+    if not args.quiet:
+        summary = ", ".join(f"{label} {n}" for label, n in counts.items())
+        print(f"\n{sum(counts.values())} file(s): {summary}", file=sys.stderr)
+    return 0
+
+
+def _filter_versions(source, labels):
+    for path, ctx in source:
+        if version_for(ctx).label in labels:
+            yield path, ctx
 
 
 def _run_fix_mode(args, total, source, active_codes):
@@ -2861,7 +3325,7 @@ def _run_fix_mode(args, total, source, active_codes):
                 fixed_ctx = Ctx(filename=path, text=new_text, parsed=fixed_parsed)
             else:
                 fixed_ctx = ctx
-            for f in run_checks(fixed_ctx, active_codes):
+            for f in run_checks(fixed_ctx, active_codes, args.promote):
                 if f.severity.rank < gate_rank:
                     continue
                 print(format_finding(path, f))
@@ -2932,6 +3396,17 @@ def main():
                     default="auto",
                     help="progress reporting on stderr (default: auto = on "
                          "when stderr is a tty)")
+    ap.add_argument("--report-version", action="store_true",
+                    help="print each file's detected format version "
+                         "(v3, v4, mixed, common) and the features behind "
+                         "it, instead of linting")
+    ap.add_argument("--only-version", default="",
+                    help="comma-separated versions to keep (v3, v4, mixed, "
+                         "common); other files are skipped")
+    ap.add_argument("--warn-v4", action="store_true",
+                    help="report v4 features (XD401) as warnings")
+    ap.add_argument("--warn-deprecated", action="store_true",
+                    help="report v3 features that v4 drops (XD402) as warnings")
     ap.add_argument("-q", "--quiet", action="store_true",
                     help="suppress trailing summary line and live progress; "
                          "findings and warnings still print")
@@ -3003,6 +3478,18 @@ def main():
         else:
             active = active - experimental_codes
 
+    args.promote = {}
+    if args.warn_v4:
+        args.promote["XD401"] = Severity.WARNING
+    if args.warn_deprecated:
+        args.promote["XD402"] = Severity.WARNING
+
+    only_versions = {v.strip() for v in args.only_version.split(",") if v.strip()}
+    bad = only_versions - set(VERSION_LABELS)
+    if bad:
+        ap.error(f"unknown version(s) in --only-version: {','.join(sorted(bad))} "
+                 f"(choose from {', '.join(VERSION_LABELS)})")
+
     if args.fix and args.base:
         ap.error("--fix is incompatible with --base "
                  "(which reads git blobs, not files on disk)")
@@ -3048,6 +3535,12 @@ def main():
     else:
         ap.error("give --base for git-diff mode, or explicit .xd paths")
 
+    if only_versions:
+        source = _filter_versions(source, only_versions)
+
+    if args.report_version:
+        return _report_versions(source, total, args)
+
     if args.fix:
         return _run_fix_mode(args, total, source, active)
 
@@ -3060,7 +3553,7 @@ def main():
     for path, ctx in source:
         checked += 1
         progress.tick(path)
-        for f in run_checks(ctx, active):
+        for f in run_checks(ctx, active, args.promote):
             if f.severity.rank < gate_rank:
                 continue
             print(format_finding(path, f))
