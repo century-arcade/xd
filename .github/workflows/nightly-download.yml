@@ -128,18 +128,18 @@ jobs:
           year=$(date -u +%Y)
           aws s3 cp "$WWWZIP" "${BUCKET}/${year}/$(basename "$WWWZIP")"
 
-      - name: Register source zip in archives.tsv
+      - name: Register source zip in source-archives.tsv
         # Adds the zip's row (name, sha256, bytes, producer, ...) to gxd's
         # register of source archives. This job doesn't commit gxd yet, so the
         # row only shows here; once it does, it goes in with the receipts.
         if: ${{ always() && vars.AWS_S3_BUCKET != '' }}
         run: |
-          if [ -z "$WWWZIP" ] || [ ! -f "$WWWZIP" ] || [ ! -f gxd/scripts/archives.py ]; then
+          if [ -z "$WWWZIP" ] || [ ! -f "$WWWZIP" ] || [ ! -f gxd/scripts/source_archives.py ]; then
             echo "no source zip, or gxd has no archive register; skipping"
             exit 0
           fi
           python gxd/scripts/make-source-archive.py "$WWWZIP" --register --producer "xd nightly downloader"
-          grep -F "$(basename "$WWWZIP")" gxd/archives.tsv
+          grep -F "$(basename "$WWWZIP")" gxd/source-archives.tsv
 
       - name: Upload artifacts
         if: always()
