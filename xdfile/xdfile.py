@@ -56,6 +56,10 @@ SECTION_SEP = EOL + EOL
 # section.  Names are case-insensitive; sections other than these are ignored.
 SECTION_HEADING_RE = re.compile(r'^\s*##\s+(.+?)\s*$')
 SECTION_NUMBERS = {'metadata': 1, 'grid': 2, 'clues': 3}
+
+# Spec 3.0: clue metadata, on the line after its clue: 'A1 ^Refs: A2 D4'.
+# The reference has no '.', which is what tells it from a clue line.
+CLUE_METADATA_RE = re.compile(r'^([A-Za-z][\w-]*|\d+)\s+\^([A-Za-z][\w-]*)\s*:\s*(.*)$')
 HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'number', 'date',
                 'relation', 'special', 'rebus', 'cluegroup', 'description', 'notes']
 
@@ -69,6 +73,7 @@ class xdfile:
         self.headers = {}  # [key] -> value or list of values
         self.grid = []  # list of string rows
         self.clues = []  # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
+        self.clue_metadata = {}  # [index in self.clues] -> list of (key, value)
         self.notes = ""
 
         if filename:
@@ -357,6 +362,15 @@ class xdfile:
                 # grid second
                 self.grid.append(line)
             elif section == 3:
+                m = CLUE_METADATA_RE.match(line)
+                if m:
+                    # belongs to the clue just above; metadata anywhere else
+                    # is ignored here (xdlint reports it as XD021)
+                    ref, key, value = m.groups()
+                    if self.clues and ref == "%s%s" % self.clues[-1][0]:
+                        self.clue_metadata.setdefault(len(self.clues) - 1, []).append((key, value.strip()))
+                    continue
+
                 # across or down clues
                 answer_idx = line.rfind("~")
                 if answer_idx > 0:
@@ -418,7 +432,7 @@ class xdfile:
         # clues (section 3)
         if emit_clues:
             prevdir = None
-            for pos, clue, answer in self.clues:
+            for i, (pos, clue, answer) in enumerate(self.clues):
                 if not answer:
                     r += EOL
                     continue
@@ -432,6 +446,10 @@ class xdfile:
                 cluetext = " ".join(cluetext.splitlines())
                 r += "%s%s. %s ~ %s" % (cluedir, cluenum, cluetext, answer)
                 r += EOL
+
+                for key, value in self.clue_metadata.get(i, []):
+                    r += "%s%s ^%s: %s" % (cluedir, cluenum, key, value)
+                    r += EOL
 
             if self.notes:
                 r += EOL + EOL
@@ -485,6 +503,8 @@ def _xd_to_dict(xd):
         'pubid': xd._publication_id,
         # JSON has no tuples; lists round-trip back to tuples on load
         'clues': [[list(pos), clue, answer] for pos, clue, answer in xd.clues],
+        # JSON object keys are strings; indexes go back to ints on load
+        'clue_metadata': {str(i): [list(kv) for kv in kvs] for i, kvs in xd.clue_metadata.items()},
     }
 
 
@@ -497,6 +517,8 @@ def _dict_to_xd(d):
     xd.notes = d['notes']
     xd._publication_id = d['pubid']
     xd.clues = [(tuple(pos), clue, answer) for pos, clue, answer in d['clues']]
+    # .get: caches written before clue metadata was parsed don't have it
+    xd.clue_metadata = {int(i): [tuple(kv) for kv in kvs] for i, kvs in d.get('clue_metadata', {}).items()}
     return xd
 
 
