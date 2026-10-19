@@ -51,6 +51,15 @@ ASIAN_OPEN_CHAR = '＿'  # U+FF3F
 NON_ANSWER_CHARS = [BLOCK_CHAR, OPEN_CHAR, ASIAN_BLOCK_CHAR, ASIAN_OPEN_CHAR]  # UNKNOWN_CHAR is a wildcard answer character
 EOL = '\n'
 SECTION_SEP = EOL + EOL
+
+# Spec 2.0: a '## [Section Name]' line declares the lines after it as that
+# section.  Names are case-insensitive; sections other than these are ignored.
+SECTION_HEADING_RE = re.compile(r'^\s*##\s+(.+?)\s*$')
+SECTION_NUMBERS = {'metadata': 1, 'grid': 2, 'clues': 3}
+
+# Spec 3.0: clue metadata, on the line after its clue: 'A1 ^Refs: A2 D4'.
+# The reference has no '.', which is what tells it from a clue line.
+CLUE_METADATA_RE = re.compile(r'^([A-Za-z][\w-]*|\d+)\s+\^([A-Za-z][\w-]*)\s*:\s*(.*)$')
 HEADER_ORDER = ['title', 'author', 'editor', 'copyright', 'number', 'date',
                 'relation', 'special', 'rebus', 'cluegroup', 'description', 'notes']
 
@@ -64,6 +73,7 @@ class xdfile:
         self.headers = {}  # [key] -> value or list of values
         self.grid = []  # list of string rows
         self.clues = []  # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
+        self.clue_metadata = {}  # [index in self.clues] -> list of (key, value)
         self.notes = ""
 
         if filename:
@@ -271,15 +281,26 @@ class xdfile:
             if clueid == posdir + str(n):
                 return answer
 
-    def parse_xd(self, xd_contents):
+    @staticmethod
+    def _heading_section(line):
+        """Section number (1-3) for a '## Metadata/Grid/Clues' heading line,
+        0 for any other heading, None if the line isn't a heading."""
+        m = SECTION_HEADING_RE.match(line)
+        if not m:
+            return None
+        return SECTION_NUMBERS.get(m.group(1).lower(), 0)
+
+    @staticmethod
+    def _implicit_sections(lines):
+        """Yield (section, line) for a file without headings: sections are
+        delineated by two or more blank lines, in a fixed order."""
         # placeholders, actual numbering starts at 1
         section = 0
-        subsection = 0
 
         # fake blank line at top to allow leading actual blank lines before headers
         nblanklines = 2
 
-        for line in xd_contents.splitlines():
+        for line in lines:
             # leading whitespace is decorative
             line = line.strip()
 
@@ -287,15 +308,39 @@ class xdfile:
             if not line:
                 nblanklines += 1
                 continue
-            else:
-                if nblanklines >= 2:
-                    section += 1
-                    subsection = 1
-                    nblanklines = 0
-                elif nblanklines == 1:
-                    subsection += 1
-                    nblanklines = 0
+            if nblanklines >= 2:
+                section += 1
+            nblanklines = 0
+            yield section, line
 
+    @classmethod
+    def _explicit_sections(cls, lines):
+        """Yield (section, line) for a file with '## Section' headings.
+        Order in the file is unimportant, so metadata is yielded first, then
+        grid, then clues.  Lines under other headings, and lines before the
+        first heading, are ignored."""
+        by_section = {1: [], 2: [], 3: []}
+        section = 0
+        for line in lines:
+            heading = cls._heading_section(line)
+            if heading is not None:
+                section = heading
+                continue
+            line = line.strip()
+            if line and section:
+                by_section[section].append(line)
+        for section in (1, 2, 3):
+            for line in by_section[section]:
+                yield section, line
+
+    def parse_xd(self, xd_contents):
+        lines = xd_contents.splitlines()
+        if any(self._heading_section(line) for line in lines):
+            sectioned = self._explicit_sections(lines)
+        else:
+            sectioned = self._implicit_sections(lines)
+
+        for section, line in sectioned:
             if section == 1:
                 # headers first
                 if ":" in line:
@@ -317,6 +362,15 @@ class xdfile:
                 # grid second
                 self.grid.append(line)
             elif section == 3:
+                m = CLUE_METADATA_RE.match(line)
+                if m:
+                    # belongs to the clue just above; metadata anywhere else
+                    # is ignored here (xdlint reports it as XD021)
+                    ref, key, value = m.groups()
+                    if self.clues and ref == "%s%s" % self.clues[-1][0]:
+                        self.clue_metadata.setdefault(len(self.clues) - 1, []).append((key, value.strip()))
+                    continue
+
                 # across or down clues
                 answer_idx = line.rfind("~")
                 if answer_idx > 0:
@@ -378,7 +432,7 @@ class xdfile:
         # clues (section 3)
         if emit_clues:
             prevdir = None
-            for pos, clue, answer in self.clues:
+            for i, (pos, clue, answer) in enumerate(self.clues):
                 if not answer:
                     r += EOL
                     continue
@@ -392,6 +446,10 @@ class xdfile:
                 cluetext = " ".join(cluetext.splitlines())
                 r += "%s%s. %s ~ %s" % (cluedir, cluenum, cluetext, answer)
                 r += EOL
+
+                for key, value in self.clue_metadata.get(i, []):
+                    r += "%s%s ^%s: %s" % (cluedir, cluenum, key, value)
+                    r += EOL
 
             if self.notes:
                 r += EOL + EOL
@@ -445,6 +503,8 @@ def _xd_to_dict(xd):
         'pubid': xd._publication_id,
         # JSON has no tuples; lists round-trip back to tuples on load
         'clues': [[list(pos), clue, answer] for pos, clue, answer in xd.clues],
+        # JSON object keys are strings; indexes go back to ints on load
+        'clue_metadata': {str(i): [list(kv) for kv in kvs] for i, kvs in xd.clue_metadata.items()},
     }
 
 
@@ -457,6 +517,8 @@ def _dict_to_xd(d):
     xd.notes = d['notes']
     xd._publication_id = d['pubid']
     xd.clues = [(tuple(pos), clue, answer) for pos, clue, answer in d['clues']]
+    # .get: caches written before clue metadata was parsed don't have it
+    xd.clue_metadata = {int(i): [tuple(kv) for kv in kvs] for i, kvs in d.get('clue_metadata', {}).items()}
     return xd
 
 
