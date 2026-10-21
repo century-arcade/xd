@@ -2002,3 +2002,365 @@ class TestNonUtf8Decode:
         assert len(findings) == 1
         assert findings[0].code == "XD022"
         assert "�" in text  # replacement char
+
+
+# ---------------------------------------------------------------------------
+# --profile gxd
+# ---------------------------------------------------------------------------
+
+GXD_CODES = {"XD801", "XD802", "XD803", "XD804", "XD805", "XD806", "XD807",
+             "XD808", "XD809", "XD810"}
+
+
+def gxd_findings(text, filename="t.xd", is_new=False, code=None):
+    ctx = make_ctx(text, filename)
+    ctx.profile = "gxd"
+    ctx.is_new = is_new
+    found = list(xdlint.run_checks(ctx, None))
+    return [f for f in found if code is None or f.code == code]
+
+
+def plain_findings(text, filename="t.xd"):
+    return list(xdlint.run_checks(make_ctx(text, filename), None))
+
+
+# Headers like a nightly import's, plus the problems the gxd rules look for.
+GXD_DIRTY = textwrap.dedent("""\
+    Title: October 06, 2026
+    Author: by Byron Walden & Ben Tausig
+    Copyright: (c) AV Club; Edited by Ben Tausig
+    Date: 2026-10-06
+    Meta: Name a rapper ~ DRAKE
+
+
+    ABC
+    D#E
+    FGH
+
+
+    A1. First [sic] ~ ABC
+    A3. [XXX] ~ FGH
+
+    D1. Down {/one/} ~ ADF
+    D2. Down two ~ CEH
+""")
+
+
+class TestGxdRules:
+    def test_rules_are_registered_under_the_profile(self):
+        assert {c for c, p in xdlint.RULE_PROFILE.items() if p == "gxd"} == GXD_CODES
+        for code in GXD_CODES:
+            assert code in xdlint.RULE_DOC
+            sev = next(s for (c, s, _, _, _) in xdlint.RULES if c == code)
+            assert sev != xdlint.Severity.ERROR
+
+    def test_xd801_by_prefix(self):
+        text = SIMPLE.replace("Author: A", "Author: By Mike Shenk")
+        assert [f.severity for f in gxd_findings(text, code="XD801")] == [
+            xdlint.Severity.WARNING]
+        assert gxd_findings(SIMPLE.replace("Author: A", "Author: Byron Walden"),
+                            code="XD801") == []
+
+    def test_xd801_fixer(self):
+        text = SIMPLE.replace("Author: A", "Author: by Matt Gaffney")
+        new, n = xdlint.FIXERS["XD801"][1](text)
+        assert n == 1 and "Author: Matt Gaffney\n" in new
+        assert xdlint.FIXERS["XD801"][1](new) == (new, 0)
+
+    def test_xd103_is_warning_under_profile(self):
+        text = SIMPLE.replace("Author: A", "Author: Amanda Rafkin; edited by Kelsey Dixon")
+        assert [f.severity for f in gxd_findings(text, code="XD103")] == [
+            xdlint.Severity.WARNING]
+        assert [f.severity for f in plain_findings(text) if f.code == "XD103"] == [
+            xdlint.Severity.INFO]
+
+    def test_xd103_profile_also_matches_semicolon_ed(self):
+        text = SIMPLE.replace("Author: A", "Author: By Alfio Micci; Ed. By Charles Preston")
+        assert len(gxd_findings(text, code="XD103")) == 1
+        assert [f for f in plain_findings(text) if f.code == "XD103"] == []
+        new, _ = xdlint.apply_fixes(text, {"XD103"}, False, profile="gxd")
+        assert "Author: Alfio Micci\nEditor: Charles Preston\n" in new
+        assert xdlint.apply_fixes(text, {"XD103"}, False) == (text, {})
+
+    def test_xd103_fixer_on_nightly_bylines(self):
+        for byline, author, editor in [
+            ("by Byron Walden, edited by Ben Tausig", "Byron Walden", "Ben Tausig"),
+            ("Amanda Rafkin; edited by Kelsey Dixon", "Amanda Rafkin", "Kelsey Dixon"),
+            ("S.N., edited by Stanley Newman", "S.N.", "Stanley Newman"),
+        ]:
+            text = SIMPLE.replace("Author: A", f"Author: {byline}")
+            new, _ = xdlint.apply_fixes(text, {"XD103", "XD801"}, False, profile="gxd")
+            assert f"Author: {author}\nEditor: {editor}\n" in new, byline
+
+    def test_xd802_editor_in_copyright(self):
+        text = SIMPLE.replace("Author: A", "Author: A\nCopyright: (c) AV Club; Edited by Ben Tausig")
+        assert len(gxd_findings(text, code="XD802")) == 1
+        new, n = xdlint.FIXERS["XD802"][1](text)
+        assert n == 1
+        assert "Author: A\nEditor: Ben Tausig\nCopyright: (c) AV Club\n" in new
+        assert xdlint.FIXERS["XD802"][1](new) == (new, 0)
+
+    def test_xd802_no_false_positive_on_reserved(self):
+        text = SIMPLE.replace("Author: A", "Author: A\nCopyright: (c) 2024 X. All rights reserved.")
+        assert gxd_findings(text, code="XD802") == []
+
+    def test_xd802_fixer_keeps_conflicting_editor(self):
+        text = SIMPLE.replace(
+            "Author: A", "Author: A\nEditor: Someone Else\nCopyright: Edited by Ben Tausig")
+        assert xdlint.FIXERS["XD802"][1](text) == (text, 0)
+
+    def test_xd802_fixer_skips_unclear_name(self):
+        text = SIMPLE.replace(
+            "Author: A", "Author: A\nCopyright: Edited by the staff of the magazine")
+        assert len(gxd_findings(text, code="XD802")) == 1
+        assert xdlint.FIXERS["XD802"][1](text) == (text, 0)
+
+    @pytest.mark.parametrize("fn,number,hits", [
+        ("cc-0948.xd", None, 1),
+        ("cc-0948.xd", "948", 0),
+        ("cc-0948.xd", "No. 948", 0),
+        ("cc-0948.xd", "#0948", 0),
+        ("cc-0948.xd", "949", 1),
+        ("nediger-219_5.xd", "219.5", 0),
+        ("dab-279a.xd", "279", 0),
+        ("dab-279a.xd", None, 1),
+        ("nytpack-16023.xd", None, 0),       # an NYT id, not a series number
+        ("cc-unshelved-ab12-x.xd", None, 0),  # provisional name
+        ("nyt2024-01-01.xd", None, 0),       # dated, not numbered
+    ])
+    def test_xd803_numbered_xdid(self, fn, number, hits):
+        text = SIMPLE if number is None else SIMPLE.replace(
+            "Author: A", f"Author: A\nNumber: {number}")
+        assert len(gxd_findings(text, filename=f"gxd/x/{fn}", code="XD803")) == hits
+
+    def test_xd804_meta_answer_in_notes(self):
+        meta = SIMPLE.replace("Author: A", "Author: A\nMeta: Name a rapper ~ DRAKE")
+        assert gxd_findings(meta + "\n\nThe answer is Drake.\n", code="XD804")
+        assert gxd_findings(meta + "\n\nName a rapper.\n", code="XD804") == []
+        # A Notes: header counts as notes too.
+        assert gxd_findings(meta.replace("Meta:", "Notes: drake!\nMeta:"), code="XD804")
+        # Whole words only; short answers and answers in the prompt skipped.
+        assert gxd_findings(meta + "\n\nDrakes are ducks.\n", code="XD804") == []
+        short = SIMPLE.replace("Author: A", "Author: A\nMeta: Pick one ~ ONE")
+        assert gxd_findings(short + "\n\nOne of these.\n", code="XD804") == []
+        joke = SIMPLE.replace(
+            "Author: A",
+            "Author: A\nMeta: The meta answer is a three-word phrase. ~ THE META ANSWER")
+        assert gxd_findings(joke + "\n\nThe meta answer is a three-word phrase.\n",
+                            code="XD804") == []
+
+    def test_xd805_markup_outside_clues(self):
+        text = SIMPLE.replace("Title: T", "Title: {/T/}") + "\n\n{*Notepad:*} hi\n"
+        f = gxd_findings(text, code="XD805")
+        assert [x.line for x in f] == [1, len(text.splitlines())]
+        # Markup in clues is fine.
+        clue = SIMPLE.replace("A1. First", "A1. {/First/}")
+        assert gxd_findings(clue, code="XD805") == []
+
+    def test_xd806_sic_is_info(self):
+        text = SIMPLE.replace("A1. First", "A1. First [SIC]")
+        assert [f.severity for f in gxd_findings(text, code="XD806")] == [
+            xdlint.Severity.INFO]
+
+    def test_xd807_placeholder_without_notes(self):
+        text = SIMPLE.replace("A1. First", "A1. [XXX]").replace("A3. Second", "A3. [XXX]")
+        f = gxd_findings(text, code="XD807")
+        assert len(f) == 1 and "1 more" in f[0].message
+        assert gxd_findings(text + "\n\nTwo clues were illegible.\n", code="XD807") == []
+
+    def test_xd808_provenance(self):
+        for note in ["Litzed by Jim", "OCR errors possible", "Downloaded from x.com",
+                     "converted by puz2xd", "Scanned by me"]:
+            f = gxd_findings(SIMPLE + "\n\n" + note + "\n", code="XD808")
+            assert [x.severity for x in f] == [xdlint.Severity.INFO], note
+        assert gxd_findings(SIMPLE + "\n\nA theme about color.\n", code="XD808") == []
+
+    def test_xd809_ampersand_new_only(self):
+        text = SIMPLE.replace("Author: A", "Author: A & B")
+        assert gxd_findings(text, code="XD809") == []
+        assert len(gxd_findings(text, is_new=True, code="XD809")) == 1
+
+    @pytest.mark.parametrize("title,hits", [
+        ("Tuesday, October 6, 2026", 0),
+        ("October 06, 2026", 1),
+        ("October 6, 2026", 1),
+        ("Tue, Oct 6, 2026", 1),
+        ("Tuesday, October  6, 2026", 1),
+        ("10/6/2026", 1),
+        # Outlet label + date: an open question in EDITORIAL.md, and a
+        # label can't be told from a puzzle name, so not flagged.
+        ("The Crossword: Tuesday, October 6, 2026", 0),
+        ("LA Times, Tue, Oct 6, 2026", 0),
+        ("Palme d'Or, Tue. Oct. 6, 2026", 0),
+        ("The Crossword: Tuesday, October 13, 2026 - Everybody's invited", 0),
+        ("Flights of Fancy", 0),
+        ("Judge's Crossword Puzzle No. 67", 0),
+    ])
+    def test_xd810_date_title(self, title, hits):
+        text = SIMPLE.replace("Title: T", f"Title: {title}").replace(
+            "Date: 2024-01-01", "Date: 2026-10-06")
+        assert len(gxd_findings(text, is_new=True, code="XD810")) == hits
+        assert gxd_findings(text, is_new=False, code="XD810") == []
+
+    def test_xd810_suggests_title_from_date(self):
+        text = SIMPLE.replace("Title: T", "Title: October 06, 2026").replace(
+            "Date: 2024-01-01", "Date: 2026-10-06")
+        (f,) = gxd_findings(text, is_new=True, code="XD810")
+        assert "'Tuesday, October 6, 2026'" in f.message
+
+    def test_xd016_is_info_under_profile(self):
+        blank = SIMPLE.replace("ABC\nD#E\nFGH", "...\n.#.\n...")
+        assert [f.severity for f in gxd_findings(blank, code="XD016")] == [
+            xdlint.Severity.INFO]
+        assert [f.severity for f in plain_findings(blank) if f.code == "XD016"] == [
+            xdlint.Severity.ERROR]
+
+    def test_no_profile_runs_no_gxd_rules(self):
+        assert not {f.code for f in plain_findings(GXD_DIRTY, "gxd/x/cc-0948.xd")} & GXD_CODES
+        ctx = make_ctx(GXD_DIRTY, "gxd/x/cc-0948.xd")
+        ctx.is_new = True
+        assert not {f.code for f in xdlint.run_checks(ctx, None)} & GXD_CODES
+
+    def test_profile_finds_everything_in_dirty_sample(self):
+        codes = {f.code for f in gxd_findings(GXD_DIRTY, "gxd/x/cc-0948.xd", is_new=True)}
+        assert {"XD801", "XD802", "XD803", "XD806", "XD807",
+                "XD809", "XD810"} <= codes
+        # Its markup is in a clue, which is allowed.
+        assert "XD805" not in codes
+
+    def test_no_profile_fix_does_not_run_gxd_fixers(self):
+        text = SIMPLE.replace("Author: A", "Author: By Mike Shenk\nCopyright: Edited by Ben Tausig")
+        new, counts = xdlint.apply_fixes(text, None, False)
+        assert "Author: By Mike Shenk" in new and "Edited by" in new
+        assert not set(counts) & GXD_CODES
+        new, counts = xdlint.apply_fixes(text, None, False, profile="gxd")
+        assert "Author: Mike Shenk" in new and "Editor: Ben Tausig" in new
+
+
+class TestAuthorHelperParity:
+    """xdlint.py keeps its own copy of the byline cleanup (it must stay
+    standalone); the converters use xdfile.utils. They must agree."""
+
+    def test_same_answers(self):
+        utils = pytest.importorskip("xdfile.utils")
+        cases = [
+            "by Byron Walden, edited by Ben Tausig",
+            "Amanda Rafkin; edited by Kelsey Dixon",
+            "By Mike Shenk/Edited by Mike Shenk",
+            "Kyle Dolan / Ed. Patti Varol",
+            "Jeff Stillman / Ed Rich Norris",
+            "S.N., edited by Stanley Newman",
+            "John Smith Jr., edited by X",
+            "By Alfio Micci; Ed. By Charles Preston",
+            "Edited by Will Shortz",
+            "By CJ Tan", "by by Matt Gaffney", "Ed Sessa", "Byron Walden", "By", "",
+        ]
+        for s in cases:
+            assert xdlint._clean_author(s, "") == utils.split_author_editor(s, ""), s
+            assert xdlint._strip_by_prefix(s) == utils.strip_by_prefix(s), s
+            assert (bool(xdlint._AUTHOR_EDITOR_RE_GXD.search(s))
+                    == utils.has_editor_credit(s)), s
+        assert xdlint._AUTHOR_EDITOR_RE_GXD.pattern == utils._AUTHOR_EDITOR_RE.pattern
+        assert xdlint._CLEAN_AUTHOR_RE.pattern == utils._CLEAN_AUTHOR_RE.pattern
+        assert xdlint._BY_PREFIX_RE.pattern == utils._BY_PREFIX_RE.pattern
+
+
+class TestGxdProfileCLI:
+    def _write(self, tmp_path, name, text):
+        p = tmp_path / name
+        p.write_text(text, encoding="utf-8")
+        return str(p)
+
+    def test_output_without_profile_unchanged(self, tmp_path):
+        """Without --profile, the output is exactly the plain catalog's
+        findings at their own severities: no gxd rule, no override."""
+        p = self._write(tmp_path, "cc-0948.xd", GXD_DIRTY)
+        _, out, _ = run_main([p, "--max-severity", "debug", "-q"])
+        assert not any(f"\t{c}\t" in out for c in GXD_CODES)
+        path = p.replace("\\", "/")
+        ctx = make_ctx(GXD_DIRTY, path)
+        want = "".join(xdlint.format_finding(path, f) + "\n"
+                       for f in xdlint._run_checks_raw(ctx, None)
+                       if f.code not in GXD_CODES)
+        assert out == want
+
+    def test_profile_path_mode_skips_new_only_rules(self, tmp_path):
+        p = self._write(tmp_path, "cc-0948.xd", GXD_DIRTY)
+        _, out, _ = run_main([p, "--profile", "gxd", "--max-severity", "info", "-q"])
+        assert "\tXD801\t" in out and "\tXD803\t" in out
+        assert "\tXD809\t" not in out and "\tXD810\t" not in out
+        _, out, _ = run_main([p, "--profile", "gxd", "--new-imports",
+                              "--max-severity", "info", "-q"])
+        assert "\tXD809\t" in out and "\tXD810\t" in out
+
+    def test_profile_gate_on_errors_only(self, tmp_path):
+        """gxd CI gates on errors: no gxd rule may fail it."""
+        p = self._write(tmp_path, "cc-0948.xd", GXD_DIRTY)
+        code, out, _ = run_main([p, "--profile", "gxd", "--new-imports",
+                                 "--max-severity", "error", "-q"])
+        assert code == 0 and out == ""
+
+    def test_xd016_does_not_fail_ci_under_profile(self, tmp_path):
+        blank = SIMPLE.replace("ABC\nD#E\nFGH", "...\n.#.\n...")
+        p = self._write(tmp_path, "src2024-01-01.xd", blank)
+        assert run_main([p, "--max-severity", "error", "-q"])[0] == 1
+        assert run_main([p, "--profile", "gxd", "--max-severity", "error", "-q"])[0] == 0
+
+    def test_enable_only_gxd_rule_needs_profile(self, tmp_path):
+        p = self._write(tmp_path, "cc-0948.xd", GXD_DIRTY)
+        code, _, err = run_main([p, "--enable-only", "XD801"])
+        assert code == 2 and "--profile gxd" in err
+        code, out, _ = run_main([p, "--profile", "gxd", "--enable-only", "XD801", "-q"])
+        assert code == 1 and "\tXD801\t" in out
+
+    def test_new_imports_rejected_in_diff_mode(self):
+        code, _, _ = run_main(["--base", "HEAD", "--new-imports"])
+        assert code == 2
+
+    def test_list_rules(self):
+        _, plain, _ = run_main(["--list-rules"])
+        assert not any(c in plain for c in GXD_CODES)
+        assert "XD016    error" in plain
+        _, prof, _ = run_main(["--list-rules", "--profile", "gxd"])
+        assert all(c in prof for c in GXD_CODES)
+        assert "XD016    info" in prof and "XD103    warning" in prof
+        assert "EDITORIAL.md" in prof
+
+    def test_fix_with_profile(self, tmp_path):
+        text = SIMPLE.replace("Author: A", "Author: by Byron Walden, edited by Ben Tausig")
+        p = self._write(tmp_path, "src2024-01-01.xd", text)
+        run_main([p, "--fix", "-q"])
+        # Plain --fix: XD103 splits the Author, as before.
+        assert "Author: Byron Walden\nEditor: Ben Tausig\n" in open(p, encoding="utf-8").read()
+        p2 = self._write(tmp_path, "src2024-01-02.xd",
+                         SIMPLE.replace("Author: A", "Author: By CJ Tan"))
+        run_main([p2, "--fix", "-q"])
+        assert "Author: By CJ Tan" in open(p2, encoding="utf-8").read()
+        run_main([p2, "--fix", "--profile", "gxd", "-q"])
+        assert "Author: CJ Tan\n" in open(p2, encoding="utf-8").read()
+
+    def test_diff_mode_new_only_applies_to_added_files(self, tmp_path, monkeypatch):
+        import shutil
+        import subprocess
+        if shutil.which("git") is None:
+            pytest.skip("git not available")
+        monkeypatch.chdir(tmp_path)
+
+        def git(*a):
+            subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t",
+                            "-c", "commit.gpgsign=false", *a],
+                           check=True, capture_output=True)
+
+        amp = SIMPLE.replace("Author: A", "Author: A & B")
+        git("init", "-q")
+        (tmp_path / "old2024-01-01.xd").write_text(SIMPLE, encoding="utf-8")
+        git("add", ".")
+        git("commit", "-q", "-m", "base")
+        (tmp_path / "old2024-01-01.xd").write_text(amp, encoding="utf-8")
+        (tmp_path / "new2024-01-01.xd").write_text(amp, encoding="utf-8")
+        git("add", ".")
+        git("commit", "-q", "-m", "head")
+        _, out, _ = run_main(["--base", "HEAD~1", "--profile", "gxd",
+                              "--max-severity", "info", "-q"])
+        hits = [line.split("\t")[0] for line in out.splitlines() if "\tXD809\t" in line]
+        assert hits == ["new2024-01-01.xd:2"]

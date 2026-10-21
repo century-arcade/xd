@@ -26,6 +26,15 @@ Severity gate:
     and an exit gate (exit 1 if any finding meets or exceeds the level).
     Use --max-severity info to surface feature-detection findings (XD3xx).
 
+Profiles (corpus policy on top of the format rules):
+    --profile gxd    gxd's editorial conventions (gitlab.com/rabidrat/gxd
+                     EDITORIAL.md, CONTRIBUTING.md): XD016 error -> info,
+                     XD103 info -> warning, and the XD8xx rules. Rules for
+                     new imports only (XD809, XD810) run on files the diff
+                     adds in --base mode, and in path mode only with
+                     --new-imports. See --list-rules --profile gxd.
+    Without --profile, none of this applies.
+
 Rule selection:
     --disable XD###[,XD###...]
     --enable-only XD###[,XD###...]
@@ -40,6 +49,7 @@ Add a new rule:
 from __future__ import annotations
 
 import argparse
+import datetime
 import difflib
 import enum
 import html
@@ -115,6 +125,8 @@ class ParsedXd:
     # Spec says ignore the section, but XD207 surfaces them so unexpected
     # sections (typos, tool-specific extensions) don't go unnoticed.
     unknown_sections: List[Tuple[int, str]] = field(default_factory=list)
+    # (line, text) for each non-blank line of the notes section.
+    notes_lines: List[Tuple[int, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -122,6 +134,12 @@ class Ctx:
     filename: str
     text: str
     parsed: ParsedXd
+    # --profile in effect (None = the plain catalog). See PROFILES.
+    profile: Optional[str] = None
+    # True when the file is a new import: added by the diff in --base mode,
+    # or every file in path mode with --new-imports. Rules registered with
+    # new_only=True run only on these.
+    is_new: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -202,6 +220,7 @@ def parse(text: str) -> ParsedXd:
     grid: List[GridRow] = []
     clues: List[Clue] = []
     notes_lines: List[str] = []
+    notes_numbered: List[Tuple[int, str]] = []
     unknown_sections: List[Tuple[int, str]] = []
 
     section = "metadata"
@@ -367,13 +386,14 @@ def parse(text: str) -> ParsedXd:
 
         elif section == "notes":
             notes_lines.append(stripped)
+            notes_numbered.append((lineno, stripped))
         # else: section == "_unknown" — per spec, ignored entirely.
 
     return ParsedXd(
         text=text, lines=lines, section_mode=section_mode,
         headers=headers, grid=grid, clues=clues,
         notes_text="\n".join(notes_lines), parse_errors=parse_errors,
-        unknown_sections=unknown_sections,
+        unknown_sections=unknown_sections, notes_lines=notes_numbered,
     )
 
 
@@ -396,17 +416,75 @@ PARSER_LEVEL_FINDINGS: List[tuple] = [
 ]
 
 
-def rule(code: str, severity: Severity, name: str, experimental: bool = False):
+# Profiles: corpus policy layered on top of the format rules, selected with
+# --profile NAME. A profile can change the severity of catalog rules and
+# owns rules of its own (registered with @rule(..., profile=NAME)), which
+# run only under that profile. Without --profile none of this applies.
+PROFILES: Dict[str, dict] = {
+    "gxd": {
+        "description": "gxd corpus policy (gitlab.com/rabidrat/gxd "
+                       "EDITORIAL.md, CONTRIBUTING.md)",
+        "severity": {
+            # EDITORIAL.md "Incomplete puzzles": puzzles without answers
+            # are welcome; unknown squares are '.'.
+            "XD016": Severity.INFO,
+            # EDITORIAL.md Headers: Editor: gets its own header.
+            "XD103": Severity.WARNING,
+        },
+    },
+}
+
+# code -> profile name, for rules that only run under a profile.
+RULE_PROFILE: Dict[str, str] = {}
+# Rules that apply only to new imports (Ctx.is_new); see Ctx.
+NEW_ONLY_RULES: set = set()
+# code -> the policy document section a profile rule enforces, shown by
+# --list-rules --profile NAME.
+RULE_DOC: Dict[str, str] = {}
+
+
+def rule(code: str, severity: Severity, name: str, experimental: bool = False,
+         profile: Optional[str] = None, new_only: bool = False,
+         doc: Optional[str] = None):
     """Register a check.
 
     experimental=True marks rules whose validation depends on conventions
     not formalized in the spec (currently: rules that interpret quantum
     or Schrödinger rebus syntax). Disabled by --no-experimental.
+
+    profile=NAME registers a rule that runs only under --profile NAME.
+    new_only=True limits it to new imports (Ctx.is_new). doc names the
+    policy section a profile rule enforces.
     """
     def deco(fn: RuleFn) -> RuleFn:
         RULES.append((code, severity, name, experimental, fn))
+        if profile is not None:
+            assert profile in PROFILES, profile
+            RULE_PROFILE[code] = profile
+        if new_only:
+            NEW_ONLY_RULES.add(code)
+        if doc:
+            RULE_DOC[code] = doc
         return fn
     return deco
+
+
+def effective_severity(code: str, severity: Severity,
+                       profile: Optional[str]) -> Severity:
+    """A rule's severity once the profile's overrides are applied."""
+    if profile is None:
+        return severity
+    return PROFILES[profile]["severity"].get(code, severity)
+
+
+def rule_applies(code: str, ctx: "Ctx") -> bool:
+    """Profile and new-import gating for one rule on one file."""
+    owner = RULE_PROFILE.get(code)
+    if owner is not None and owner != ctx.profile:
+        return False
+    if code in NEW_ONLY_RULES and not ctx.is_new:
+        return False
+    return True
 
 
 def finding(code: str, severity: Severity, line: int, message: str) -> Finding:
@@ -1206,15 +1284,29 @@ def _(ctx):
 _AUTHOR_EDITOR_RE = re.compile(r"/\s*Ed(?:itor|\.)?\b|edited by", re.IGNORECASE)
 
 
+# --profile gxd also catches 'Smith; Ed. By Jones' and 'Smith, Ed. Jones'.
+# Same pattern as xdfile.utils._AUTHOR_EDITOR_RE, which the converters use.
+_AUTHOR_EDITOR_RE_GXD = re.compile(
+    r"/\s*Ed(?:itor|\.)?\b|edited by|[;,]\s*Ed\.", re.IGNORECASE)
+
+
+def _author_editor_re(profile: Optional[str]):
+    return _AUTHOR_EDITOR_RE_GXD if profile == "gxd" else _AUTHOR_EDITOR_RE
+
+
 @rule("XD103", Severity.INFO, "editor-folded-into-author")
 def _(ctx):
     """Author header value carries editor info ('Smith / Ed. Jones',
     'Smith; edited by Jones'). Split-out via --fix is available but
-    optional — the spec does not require a separate Editor header."""
+    optional — the spec does not require a separate Editor header.
+    Under --profile gxd it is a warning (gxd EDITORIAL.md, Headers:
+    Editor: has a header of its own [established]) and also matches
+    'Smith; Ed. Jones'."""
+    pattern = _author_editor_re(ctx.profile)
     for h in ctx.parsed.headers:
         if h.key.lower() != "author":
             continue
-        if _AUTHOR_EDITOR_RE.search(h.value):
+        if pattern.search(h.value):
             yield finding("XD103", Severity.INFO, h.line,
                           "Author value contains editor info; "
                           "--fix can split into separate Author and Editor headers")
@@ -1738,6 +1830,9 @@ FIX_ORDER = [
               # runs are already gone; after XD204/XD208 so tabs and NBSPs
               # have already become regular spaces)
     "XD103",  # split editor out of Author header
+    "XD802",  # move 'Edited by X' out of Copyright into Editor (gxd)
+    "XD801",  # drop 'By ' from Author (gxd; after XD103, which already
+              # drops it from an Author it splits)
     "XD107",  # drop duplicate header lines (after XD103: lets XD103 pick the
               # editor-bearing Author even if it isn't the first one, then
               # cleans up the duplicate it leaves behind)
@@ -1757,9 +1852,16 @@ FIX_ORDER = [
 ]
 
 
-def fixer(code: str, unsafe: bool = False):
+# Fixers whose behavior depends on --profile take it as a keyword,
+# fn(text, profile=None); the rest are called as fn(text).
+PROFILE_AWARE_FIXERS: set = set()
+
+
+def fixer(code: str, unsafe: bool = False, profile_aware: bool = False):
     def deco(fn: FixerFn) -> FixerFn:
         FIXERS[code] = (unsafe, fn)
+        if profile_aware:
+            PROFILE_AWARE_FIXERS.add(code)
         return fn
     return deco
 
@@ -2289,10 +2391,30 @@ def _(text):
 # value that looks like "Smith / Ed. Jones" or "Smith; edited by Jones" into
 # (author, editor). Empty-author cases (e.g. "Edited by Smith") get returned
 # as ("", "Smith"); the fixer below treats those as out-of-scope.
+# Kept in lockstep with xdfile.utils.split_author_editor(), which the
+# converters use for new imports; tests/test_xdlint.py checks that the two
+# agree. (xdlint.py stays standalone, so it can't import xdfile.)
 _CLEAN_AUTHOR_RE = re.compile(
     r"(?i)(?:(?:By )*(.+)(?:[;/,-]|and) *)?"
     r"(?:edited|Editor|(?<!\w)Ed[.])(?: By)*(.*)"
 )
+# A trailing '.' that ends an initial or Jr./Sr. is part of the name
+# ('S.N., edited by Stanley Newman' keeps 'S.N.').
+_NAME_FINAL_PERIOD_RE = re.compile(r"(?:\b[A-Z]|\bJr|\bSr)\.$")
+_BY_PREFIX_RE = re.compile(r"^(?:by\s+)+", re.IGNORECASE)
+
+
+def _strip_by_prefix(s: str) -> str:
+    """'By Mike Shenk' -> 'Mike Shenk'; unchanged if nothing would remain."""
+    rest = _BY_PREFIX_RE.sub("", s)
+    return rest if rest.strip() else s
+
+
+def _trim_name(s: str) -> str:
+    s = s.strip().rstrip(",").strip()
+    if s.endswith(".") and not _NAME_FINAL_PERIOD_RE.search(s):
+        s = s[:-1].rstrip()
+    return s
 
 
 def _clean_author(author: str, editor: str) -> Tuple[str, str]:
@@ -2303,22 +2425,21 @@ def _clean_author(author: str, editor: str) -> Tuple[str, str]:
         if author:
             while author.lower().startswith("by "):
                 author = author[3:]
-            while author and author[-1] in ",.":
-                author = author[:-1]
+            author = _trim_name(author)
         else:
             author = ""
         if " / " in author and not editor:
             author, editor = author.rsplit(" / ", 1)
     if editor:
+        editor = editor.strip()
         while editor.lower().startswith("by "):
-            editor = editor[3:]
-        while editor and editor[-1] in ",.":
-            editor = editor[:-1]
+            editor = editor[3:].strip()
+        editor = _trim_name(editor)
     return (author or "").strip(), (editor or "").strip()
 
 
-@fixer("XD103")
-def _(text):
+@fixer("XD103", profile_aware=True)
+def _(text, profile=None):
     """Split 'Author: X / Ed. Y' style values into separate Author and
     Editor headers. Conservative: skipped when the cleaned Author would be
     empty (e.g. 'Edited by Smith' — a content reinterpretation we don't
@@ -2330,9 +2451,10 @@ def _(text):
     # isn't first. We delete sibling Author lines ourselves rather than
     # leaving them for XD107: XD107 keeps the *first* duplicate, which
     # would discard the cleaned Author when the dirty one wasn't first.
+    pattern = _author_editor_re(profile)
     author_h = next((h for h in parsed.headers
                      if h.key.lower() == "author"
-                     and _AUTHOR_EDITOR_RE.search(h.value)), None)
+                     and pattern.search(h.value)), None)
     editor_h = next((h for h in parsed.headers
                      if h.key.lower() == "editor"), None)
     if author_h is None:
@@ -2553,20 +2675,411 @@ def _(text):
     return "".join(out), count
 
 
-def apply_fixes(text: str, codes: Optional[set],
-                unsafe_ok: bool) -> Tuple[str, Dict[str, int]]:
+# ---------------------------------------------------------------------------
+# XD8xx - gxd corpus policy (--profile gxd)
+# ---------------------------------------------------------------------------
+# These rules enforce gxd's editorial conventions, not the .xd format, so
+# they run only under --profile gxd. Each names the section of gxd's
+# EDITORIAL.md or CONTRIBUTING.md (gitlab.com/rabidrat/gxd) it enforces.
+# Severity follows the convention's status there: [established] and
+# [practice] are warnings, [proposed] is info. Rules for [proposed]
+# conventions that apply to new imports only are new_only (see Ctx.is_new).
+
+def _line_ending(s: str) -> str:
+    if s.endswith("\r\n"):
+        return "\r\n"
+    if s.endswith("\n"):
+        return "\n"
+    return ""
+
+
+def _notes_texts(parsed: ParsedXd) -> List[Tuple[int, str]]:
+    """(line, text) for the notes: Section 4 plus any Notes: header."""
+    out = [(h.line, h.value) for h in parsed.headers
+           if h.key.lower() == "notes" and h.value.strip()]
+    return out + list(parsed.notes_lines)
+
+
+@rule("XD801", Severity.WARNING, "author-by-prefix", profile="gxd",
+      doc="EDITORIAL.md Headers, Author: no 'By ' prefix [established]")
+def _(ctx):
+    """Author: is the constructor's name in a normalized form, with no
+    'By ' prefix (gxd EDITORIAL.md, Headers, Author:, [established])."""
+    for h in ctx.parsed.headers:
+        if h.key.lower() == "author" and _strip_by_prefix(h.value) != h.value:
+            yield finding("XD801", Severity.WARNING, h.line,
+                          f"Author {h.value!r} starts with 'By '; gxd's "
+                          f"Author: is the name only (EDITORIAL.md, Headers)")
+
+
+@fixer("XD801")
+def _(text):
+    """Drop a leading 'By ' from Author: values."""
+    parsed = parse(text)
+    lines = text.splitlines(keepends=True)
+    fixes = 0
+    for h in parsed.headers:
+        if h.key.lower() != "author":
+            continue
+        new = _strip_by_prefix(h.value)
+        if new != h.value:
+            i = h.line - 1
+            lines[i] = f"{h.key}: {new}{_line_ending(lines[i])}"
+            fixes += 1
+    return "".join(lines), fixes
+
+
+# 'Edited by X' (or 'Ed. by X', 'Editor: X') inside Copyright:. A bare
+# 'Ed. X' is not matched: in a rights line 'ed.' can also mean edition.
+_COPYRIGHT_EDITOR_RE = re.compile(
+    r"\bedited\s+by\b|(?<!\w)ed\.\s*by\b|\beditor\s*:", re.IGNORECASE)
+_NAME_WORD_RE = re.compile(
+    r"^(?:[A-Z][\w.'-]*|[A-Z]\.|and|&|de|del|der|van|von|la|le|du|di)$")
+
+
+def _copyright_editor_split(value: str) -> Optional[Tuple[str, str]]:
+    """('Copyright 2026 X; Edited by Jane Doe') -> ('Copyright 2026 X',
+    'Jane Doe') when the editor credit can be cut out unambiguously:
+    one credit, followed by a plain name and then the end of the value or
+    a separator. None otherwise."""
+    matches = list(_COPYRIGHT_EDITOR_RE.finditer(value))
+    if len(matches) != 1:
+        return None
+    m = matches[0]
+    rest = value[m.end():]
+    nm = re.match(r"\s*([^;,|/()]+?)\s*(?=$|[;,|/()])", rest)
+    if not nm:
+        return None
+    name = _trim_name(nm.group(1))
+    words = name.split()
+    if not 1 <= len(words) <= 5 or not all(_NAME_WORD_RE.match(w) for w in words):
+        return None
+    before = value[:m.start()].rstrip()
+    before = re.sub(r"[\s;,|/-]+$", "", before)
+    after = rest[nm.end():].lstrip()
+    if before and after:
+        after = re.sub(r"^[;,|/]\s*", "", after)
+        remainder = f"{before}; {after}" if after else before
+    else:
+        remainder = (before or re.sub(r"^[;,|/]\s*", "", after)).strip()
+    return remainder, name
+
+
+@rule("XD802", Severity.WARNING, "editor-in-copyright", profile="gxd",
+      doc="EDITORIAL.md Headers, Editor: and Copyright: [established]")
+def _(ctx):
+    """Copyright: holds only the rights or syndication line; the editor
+    has an Editor: header of its own (gxd EDITORIAL.md, Headers, Editor:
+    and Copyright:, [established]). The Author: case is XD103."""
+    for h in ctx.parsed.headers:
+        if h.key.lower() == "copyright" and _COPYRIGHT_EDITOR_RE.search(h.value):
+            yield finding("XD802", Severity.WARNING, h.line,
+                          "Copyright contains an editor credit; gxd puts the "
+                          "editor in Editor: (EDITORIAL.md, Headers)")
+
+
+@fixer("XD802")
+def _(text):
+    """Move the editor credit out of Copyright: into Editor:, when it can
+    be cut out unambiguously and no different Editor: is already set."""
+    parsed = parse(text)
+    cr = next((h for h in parsed.headers if h.key.lower() == "copyright"
+               and _COPYRIGHT_EDITOR_RE.search(h.value)), None)
+    if cr is None:
+        return text, 0
+    split = _copyright_editor_split(cr.value)
+    if split is None:
+        return text, 0
+    remainder, name = split
+    editor_h = next((h for h in parsed.headers
+                     if h.key.lower() == "editor"), None)
+    if editor_h is not None and editor_h.value and editor_h.value != name:
+        return text, 0
+    lines = text.splitlines(keepends=True)
+    nl = _detect_nl(text)
+    ci = cr.line - 1
+    if remainder:
+        lines[ci] = f"{cr.key}: {remainder}{_line_ending(lines[ci])}"
+    else:
+        lines[ci] = None
+    if editor_h is None:
+        author_h = next((h for h in parsed.headers
+                         if h.key.lower() == "author"), None)
+        at = author_h.line if author_h else cr.line - 1
+        lines.insert(at, f"Editor: {name}{nl}")
+    elif not editor_h.value:
+        ei = editor_h.line - 1
+        lines[ei] = f"{editor_h.key}: {name}{_line_ending(lines[ei])}"
+    return "".join(x for x in lines if x is not None), 1
+
+
+# '<pubid>-<number>[a-z]' (cc-0948, nediger-219_5, dab-279a). Same shape as
+# the numbered-xdid pattern in xdfile/catalog.py shelf_path_from_xdid().
+_NUMBERED_STEM_RE = re.compile(r"^([a-z]+)-(\d[A-Za-z0-9_]*?)([a-z]?)$")
+# Pubids whose number is an id, not a place in a numbered series, so
+# Number: doesn't apply. nytpack-<n>: the number is the NYT's puzzle id.
+_NOT_SERIES_NUMBER_PUBIDS = {"nytpack"}
+
+
+def _norm_number(s: str) -> str:
+    """Number: value or file-name number, compared the way xdids are built
+    (xdfile.number_slug): drop 'No.'/'#', non-alphanumerics become '_',
+    case and leading zeros ignored."""
+    s = re.sub(r"(?i)^(?:no\.?|#)\s*", "", s.strip())
+    s = re.sub(r"[^A-Za-z0-9]", "_", s).lower()
+    return s.lstrip("0") or "0"
+
+
+@rule("XD803", Severity.WARNING, "numbered-xdid-number", profile="gxd",
+      doc="CONTRIBUTING.md Numbered series; EDITORIAL.md Headers, "
+          "Number: [practice]")
+def _(ctx):
+    """A file named for a numbered series, <pubid>-<number>[a-z].xd, needs
+    a Number: header that matches the number in its name (gxd
+    CONTRIBUTING.md, xdids, Numbered series; EDITORIAL.md, Headers,
+    Number:, [practice]). Provisional (unshelved) names are skipped, and
+    so are pubids whose number isn't a series number (nytpack)."""
+    base = os.path.basename(ctx.filename.replace("\\", "/"))
+    if "unshelved" in base or not base.endswith(".xd"):
+        return
+    m = _NUMBERED_STEM_RE.match(base[:-3])
+    if not m or m.group(1) in _NOT_SERIES_NUMBER_PUBIDS:
+        return
+    num, suffix = m.group(2), m.group(3)
+    number_h = next((h for h in ctx.parsed.headers
+                     if h.key.lower() == "number"), None)
+    if number_h is None or not number_h.value.strip():
+        yield finding("XD803", Severity.WARNING, number_h.line if number_h else 0,
+                      f"file name is numbered ({num}) but there is no "
+                      f"Number: header (CONTRIBUTING.md, Numbered series)")
+        return
+    got = _norm_number(number_h.value)
+    if got not in (_norm_number(num), _norm_number(num + suffix)):
+        yield finding("XD803", Severity.WARNING, number_h.line,
+                      f"Number: {number_h.value!r} doesn't match the number "
+                      f"in the file name ({num})")
+
+
+def _phrase_re(phrase: str):
+    words = phrase.split()
+    return re.compile(r"(?<!\w)" + r"\s+".join(map(re.escape, words)) + r"(?!\w)",
+                      re.IGNORECASE)
+
+
+@rule("XD804", Severity.WARNING, "meta-answer-in-notes", profile="gxd",
+      doc="EDITORIAL.md Headers, Meta: [practice]")
+def _(ctx):
+    """'Meta: <prompt> ~ <answer>': the answer never goes in the notes,
+    because solving software shows the notes before the solve (gxd
+    EDITORIAL.md, Headers, Meta:, [practice]). Whole-word, case-insensitive
+    match; answers under 4 letters are skipped as too noisy, and so are
+    answers that the prompt itself contains."""
+    notes = _notes_texts(ctx.parsed)
+    if not notes:
+        return
+    for h in ctx.parsed.headers:
+        if h.key.lower() != "meta":
+            continue
+        prompt, sep, answer = h.value.rpartition("~")
+        answer = answer.strip()
+        if not sep or len(re.sub(r"\W", "", answer)) < 4:
+            continue
+        pat = _phrase_re(answer)
+        if pat.search(prompt):
+            continue
+        for line, text in notes:
+            if pat.search(text):
+                yield finding("XD804", Severity.WARNING, line,
+                              f"notes give the Meta: answer {answer!r} "
+                              f"(EDITORIAL.md, Headers, Meta:)")
+                break
+
+
+# The markup kinds EDITORIAL.md lists: italic, bold, underline, strike,
+# superscript, subscript.
+_PLAIN_TEXT_MARKUP_RE = re.compile(r"\{([/*_\-^~])(.+?)\1\}")
+
+
+@rule("XD805", Severity.WARNING, "markup-outside-clues", profile="gxd",
+      doc="EDITORIAL.md Characters and typography, Markup only in clues "
+          "[established]")
+def _(ctx):
+    """Markup ({/italic/}, {*bold*}, {_underline_}, {-strike-}, {^sup^},
+    {~sub~}) belongs only in clues; headers and notes are plain text (gxd
+    EDITORIAL.md, Characters and typography, [established])."""
+    for h in ctx.parsed.headers:
+        m = _PLAIN_TEXT_MARKUP_RE.search(h.value)
+        if m:
+            yield finding("XD805", Severity.WARNING, h.line,
+                          f"markup {m.group(0)!r} in header {h.key}: "
+                          f"headers are plain text (EDITORIAL.md)")
+    for line, text in ctx.parsed.notes_lines:
+        m = _PLAIN_TEXT_MARKUP_RE.search(text)
+        if m:
+            yield finding("XD805", Severity.WARNING, line,
+                          f"markup {m.group(0)!r} in the notes: notes are "
+                          f"plain text (EDITORIAL.md)")
+
+
+_SIC_RE = re.compile(r"\[sic\]", re.IGNORECASE)
+
+
+@rule("XD806", Severity.INFO, "annotation-in-clue", profile="gxd",
+      doc="EDITORIAL.md Clues and grid: no '[sic]' in clues [practice]; "
+          "for review")
+def _(ctx):
+    """Clues are the publisher's text, with no '[sic]' or other
+    annotations of ours (gxd EDITORIAL.md, Clues and grid, [practice]).
+    For review, not fixing: a text match can't tell our '[sic]' from the
+    publisher's own (a clue about the word, a quotation), and in the
+    corpus today every hit is the publisher's. Hence info, not warning."""
+    for clue in ctx.parsed.clues:
+        if _SIC_RE.search(clue.body):
+            yield finding("XD806", Severity.INFO, clue.line,
+                          f"clue {clue.pos} contains '[sic]'; check it is the "
+                          f"publisher's text, not an annotation "
+                          f"(EDITORIAL.md, Clues and grid)")
+
+
+_MISSING_CLUE_PLACEHOLDER = "[XXX]"
+
+
+@rule("XD807", Severity.WARNING, "missing-clue-not-noted", profile="gxd",
+      doc="EDITORIAL.md Incomplete puzzles: a missing clue is [XXX], "
+          "and the notes say what is missing [practice]")
+def _(ctx):
+    """A missing clue is filed as gxd's '[XXX]' placeholder, and the notes
+    say what is missing (gxd EDITORIAL.md, Incomplete puzzles,
+    [practice]). Fires when the file has placeholders but no notes at
+    all; whether the notes cover every placeholder is left to review."""
+    placeholders = [c for c in ctx.parsed.clues
+                    if c.body.strip() == _MISSING_CLUE_PLACEHOLDER]
+    if not placeholders or _notes_texts(ctx.parsed):
+        return
+    first = placeholders[0]
+    more = f" (and {len(placeholders) - 1} more)" if len(placeholders) > 1 else ""
+    yield finding("XD807", Severity.WARNING, first.line,
+                  f"clue {first.pos} is the {_MISSING_CLUE_PLACEHOLDER} "
+                  f"placeholder{more} but there are no notes saying what is "
+                  f"missing (EDITORIAL.md, Incomplete puzzles)")
+
+
+_PROVENANCE_RE = re.compile(
+    r"(?i:\blitzed\s+by\b|\bdownloaded\s+from\b|\bconverted\s+(?:from|by)\b"
+    r"|\bscanned\s+by\b)|\bOCR(?:'d|ed)?\b")
+
+
+@rule("XD808", Severity.INFO, "provenance-in-notes", profile="gxd",
+      doc="EDITORIAL.md Notes, What does not go in the notes [practice]; "
+          "heuristic")
+def _(ctx):
+    """Where the puzzle came from and how it was made (download details,
+    OCR caveats, 'Litzed by ...') goes in receipts and the source
+    archive's NOTES.md, not the notes (gxd EDITORIAL.md, Notes, What does
+    not go in the notes, [practice]). A phrase match, so info."""
+    for line, text in _notes_texts(ctx.parsed):
+        m = _PROVENANCE_RE.search(text)
+        if m:
+            yield finding("XD808", Severity.INFO, line,
+                          f"notes mention {m.group(0)!r}; provenance goes in "
+                          f"receipts, not the notes (EDITORIAL.md, Notes)")
+
+
+@rule("XD809", Severity.INFO, "author-ampersand", profile="gxd",
+      new_only=True,
+      doc="EDITORIAL.md Headers, Author: join with 'and' [proposed]; "
+          "new imports only")
+def _(ctx):
+    """Two constructors are joined with 'and', not '&' (gxd EDITORIAL.md,
+    Headers, Author:, [proposed] for new imports; existing files are not
+    changed, so this runs only on new imports)."""
+    for h in ctx.parsed.headers:
+        if h.key.lower() == "author" and "&" in h.value:
+            yield finding("XD809", Severity.INFO, h.line,
+                          "Author joins names with '&'; gxd uses 'and' for "
+                          "new imports (EDITORIAL.md, Headers)")
+
+
+_MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July",
+                "August", "September", "October", "November", "December"]
+_WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+                  "Saturday", "Sunday"]
+_DATE_EXPR = (
+    r"(?:(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+)?"
+    r"(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+"
+    r"\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}"
+    r"|\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2})"
+)
+# A title that is only a date, in any form ('October 06, 2026', 'Tue, Oct 6,
+# 2026', '10/6/2026'). A title with a label before the date ('LA Times, Mon,
+# Jan 6, 2020', 'The Crossword: Tuesday, October 6, 2026') is not matched:
+# EDITORIAL.md leaves outlet-name-and-date titles as an open question, and a
+# label can't be told from a puzzle's name ('Palme d'Or, Sun. May 1, 2016').
+_DATE_TITLE_RE = re.compile(r"^" + _DATE_EXPR + r"$", re.IGNORECASE)
+
+
+_CANONICAL_DATE_TITLE_RE = re.compile(
+    r"^(?:" + "|".join(_WEEKDAY_NAMES) + r"), (?:" + "|".join(_MONTH_NAMES)
+    + r") [1-9]\d?, \d{4}$")
+
+
+def _canonical_date_title(iso: str) -> Optional[str]:
+    try:
+        dt = datetime.date.fromisoformat(iso.strip())
+    except ValueError:
+        return None
+    return (f"{_WEEKDAY_NAMES[dt.weekday()]}, {_MONTH_NAMES[dt.month - 1]} "
+            f"{dt.day}, {dt.year}")
+
+
+@rule("XD810", Severity.INFO, "date-title-form", profile="gxd",
+      new_only=True,
+      doc="EDITORIAL.md Headers, Title: date titles [proposed]; "
+          "new imports only")
+def _(ctx):
+    """When a puzzle's only title is its date, the title is the date in the
+    form 'Tuesday, October 6, 2026': full weekday and month, no zero
+    padding, no outlet name (gxd EDITORIAL.md, Headers, Title:,
+    [proposed]; existing files are not changed, so this runs only on new
+    imports). Checks titles that are a bare date; titles with an outlet
+    label before the date are an open question there and are not
+    flagged."""
+    title_h = next((h for h in ctx.parsed.headers
+                    if h.key.lower() == "title"), None)
+    if title_h is None or not _DATE_TITLE_RE.match(title_h.value.strip()):
+        return
+    title = title_h.value.strip()
+    want = _canonical_date_title(get_header(ctx.parsed, "date") or "")
+    if title == want or (want is None and _CANONICAL_DATE_TITLE_RE.match(title)):
+        return
+    form = (f"{want!r} (from Date:)" if want
+            else "like 'Tuesday, October 6, 2026'")
+    yield finding("XD810", Severity.INFO, title_h.line,
+                  f"date title {title_h.value!r}: gxd's form is {form}, "
+                  f"with no zero padding (EDITORIAL.md, Headers)")
+
+
+def apply_fixes(text: str, codes: Optional[set], unsafe_ok: bool,
+                profile: Optional[str] = None) -> Tuple[str, Dict[str, int]]:
     """Apply fixers in canonical order. Each fixer is idempotent and
-    reparses internally if needed, so a single pass is sufficient."""
+    reparses internally if needed, so a single pass is sufficient.
+    Fixers for a profile's own rules run only under that profile."""
     counts: Dict[str, int] = {}
     for code in FIX_ORDER:
         if codes is not None and code not in codes:
             continue
         if code not in FIXERS:
             continue
+        owner = RULE_PROFILE.get(code)
+        if owner is not None and owner != profile:
+            continue
         unsafe, fn = FIXERS[code]
         if unsafe and not unsafe_ok:
             continue
-        new_text, n = fn(text)
+        if code in PROFILE_AWARE_FIXERS:
+            new_text, n = fn(text, profile=profile)
+        else:
+            new_text, n = fn(text)
         if new_text != text:
             counts[code] = counts.get(code, 0) + n
             text = new_text
@@ -2625,10 +3138,13 @@ def _decode_with_findings(data: bytes):
                               line=line, message=msg)]
 
 
-def contexts_from_paths(paths):
+def contexts_from_paths(paths, profile=None, new_imports=False):
     """Returns (total_count, generator-of-(path, Ctx)). The list is
     materialized so the caller can show progress. Memory cost is just
-    the path strings; file contents are still read lazily."""
+    the path strings; file contents are still read lazily.
+
+    new_imports=True marks every file as a new import (Ctx.is_new); path
+    mode can't tell otherwise."""
     file_paths = list(iter_xd_paths(paths))
 
     def gen():
@@ -2642,7 +3158,8 @@ def contexts_from_paths(paths):
             text, decode_findings = _decode_with_findings(data)
             parsed = parse(text)
             parsed.parse_errors[:0] = decode_findings
-            yield path, Ctx(filename=path, text=text, parsed=parsed)
+            yield path, Ctx(filename=path, text=text, parsed=parsed,
+                            profile=profile, is_new=new_imports)
 
     return len(file_paths), gen()
 
@@ -2681,12 +3198,21 @@ def _batch_show(ref, paths):
     return result
 
 
-def contexts_from_git(base, head):
-    """Lint files added or modified between two refs.
+def contexts_from_git(base, head, profile=None):
+    """Lint files added or modified between two refs. Files the diff adds
+    are new imports (Ctx.is_new).
 
     Returns (total_count, generator-of-(path, Ctx))."""
-    out = _git("diff", "--name-only", "--diff-filter=AM", f"{base}..{head}")
-    paths = [p for p in out.splitlines() if p.endswith(".xd")]
+    out = _git("diff", "--name-status", "--diff-filter=AM", f"{base}..{head}")
+    paths = []
+    added = set()
+    for row in out.splitlines():
+        status, _, p = row.partition("\t")
+        if not p.endswith(".xd"):
+            continue
+        paths.append(p)
+        if status.startswith("A"):
+            added.add(p)
     blobs = _batch_show(head, paths)
 
     def gen():
@@ -2697,7 +3223,8 @@ def contexts_from_git(base, head):
             text, decode_findings = _decode_with_findings(content)
             parsed = parse(text)
             parsed.parse_errors[:0] = decode_findings
-            yield path, Ctx(filename=path, text=text, parsed=parsed)
+            yield path, Ctx(filename=path, text=text, parsed=parsed,
+                            profile=profile, is_new=path in added)
 
     return len(paths), gen()
 
@@ -2786,19 +3313,32 @@ def _progress_enabled(arg: str, stream=None) -> bool:
 # Main
 # ---------------------------------------------------------------------------
 
-def run_checks(ctx: Ctx, active_codes):
-    """Yield findings from the parser plus all active rules."""
+def _run_checks_raw(ctx: Ctx, active_codes):
     for f in ctx.parsed.parse_errors:
         if active_codes is None or f.code in active_codes:
             yield f
     for code, severity, _name, _experimental, fn in RULES:
         if active_codes is not None and code not in active_codes:
             continue
+        if not rule_applies(code, ctx):
+            continue
         try:
             yield from fn(ctx)
         except Exception as e:
             yield finding(code, severity, 0,
                           f"rule raised {type(e).__name__}: {e}")
+
+
+def run_checks(ctx: Ctx, active_codes):
+    """Yield findings from the parser plus all active rules, with the
+    severities of ctx.profile (if any) applied."""
+    overrides = PROFILES[ctx.profile]["severity"] if ctx.profile else {}
+    for f in _run_checks_raw(ctx, active_codes):
+        sev = overrides.get(f.code)
+        if sev is not None and sev != f.severity:
+            f = Finding(code=f.code, severity=sev, line=f.line,
+                        message=f.message)
+        yield f
 
 
 def format_finding(path, f: Finding) -> str:
@@ -2809,7 +3349,8 @@ def format_finding(path, f: Finding) -> str:
 def _run_fix_mode(args, total, source, active_codes):
     """Apply fixers per file, then re-lint and report what's left.
     With --diff, print diffs to stdout and skip writing."""
-    fix_codes = set(FIXERS.keys())
+    fix_codes = {c for c in FIXERS
+                 if RULE_PROFILE.get(c) in (None, args.profile)}
     if active_codes is not None:
         fix_codes &= active_codes
 
@@ -2833,7 +3374,8 @@ def _run_fix_mode(args, total, source, active_codes):
             _SLOT_CACHE.pop(id(ctx), None)
             continue
 
-        new_text, counts = apply_fixes(ctx.text, fix_codes, args.unsafe_fixes)
+        new_text, counts = apply_fixes(ctx.text, fix_codes, args.unsafe_fixes,
+                                       profile=args.profile)
         changed = new_text != ctx.text
 
         if changed:
@@ -2858,7 +3400,8 @@ def _run_fix_mode(args, total, source, active_codes):
         if not args.diff:
             if changed:
                 fixed_parsed = parse(new_text)
-                fixed_ctx = Ctx(filename=path, text=new_text, parsed=fixed_parsed)
+                fixed_ctx = Ctx(filename=path, text=new_text, parsed=fixed_parsed,
+                                profile=ctx.profile, is_new=ctx.is_new)
             else:
                 fixed_ctx = ctx
             for f in run_checks(fixed_ctx, active_codes):
@@ -2919,6 +3462,17 @@ def main():
     ap.add_argument("--no-experimental", action="store_true",
                     help="skip experimental rules (those interpreting "
                          "spec extensions like quantum/Schrödinger rebus)")
+    ap.add_argument("--profile", choices=sorted(PROFILES),
+                    help="apply a corpus policy on top of the format rules: "
+                         "adjusts some severities and enables the "
+                         "profile's own rules (gxd: XD8xx; see "
+                         "--list-rules --profile gxd)")
+    ap.add_argument("--new-imports", action="store_true",
+                    help="path mode: treat every file as a new import, so "
+                         "rules for new imports only (XD809, XD810) run too. "
+                         "Without it they are skipped in path mode. In diff "
+                         "mode (--base) they run on files the diff adds, "
+                         "not on modified ones")
     ap.add_argument("--fix", action="store_true",
                     help="apply fixes for fixable rules and write to disk")
     ap.add_argument("--diff", action="store_true",
@@ -2947,20 +3501,42 @@ def main():
         args.progress = "never"
 
     if args.list_rules:
+        # With --profile: effective severities, plus the profile's rules
+        # (flagged with the profile name; 'new' = new imports only) and the
+        # policy section each enforces. Without it, the plain catalog.
+        prof = args.profile
+        overrides = PROFILES[prof]["severity"] if prof else {}
         print(f"{'CODE':<8} {'SEVERITY':<8} {'FLAGS':<10} NAME")
         rows = []
         for code, sev, name, experimental, _ in RULES:
+            owner = RULE_PROFILE.get(code)
+            if owner is not None and owner != prof:
+                continue
             flags = []
             if experimental:
                 flags.append("exp")
             if code in FIXERS:
                 flags.append("ufix" if FIXERS[code][0] else "fix")
-            rows.append((code, sev, name, ",".join(flags)))
+            if owner is not None or code in overrides:
+                flags.append(prof)
+            if code in NEW_ONLY_RULES:
+                flags.append("new")
+            if code in RULE_DOC:
+                name = f"{name}  ({RULE_DOC[code]})"
+            rows.append((code, effective_severity(code, sev, prof), name,
+                         ",".join(flags)))
         for code, sev, name in PARSER_LEVEL_FINDINGS:
-            rows.append((code, sev, name, "parser"))
+            flags = "parser" + (f",{prof}" if code in overrides else "")
+            rows.append((code, effective_severity(code, sev, prof), name, flags))
         for code, sev, name, flags in sorted(rows):
             print(f"{code:<8} {sev.value:<8} {flags:<10} {name}")
+        if prof:
+            print(f"\nprofile {prof}: {PROFILES[prof]['description']}")
         return 0
+
+    if args.new_imports and args.base:
+        ap.error("--new-imports is for path mode; with --base, files the "
+                 "diff adds are the new imports")
 
     experimental_codes = {code for (code, _s, _n, exp, _f) in RULES if exp}
 
@@ -3003,6 +3579,15 @@ def main():
         else:
             active = active - experimental_codes
 
+    # A profile's own rules do nothing without that profile; say so rather
+    # than silently selecting nothing.
+    if args.enable_only:
+        foreign = sorted(c for c in active
+                         if RULE_PROFILE.get(c) not in (None, args.profile))
+        if foreign:
+            ap.error(f"rule(s) {','.join(foreign)} run only under "
+                     f"--profile {RULE_PROFILE[foreign[0]]}")
+
     if args.fix and args.base:
         ap.error("--fix is incompatible with --base "
                  "(which reads git blobs, not files on disk)")
@@ -3042,9 +3627,11 @@ def main():
                   file=sys.stderr)
 
     if args.base:
-        total, source = contexts_from_git(args.base, args.head)
+        total, source = contexts_from_git(args.base, args.head,
+                                          profile=args.profile)
     elif args.paths:
-        total, source = contexts_from_paths(args.paths)
+        total, source = contexts_from_paths(args.paths, profile=args.profile,
+                                            new_imports=args.new_imports)
     else:
         ap.error("give --base for git-diff mode, or explicit .xd paths")
 
