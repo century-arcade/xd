@@ -15,6 +15,7 @@ import time
 
 import xdfile
 from .utils import warn, clean_c1_controls, clean_latin1_utf8_mojibake
+from .utils import clean_author_header
 
 
 def reparse_date(s):
@@ -89,7 +90,11 @@ def parse_puz(contents, filename):
 
     xd = xdfile.xdfile('', filename)
 
-    xd.set_header("Author", decode(puzobj.author))
+    # Author: is the constructor only; an editor credited in the byline
+    # ("Amanda Rafkin; edited by Kelsey Dixon") gets its own Editor: header.
+    author, editor = clean_author_header(decode(puzobj.author))
+    xd.set_header("Author", author)
+    xd.set_header("Editor", editor)
     xd.set_header("Copyright", decode(puzobj.copyright))
     xd.set_header("Notes", decode(puzobj.notes))
 
