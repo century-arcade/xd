@@ -13,7 +13,7 @@ WWWZIP=/tmp/${NOW}-www.zip
 S3_REGION=us-west-2
 S3_WWW=s3://xd.saul.pw
 
-.PHONY: gxd.sqlite clean clean-cache
+.PHONY: gxd.sqlite clean clean-cache sample sample-plan
 
 all: analyze gridmatches website
 
@@ -81,6 +81,20 @@ gridmatches: gxd.sqlite src/gridcmp.so
 gxd.sqlite: ${GXD_DIR}
 	time ./scripts/26-mkdb-sqlite.py -o $@ -c ${GXD_DIR}
 	cat src/inputgridmatches.sql | sqlite3 $@
+
+# Reproducible held-out sample of full puzzles, e.g. for a guest researcher's
+# eval set. Not public: publish as a release on the private gxd repo.
+#   make sample SAMPLE_SEED=rj-2026-10
+#   make sample SAMPLE_SEED=... SAMPLE_ARGS='--exclude prior/MANIFEST.tsv'
+#   make sample-plan SAMPLE_SEED=...   # allocation table only, no zip
+SAMPLE_SEED?=$(error set SAMPLE_SEED)
+SAMPLE_ARGS?=
+sample:
+	mkdir -p ${PUB_DIR}
+	scripts/28-mkzip-sample.py -c ${GXD_DIR} --seed ${SAMPLE_SEED} ${SAMPLE_ARGS} -o ${PUB_DIR}/xd-sample-${SAMPLE_SEED}.zip
+
+sample-plan:
+	scripts/28-mkzip-sample.py -c ${GXD_DIR} --seed ${SAMPLE_SEED} ${SAMPLE_ARGS} --dry-run
 
 gxd.zip:
 	find ${GXD_DIR} -name '*.xd' -print | sort | zip $@ -@
