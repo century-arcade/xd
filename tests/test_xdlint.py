@@ -1308,6 +1308,34 @@ class TestFixers:
         assert n == 0
         assert new == text
 
+    def test_xd009_fix_a_grave_with_flattened_nbsp(self):
+        # UTF-8 'à' read as latin-1 is 'Ã' + NBSP; with the NBSP already
+        # flattened only 'Ã ' is left. gxd crossynergy/philadelphia clues.
+        text = ("A45. Pied-Ã -terre in Bangkok? ~ THAIPAD\n"
+                "D113. Show off Ã la Mr. Universe ~ FLEX\n"
+                "A121. Not lÃ ~ ICI\n")
+        new, n = xdlint.FIXERS["XD009"][1](text)
+        assert n == 3
+        assert new == ("A45. Pied-à-terre in Bangkok? ~ THAIPAD\n"
+                       "D113. Show off à la Mr. Universe ~ FLEX\n"
+                       "A121. Not là ~ ICI\n")
+
+    def test_xd009_a_grave_flagged_but_not_after_a_capital(self):
+        f = run_rule("XD009", "A1. Vis-Ã -vis ~ ASTO\n")
+        assert len(f) == 1 and "'à'" in f[0].message
+        # Real Portuguese: 'Ã ' ending an uppercase word.
+        assert run_rule("XD009", "A1. IRMÃ DULCE ~ NUN\n") == []
+        new, n = xdlint.FIXERS["XD009"][1]("A1. IRMÃ DULCE ~ NUN\n")
+        assert n == 0
+
+    def test_xd024_replacement_character(self):
+        # gxd indie/agard/gfp-169.xd A34, newsday/2014/nw2014-03-02.xd A30
+        f = run_rule("XD024", "A34. Not to be @#$� with ~ TAMPERRESISTANT\n"
+                              "A30. Vicuï¿½as' habitat ~ ANDES\n")
+        assert [x.line for x in f] == [1, 2]
+        assert all(x.severity == xdlint.Severity.ERROR for x in f)
+        assert run_rule("XD024", "A1. Café ~ BISTRO\n") == []
+
     def test_xd011_html_entity_unescape(self):
         text = "Title: A &amp; B\n"
         new, n = xdlint.FIXERS["XD011"][1](text)

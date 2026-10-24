@@ -30,6 +30,9 @@ def decode(s):
     # handles the trailer). E.g. .puz bytes \xc2\x92 (UTF-8 U+0092) read as
     # latin-1 -> 'Â' -> '' -> "'".
     s = re.sub(r'Â([\x80-\x9f])', r'\1', s)
+    # UTF-8 'à' (\xc3\xa0) read as latin-1 is 'Ã' + NBSP. Fix it before the
+    # NBSP collapse below turns it into 'Ã ' (gxd had 'Pied-Ã -terre').
+    s = s.replace('\xc3\xa0', 'à')
     # UTF-8 NBSP read as latin-1 surfaces as 'Â\xa0'; collapse to space.
     s = s.replace('\xc2\xa0', ' ')
     s = s.replace('\xa0', ' ')
@@ -60,7 +63,7 @@ def decode(s):
         '“': '"', '”': '"',  # curly double quotes
         '…': '...',               # horizontal ellipsis
     }))
-    s = urllib.parse.unquote(s)
+    s = unquote(s)
     s = html.unescape(s)
     # Remove spurious semicolons from invalid HTML entity refs
     # (e.g. html2text converts "B&O" to "B&O;")
@@ -68,6 +71,18 @@ def decode(s):
     # Collapse any run of whitespace to a single space (clue text shouldn't have tabs or multi-space runs)
     s = re.sub(r'\s+', ' ', s)
     return s
+
+
+def unquote(s):
+    # Percent-escaped bytes are usually UTF-8. When they aren't (a cp1252
+    # byte, or UTF-8 that was encoded twice), decoding them as UTF-8 would
+    # turn each one into U+FFFD. Read them as latin-1 instead and send the
+    # result back through decode(), whose mojibake passes handle the rest.
+    # E.g. 'Ã%82Â%96' (cp1252 0x96 encoded as UTF-8 twice) -> '–'.
+    try:
+        return urllib.parse.unquote(s, errors='strict')
+    except UnicodeDecodeError:
+        return decode(urllib.parse.unquote(s, encoding='latin-1'))
 
 
 def is_block(puz, x, y):

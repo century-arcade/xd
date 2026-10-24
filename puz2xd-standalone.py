@@ -73,10 +73,21 @@ def clean_c1_controls(s):
     return _C1_RE.sub(repl, s)
 
 
+def unquote(s):
+    # Percent-escaped bytes that aren't UTF-8 would become U+FFFD; read
+    # them as latin-1 and run decode() again (see xdfile/puz2xd.py).
+    try:
+        return urllib.parse.unquote(s, errors='strict')
+    except UnicodeDecodeError:
+        return decode(urllib.parse.unquote(s, encoding='latin-1'))
+
+
 def decode(s):
     # 'Â' (U+00C2) before a C1 control: \xc2\xXX UTF-8 misread as latin-1.
     # Strip the orphan 'Â' so clean_c1_controls handles the trailer.
     s = re.sub(r'Â([\x80-\x9f])', r'\1', s)
+    # UTF-8 'à' read as latin-1 -> 'Ã\xa0'. Before the NBSP collapse.
+    s = s.replace('\xc3\xa0', 'à')
     # UTF-8 NBSP read as latin-1 -> 'Â\xa0'; then any remaining NBSPs.
     s = s.replace('\xc2\xa0', ' ')
     s = s.replace('\xa0', ' ')
@@ -97,7 +108,7 @@ def decode(s):
         '“': '"', '”': '"',
         '…': '...',
     }))
-    s = urllib.parse.unquote(s)
+    s = unquote(s)
     s = html.unescape(s)
     # Remove spurious semicolons from invalid HTML entity refs
     # (e.g. html2text converts "B&O" to "B&O;")

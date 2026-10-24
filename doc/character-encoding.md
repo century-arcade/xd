@@ -181,13 +181,13 @@ Similar artifacts appeared at byte 0x80 in BG 2009-2011 files for `°` (`90° on
 [`xdfile/puz2xd.py`](../xdfile/puz2xd.py) `decode()` runs at conversion time on every clue, header, and metadata field pulled from a .puz. Order of operations:
 
 1. **Strip orphan `Â`** before a C1 control: `\xc2\xXX` UTF-8 misread as latin-1 produces `Â + control`. Drop the `Â` so `clean_c1_controls` handles the trailer.
-2. **NBSP collapse**: `\xc2\xa0` (UTF-8 NBSP read as latin-1) and standalone `\xa0` → space.
+2. **NBSP collapse**: `\xc3\xa0` (UTF-8 `à` read as latin-1, `Ã` + NBSP) → `à` first, so the collapse can't leave `Ã `; then `\xc2\xa0` (UTF-8 NBSP read as latin-1) and standalone `\xa0` → space.
 3. **Targeted UTF-8 fix**: `\xc3\xa8` (`Ã¨`) → `è`. (Subsumed by `clean_latin1_utf8_mojibake` but kept explicit for clarity / backward-compat with old test cases.)
 4. **Mac Roman curly quotes**: `\xd3` → `"`, `\xd4` → `"`.
 5. **`clean_latin1_utf8_mojibake`**: §6a — `Ã/Â + cont byte` → re-decoded UTF-8 char.
 6. **`clean_c1_controls`**: §3, §4, §6c — UTF-8 trailer reconstruction → orphan `"/D` strip → U+008E override → cp1252 default with U+0080/U+0098 skipped.
 7. **ASCII typography flattening**: curly quotes → ASCII, ellipsis → `...`. Em dash kept as Unicode (matches existing corpus convention).
-8. **URL unquote, HTML entity unescape, whitespace collapse** — pre-existing legacy steps.
+8. **URL unquote, HTML entity unescape, whitespace collapse** — pre-existing legacy steps. Percent-escaped bytes are decoded as UTF-8; when they aren't valid UTF-8 (a cp1252 byte, or UTF-8 encoded twice, like `Ã%82Â%96` for `–`), they're read as latin-1 and the string goes through `decode()` again, so they don't become U+FFFD.
 
 The two lossy bulk replacements that the legacy decode used to do — `\xc3\x82 → ""` and `\xc2 → " "` — are dropped. They corrupted legitimate French text (real `Â`, `Ã` in proper nouns) trying to clean up a small class of UTF-8 leftovers. The new pipeline only touches `Â` / `Ã` when followed by a continuation byte (a clear UTF-8 mojibake signal).
 
@@ -197,8 +197,9 @@ The two lossy bulk replacements that the legacy decode used to do — `\xc3\x82 
 
 | Code | Severity | Catches | Auto-fix |
 |---|---|---|---|
-| `XD009` | error | latin-1 misread of UTF-8 (`Ãª`, `Ã©`, `Ã³`, etc.) | yes |
+| `XD009` | error | latin-1 misread of UTF-8 (`Ãª`, `Ã©`, `Ã³`, etc.), and `Ã ` for `à` once its NBSP was flattened | yes |
 | `XD010` | error | C1 control codepoints (U+0080–U+009F) | partial |
+| `XD024` | error | U+FFFD replacement character, or its mojibake `ï¿½`: a character was lost | no |
 
 `XD010`'s fixer runs four passes:
 
