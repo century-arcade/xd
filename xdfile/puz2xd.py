@@ -74,6 +74,38 @@ def is_block(puz, x, y):
     return x < 0 or y < 0 or x >= puz.width or y >= puz.height or puz[x, y].solution == '.'
 
 
+# HTML formatting in .puz text (an xword-dl download with preserve_html, or
+# a publisher's own tags) becomes xd markup in clues and plain text in
+# headers. Other common tags are dropped; anything else that only looks
+# like a tag ("<3") is left alone. Runs before decode(), so an escaped
+# '&lt;i&gt;' stays text.
+_HTML_MARKUP = {
+    'i': '/', 'em': '/', 'b': '*', 'strong': '*', 'u': '_',
+    's': '-', 'strike': '-', 'del': '-', 'sup': '^', 'sub': '~',
+}
+_HTML_DROPPED = {'span', 'a', 'font', 'small', 'big', 'br', 'p', 'div'}
+_HTML_TAG_RE = re.compile(r'<(/?)([a-zA-Z]+)\b[^<>]*>')
+
+
+def html_to_markup(s, markup=True):
+    def repl(m):
+        closing, tag = m.group(1), m.group(2).lower()
+        if tag in _HTML_MARKUP:
+            if not markup:
+                return ''
+            c = _HTML_MARKUP[tag]
+            return c + '}' if closing else '{' + c
+        if tag in _HTML_DROPPED:
+            return ' ' if tag in ('br', 'p', 'div') else ''
+        return m.group(0)
+    s = _HTML_TAG_RE.sub(repl, s)
+    # Keep spaces outside the markup: '<i>Bring It On </i>' -> '{/Bring It On/} '
+    s = re.sub(r'(\{[/*_\-^~])(\s+)', r'\2\1', s)
+    s = re.sub(r'(\s+)([/*_\-^~]\})', r'\2\1', s)
+    # and drop markup left empty.
+    return re.sub(r'\{([/*_\-^~])\1\}', '', s)
+
+
 def parse_puz(contents, filename):
     rebus_shorthands = list("zyxwvutsrqponmlkjihgfedcba⚷⚳♇♆⛢♄♃♂♁♀☿♹♸♷♶♵♴♳⅘⅗⅖⅕♚♛♜♝♞♟⚅⚄⚃⚂⚁⚀♣♦♥♠+&%$@?*0987654321")
 
@@ -92,13 +124,13 @@ def parse_puz(contents, filename):
 
     # Author: is the constructor only; an editor credited in the byline
     # ("Amanda Rafkin; edited by Kelsey Dixon") gets its own Editor: header.
-    author, editor = clean_author_header(decode(puzobj.author))
+    author, editor = clean_author_header(decode(html_to_markup(puzobj.author, markup=False)))
     xd.set_header("Author", author)
     xd.set_header("Editor", editor)
-    xd.set_header("Copyright", decode(puzobj.copyright))
-    xd.set_header("Notes", decode(puzobj.notes))
+    xd.set_header("Copyright", decode(html_to_markup(puzobj.copyright, markup=False)))
+    xd.set_header("Notes", decode(html_to_markup(puzobj.notes, markup=False)))
 
-    xd.set_header("Title", decode(puzobj.title))
+    xd.set_header("Title", decode(html_to_markup(puzobj.title, markup=False)))
 
     used_rebuses = {}  # [puz_rebus_gridvalue_as_string] -> our_rebus_gridvalue
     rebus = {}  # [our_rebus_gridvalue] -> full_cell
@@ -177,7 +209,7 @@ def parse_puz(contents, filename):
             cluenum = "A" + str(number)
             if cluenum not in answers:
                 raise xdfile.IncompletePuzzleParse(xd, "Clue number doesn't match grid: " + cluenum)
-            xd.clues.append((("A", number), decode(clue), answers.get(cluenum, "")))
+            xd.clues.append((("A", number), decode(html_to_markup(clue)), answers.get(cluenum, "")))
 
         # xd.append_clue_break()
 
@@ -185,7 +217,7 @@ def parse_puz(contents, filename):
             cluenum = "D" + str(number)
             if cluenum not in answers:
                 raise xdfile.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + cluenum)
-            xd.clues.append((("D", number), decode(clue), answers.get(cluenum, "")))
+            xd.clues.append((("D", number), decode(html_to_markup(clue)), answers.get(cluenum, "")))
     except KeyError as e:
         raise xdfile.IncompletePuzzleParse(xd, "Clue doesn't match grid: " + str(e))
 
