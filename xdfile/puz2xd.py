@@ -30,6 +30,9 @@ def decode(s):
     # handles the trailer). E.g. .puz bytes \xc2\x92 (UTF-8 U+0092) read as
     # latin-1 -> 'Â' -> '' -> "'".
     s = re.sub(r'Â([\x80-\x9f])', r'\1', s)
+    # UTF-8 'à' (\xc3\xa0) read as latin-1 is 'Ã' + NBSP. Fix it before the
+    # NBSP collapse below turns it into 'Ã ' (gxd had 'Pied-Ã -terre').
+    s = s.replace('\xc3\xa0', 'à')
     # UTF-8 NBSP read as latin-1 surfaces as 'Â\xa0'; collapse to space.
     s = s.replace('\xc2\xa0', ' ')
     s = s.replace('\xa0', ' ')

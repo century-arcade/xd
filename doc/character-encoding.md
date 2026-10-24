@@ -181,7 +181,7 @@ Similar artifacts appeared at byte 0x80 in BG 2009-2011 files for `°` (`90° on
 [`xdfile/puz2xd.py`](../xdfile/puz2xd.py) `decode()` runs at conversion time on every clue, header, and metadata field pulled from a .puz. Order of operations:
 
 1. **Strip orphan `Â`** before a C1 control: `\xc2\xXX` UTF-8 misread as latin-1 produces `Â + control`. Drop the `Â` so `clean_c1_controls` handles the trailer.
-2. **NBSP collapse**: `\xc2\xa0` (UTF-8 NBSP read as latin-1) and standalone `\xa0` → space.
+2. **NBSP collapse**: `\xc3\xa0` (UTF-8 `à` read as latin-1, `Ã` + NBSP) → `à` first, so the collapse can't leave `Ã `; then `\xc2\xa0` (UTF-8 NBSP read as latin-1) and standalone `\xa0` → space.
 3. **Targeted UTF-8 fix**: `\xc3\xa8` (`Ã¨`) → `è`. (Subsumed by `clean_latin1_utf8_mojibake` but kept explicit for clarity / backward-compat with old test cases.)
 4. **Mac Roman curly quotes**: `\xd3` → `"`, `\xd4` → `"`.
 5. **`clean_latin1_utf8_mojibake`**: §6a — `Ã/Â + cont byte` → re-decoded UTF-8 char.

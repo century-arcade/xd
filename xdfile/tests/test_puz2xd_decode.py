@@ -158,3 +158,13 @@ def test_decode_strips_c3_82_mojibake_artifact():
     assert decode("Cleo\xc3\x82's slayer") == "Cleo's slayer"
     # Combine with adjacent legit mojibake — strip applies only to \xc3\x82.
     assert decode("Cafe\xc3\x82 Caf\xc3\xa9") == "Cafe Café"
+
+
+def test_decode_a_grave_before_nbsp_collapse():
+    # \xc3\xa0 = UTF-8 'à' read as latin-1: 'Ã' + NBSP. The NBSP collapse
+    # used to run first and leave 'Ã '.
+    # gxd/crossynergy/2014/cs2014-01-04.xd A45 "Pied-Ã -terre in Bangkok?"
+    assert decode("Pied-\xc3\xa0-terre in Bangkok?") == "Pied-à-terre in Bangkok?"
+    # gxd/philadelphia/2014/pi2014-11-16.xd D113 "Show off Ã la Mr. Universe"
+    assert decode("Show off \xc3\xa0 la Mr. Universe") == "Show off à la Mr. Universe"
+    assert decode("Not l\xc3\xa0") == "Not là"
