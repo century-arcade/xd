@@ -187,7 +187,7 @@ Similar artifacts appeared at byte 0x80 in BG 2009-2011 files for `°` (`90° on
 5. **`clean_latin1_utf8_mojibake`**: §6a — `Ã/Â + cont byte` → re-decoded UTF-8 char.
 6. **`clean_c1_controls`**: §3, §4, §6c — UTF-8 trailer reconstruction → orphan `"/D` strip → U+008E override → cp1252 default with U+0080/U+0098 skipped.
 7. **ASCII typography flattening**: curly quotes → ASCII, ellipsis → `...`. Em dash kept as Unicode (matches existing corpus convention).
-8. **URL unquote, HTML entity unescape, whitespace collapse** — pre-existing legacy steps.
+8. **URL unquote, HTML entity unescape, whitespace collapse** — pre-existing legacy steps. Percent-escaped bytes are decoded as UTF-8; when they aren't valid UTF-8 (a cp1252 byte, or UTF-8 encoded twice, like `Ã%82Â%96` for `–`), they're read as latin-1 and the string goes through `decode()` again, so they don't become U+FFFD.
 
 The two lossy bulk replacements that the legacy decode used to do — `\xc3\x82 → ""` and `\xc2 → " "` — are dropped. They corrupted legitimate French text (real `Â`, `Ã` in proper nouns) trying to clean up a small class of UTF-8 leftovers. The new pipeline only touches `Â` / `Ã` when followed by a continuation byte (a clear UTF-8 mojibake signal).
 
