@@ -29,18 +29,20 @@ def download_puzzles(outf, puzsrc, pubid, date, xwordid, fallback_latest=True):
     fn = "%s.%s" % (xdid, puzsrc.ext)
 
     if puzsrc['xword-dl_id']:
+        # unicode=True: xword-dl writes a UTF-8 (v2.0) .puz instead of folding
+        # emoji to ":name:" shortcodes and other non-Latin-1 text to ASCII.
         filename_t = pubid + "%Y-%m-%d"  # wap2026-04-01
         try:
             # `content` is always a a puz.Puz object
             log("%s: fetching via xword-dl" % xdid)
-            content, filename = by_keyword(xwordid, date=date.strftime("%Y-%m-%d"), filename=filename_t)
+            content, filename = by_keyword(xwordid, date=date.strftime("%Y-%m-%d"), filename=filename_t, unicode=True)
         except Exception as e:
             if not fallback_latest:
                 error("%s: xword-dl failed: %s" % (xdid, e))
                 return False
             log("%s: xword-dl fetch failed (%s); retrying for latest issue" % (xdid, e))
             try:
-                content, filename = by_keyword(xwordid, filename=filename_t)
+                content, filename = by_keyword(xwordid, filename=filename_t, unicode=True)
             except Exception as e:
                 error("%s: xword-dl gave up: %s" % (xdid, e))
                 return False
