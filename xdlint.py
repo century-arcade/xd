@@ -1000,6 +1000,41 @@ def _(ctx):
             yield finding("XD009", Severity.ERROR, i,
                           f"latin-1 misread of UTF-8 {m.group(0)!r} "
                           f"at col {m.start() + 1} (should be {fix!r})")
+        for m in _A_GRAVE_FLATTENED_RE.finditer(line):
+            yield finding("XD009", Severity.ERROR, i,
+                          f"latin-1 misread of UTF-8 'à' at col "
+                          f"{m.start() + 1}: 'Ã' + no-break space, flattened "
+                          f"to 'Ã ' (should be 'à')")
+
+
+# UTF-8 'à' (\xc3\xa0) misread as latin-1 is 'Ã' + NBSP, which
+# _LATIN1_UTF8_RE catches; once the NBSP has been flattened to a space
+# (XD208, or decode() before it handled 'à') only 'Ã ' is left
+# ("Pied-Ã -terre"). Not after a capital, where 'Ã ' ends a real
+# Portuguese word ("IRMÃ DULCE").
+_A_GRAVE_FLATTENED_RE = re.compile(r"(?<![A-ZÀ-Þ])Ã ")
+
+
+# U+FFFD is what a decoder writes for bytes it couldn't read, so a character
+# was lost before or during conversion; 'ï¿½' is U+FFFD's UTF-8 bytes read
+# as latin-1. Nothing says what the character was, so there's no fixer.
+_REPLACEMENT_CHAR_RE = re.compile("�|ï¿½")
+
+
+@rule("XD024", Severity.ERROR, "replacement-character")
+def _(ctx):
+    """U+FFFD (or its mojibake 'ï¿½') in the text: a character was lost,
+    e.g. "Not to be @#$� with". Check the source or the published
+    puzzle for what it was. Files that aren't valid UTF-8 get XD022
+    instead, since their U+FFFDs come from the lint's own decode."""
+    if any(f.code == "XD022" for f in ctx.parsed.parse_errors):
+        return
+    for i, line in enumerate(ctx.parsed.lines, 1):
+        m = _REPLACEMENT_CHAR_RE.search(line)
+        if m:
+            yield finding("XD024", Severity.ERROR, i,
+                          f"replacement character {m.group(0)!r} at col "
+                          f"{m.start() + 1}: a character was lost")
 
 
 _HTML_ENTITY_RE = re.compile(r"&(?:[a-zA-Z]{1,8}|#\d+|#x[0-9a-fA-F]+);")
@@ -1910,6 +1945,11 @@ def _(text):
     artifact in the corpus -- not real text. Stripped rather than re-decoded,
     which would produce a literal 'Â' (U+00C2) sitting in the middle of clue
     text. Mirrors the explicit strip in xdfile/puz2xd.py decode().
+
+    'Ã ' (an 'à' whose no-break space was flattened) becomes 'à': the space
+    was the NBSP, but a following space may have been collapsed into it,
+    so it's kept except before a hyphen ("Pied-Ã -terre" -> "Pied-à-terre",
+    "Ã la" -> "à la").
     """
     count = 0
     def repl(m):
@@ -1924,7 +1964,13 @@ def _(text):
             return s
         count += 1
         return replacement
-    return _LATIN1_UTF8_RE.sub(repl, text), count
+    text = _LATIN1_UTF8_RE.sub(repl, text)
+
+    def repl_a_grave(m):
+        nonlocal count
+        count += 1
+        return 'à' if text[m.end():m.end() + 1] == '-' else 'à '
+    return _A_GRAVE_FLATTENED_RE.sub(repl_a_grave, text), count
 
 
 @fixer("XD010")
