@@ -1,5 +1,5 @@
 crossword==0.1.2
-xword-dl @ git+https://github.com/thisisparker/xword-dl.git@main
+xword-dl @ git+https://github.com/alexdej/xword-dl.git@main
 puzpy>=0.2.6
 
 # xdfile deps
