@@ -77,6 +77,8 @@ def decode(s):
     # 'Â' (U+00C2) before a C1 control: \xc2\xXX UTF-8 misread as latin-1.
     # Strip the orphan 'Â' so clean_c1_controls handles the trailer.
     s = re.sub(r'Â([\x80-\x9f])', r'\1', s)
+    # UTF-8 'à' read as latin-1 -> 'Ã\xa0'. Before the NBSP collapse.
+    s = s.replace('\xc3\xa0', 'à')
     # UTF-8 NBSP read as latin-1 -> 'Â\xa0'; then any remaining NBSPs.
     s = s.replace('\xc2\xa0', ' ')
     s = s.replace('\xa0', ' ')
