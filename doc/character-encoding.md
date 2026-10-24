@@ -197,8 +197,9 @@ The two lossy bulk replacements that the legacy decode used to do — `\xc3\x82 
 
 | Code | Severity | Catches | Auto-fix |
 |---|---|---|---|
-| `XD009` | error | latin-1 misread of UTF-8 (`Ãª`, `Ã©`, `Ã³`, etc.) | yes |
+| `XD009` | error | latin-1 misread of UTF-8 (`Ãª`, `Ã©`, `Ã³`, etc.), and `Ã ` for `à` once its NBSP was flattened | yes |
 | `XD010` | error | C1 control codepoints (U+0080–U+009F) | partial |
+| `XD024` | error | U+FFFD replacement character, or its mojibake `ï¿½`: a character was lost | no |
 
 `XD010`'s fixer runs four passes:
 
