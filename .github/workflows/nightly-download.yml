@@ -110,8 +110,9 @@ jobs:
           aws-region: ${{ vars.AWS_S3_REGION }}
 
       - name: Upload source zip to S3
-        # The log is already inside the zip (OutputZipFile writes a .log entry
-        # on close), so we don't upload it separately.
+        # The zip is a gxd source archive: the puzzles plus MANIFEST.tsv,
+        # NOTES.md (which names this run) and the downloader's log, so we don't
+        # upload the log separately.
         if: ${{ always() && vars.AWS_S3_BUCKET != '' }}
         env:
           BUCKET: ${{ vars.AWS_S3_BUCKET }}
