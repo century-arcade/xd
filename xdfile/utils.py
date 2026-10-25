@@ -138,6 +138,88 @@ def clean_c1_controls(s: str) -> str:
     return s
 
 
+# Author/Editor credit cleanup. gxd's Author: is the constructor only, with
+# no "By " prefix, and the editor goes in its own Editor: header (gxd
+# EDITORIAL.md, Headers). Publishers' feeds fold both into one byline
+# ("by Byron Walden, edited by Ben Tausig", "Amanda Rafkin; edited by Kelsey
+# Dixon", "Kyle Dolan / Ed. Patti Varol"). Kept in lockstep with
+# _BY_PREFIX_RE, _AUTHOR_EDITOR_RE_GXD and _clean_author() in xdlint.py
+# (which has to stay stdlib-only and standalone); tests/test_xdlint.py
+# checks that the two copies agree.
+_BY_PREFIX_RE = re.compile(r"^(?:by\s+)+", re.IGNORECASE)
+_AUTHOR_EDITOR_RE = re.compile(
+    r"/\s*Ed(?:itor|\.)?\b|edited by|[;,]\s*Ed\.", re.IGNORECASE)
+_CLEAN_AUTHOR_RE = re.compile(
+    r"(?i)(?:(?:By )*(.+)(?:[;/,-]|and) *)?"
+    r"(?:edited|Editor|(?<!\w)Ed[.])(?: By)*(.*)"
+)
+# A trailing '.' that ends an initial or Jr./Sr. is part of the name.
+_NAME_FINAL_PERIOD_RE = re.compile(r"(?:\b[A-Z]|\bJr|\bSr)\.$")
+
+
+def strip_by_prefix(s):
+    """'By Mike Shenk' -> 'Mike Shenk'. Leaves the value alone if nothing
+    would remain."""
+    rest = _BY_PREFIX_RE.sub("", s)
+    return rest if rest.strip() else s
+
+
+def has_editor_credit(author):
+    """True if an Author value also credits an editor."""
+    return bool(_AUTHOR_EDITOR_RE.search(author or ""))
+
+
+def _trim_name(s):
+    s = s.strip().rstrip(",").strip()
+    if s.endswith(".") and not _NAME_FINAL_PERIOD_RE.search(s):
+        s = s[:-1].rstrip()
+    return s
+
+
+def split_author_editor(author, editor=""):
+    """Split an Author value that also credits the editor into
+    (author, editor), dropping any "By " prefix from either.
+
+    'by Byron Walden, edited by Ben Tausig' -> ('Byron Walden', 'Ben Tausig')
+    'Kyle Dolan / Ed. Patti Varol'          -> ('Kyle Dolan', 'Patti Varol')
+
+    The author comes back empty when the value names only an editor
+    ('Edited by Will Shortz'); callers decide what to do with that.
+    """
+    if author:
+        m = _CLEAN_AUTHOR_RE.search(author)
+        if m:
+            author, editor = m.groups()
+        if author:
+            while author.lower().startswith("by "):
+                author = author[3:]
+            author = _trim_name(author)
+        else:
+            author = ""
+        if " / " in author and not editor:
+            author, editor = author.rsplit(" / ", 1)
+    if editor:
+        editor = editor.strip()
+        while editor.lower().startswith("by "):
+            editor = editor[3:].strip()
+        editor = _trim_name(editor)
+    return (author or "").strip(), (editor or "").strip()
+
+
+def clean_author_header(author):
+    """The (Author, Editor) a converter should write for a publisher's
+    byline: the constructor without "By ", and the editor, if the byline
+    credits one. Editor is '' when there is none. A byline that names only
+    an editor is left as it is."""
+    author = (author or "").strip()
+    if has_editor_credit(author):
+        new_author, new_editor = split_author_editor(author)
+        if new_author:
+            return new_author, new_editor
+        return author, ""
+    return strip_by_prefix(author), ""
+
+
 def split_xdid(xdid):
     """ Split xdid [nyt2015-07-01] into set
     If not matched return None

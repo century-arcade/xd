@@ -81,3 +81,45 @@ def test_clean_c1_controls_strips_orphan_quote_trailer():
     # Lone U+009D not preceded by " is left intact for manual review.
     assert utils.clean_c1_controls("foobar") == "foobar"
 
+
+
+# Bylines as the nightly feeds deliver them -> (Author, Editor).
+BYLINES = [
+    ("by Byron Walden, edited by Ben Tausig", ("Byron Walden", "Ben Tausig")),
+    ("Amanda Rafkin; edited by Kelsey Dixon", ("Amanda Rafkin", "Kelsey Dixon")),
+    ("By Mike Shenk/Edited by Mike Shenk", ("Mike Shenk", "Mike Shenk")),
+    ("Kyle Dolan / Ed. Patti Varol", ("Kyle Dolan", "Patti Varol")),
+    ("By Adrian Johnson and Alexandra Doumani / Ed. David Steinberg",
+     ("Adrian Johnson and Alexandra Doumani", "David Steinberg")),
+    ("Zachary Edward-Brown & Shannon Rapp / Ed. Patti Varol",
+     ("Zachary Edward-Brown & Shannon Rapp", "Patti Varol")),
+    ("S.N., edited by Stanley Newman", ("S.N.", "Stanley Newman")),
+    ("Fred Piscop, edited by Stanley Newman", ("Fred Piscop", "Stanley Newman")),
+    ("By Alfio Micci; Ed. By Charles Preston", ("Alfio Micci", "Charles Preston")),
+    ("By CJ Tan", ("CJ Tan", "")),
+    ("by Matt Gaffney", ("Matt Gaffney", "")),
+    ("Matt Gaffney", ("Matt Gaffney", "")),
+    ("Ed Sessa", ("Ed Sessa", "")),
+    ("Ed Pegg Jr.", ("Ed Pegg Jr.", "")),
+    ("Byron Walden", ("Byron Walden", "")),
+    # Only an editor named: left for a person to sort out.
+    ("Edited by Will Shortz", ("Edited by Will Shortz", "")),
+    ("", ("", "")),
+]
+
+
+def test_clean_author_header():
+    for byline, want in BYLINES:
+        assert utils.clean_author_header(byline) == want, byline
+
+
+def test_split_author_editor_keeps_existing_editor():
+    assert utils.split_author_editor("Smith", "Jones") == ("Smith", "Jones")
+    assert utils.split_author_editor("", "Jones") == ("", "Jones")
+
+
+def test_strip_by_prefix():
+    assert utils.strip_by_prefix("By Mike Shenk") == "Mike Shenk"
+    assert utils.strip_by_prefix("by by Mike Shenk") == "Mike Shenk"
+    assert utils.strip_by_prefix("Byron Walden") == "Byron Walden"
+    assert utils.strip_by_prefix("By") == "By"

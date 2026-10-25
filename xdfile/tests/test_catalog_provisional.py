@@ -301,3 +301,15 @@ def test_mint_variant_xdid_unrecognized_base(monkeypatch):
 def test_mint_variant_xdid_number_format(monkeypatch):
     _patch_receipts(monkeypatch, by_xdid={})
     assert catalog.mint_variant_xdid("up-481", "bwh", "x.puz") == "up-481a"
+
+
+def test_shelf_path_from_xdid_number_slug():
+    assert catalog.shelf_path_from_xdid("fakepub-219_5") == "fakepub/fakepub-219_5"
+
+
+def test_deduce_xdid_and_shelf_path_non_integer_number(monkeypatch):
+    Publ = namedtuple("Publ", "PublisherAbbr")
+    monkeypatch.setattr(metadb, "xd_publications", lambda: {"fakepub": Publ("fakeco")})
+    xd = XDFile("Title: t\nNumber: 219.5\n\n\nA\n\n\nA1. c ~ A\n", filename="fakepub-219.puz")
+    assert catalog.deduce_xdid(xd, "fakepub", "mdtext") == "fakepub-219_5"
+    assert catalog.get_shelf_path(xd, "fakepub", "mdtext") == "fakeco/fakepub-219_5"

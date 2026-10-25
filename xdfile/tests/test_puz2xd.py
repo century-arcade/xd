@@ -31,3 +31,40 @@ def test_decode_legacy_replacements():
 
 def test_parse_puz():
     assert True
+
+
+def _tiny_puz(author):
+    import puz
+    p = puz.Puzzle()
+    p.width = p.height = 3
+    p.solution = 'ABCD.EFGH'
+    p.fill = '----.----'
+    p.title = 'T'
+    p.author = author
+    p.copyright = '(c) Somebody'
+    p.clues = ['a1', 'd1', 'd2', 'a3']
+    return p.tobytes()
+
+
+def test_parse_puz_splits_editor_out_of_author():
+    from xdfile.puz2xd import parse_puz
+    xd = parse_puz(_tiny_puz('by Byron Walden, edited by Ben Tausig'),
+                   'avc2026-10-21.puz')
+    assert xd.get_header('Author') == 'Byron Walden'
+    assert xd.get_header('Editor') == 'Ben Tausig'
+    out = xd.to_unicode()
+    assert 'Author: Byron Walden\nEditor: Ben Tausig\n' in out
+
+
+def test_parse_puz_strips_by_prefix_without_editor():
+    from xdfile.puz2xd import parse_puz
+    xd = parse_puz(_tiny_puz('By CJ Tan'), 'wsj2026-10-21.puz')
+    assert xd.get_header('Author') == 'CJ Tan'
+    assert 'Editor' not in xd.headers
+
+
+def test_parse_puz_plain_author_unchanged():
+    from xdfile.puz2xd import parse_puz
+    xd = parse_puz(_tiny_puz('Matt Gaffney'), 'wsj2026-10-21.puz')
+    assert xd.get_header('Author') == 'Matt Gaffney'
+    assert 'Editor' not in xd.to_unicode()

@@ -190,8 +190,8 @@ def shelf_path_from_xdid(xdid):
         publisher = publ.PublisherAbbr if publ else pubid
         year = m.group(2)
         return "%s/%s/%s" % (publisher, year, xdid)
-    # Number format with optional letter variant: <pubid>-NNN[a-z]
-    m = re.match(r'^([a-z]+)-\d+[a-z]?$', xdid)
+    # Number format: <pubid>-NNN[a-z], or a number_slug like 219_5
+    m = re.match(r'^([a-z]+)-\d[A-Za-z0-9_]*$', xdid)
     if m:
         pubid = m.group(1)
         publ = metadb.xd_publications().get(pubid)
@@ -281,7 +281,7 @@ def deduce_xdid(xd, pubid, mdtext, strict=False):
 
     num = xd.get_header('Number')
     if num:
-        return "%s-%03d" % (pubid, int(num))
+        return "%s-%s" % (pubid, xdfile.number_slug(num))
 
     dt = xd.get_header("Date")
     if dt:
@@ -310,7 +310,7 @@ def get_shelf_path(xd, pubid, mdtext, strict=False):
 
     num = xd.get_header('Number')
     if num:
-        return "%s/%s-%03d" % (publisher or pubid, pubid, int(num))
+        return "%s/%s-%s" % (publisher or pubid, pubid, xdfile.number_slug(num))
 
     dt = xd.get_header("Date")
     if dt:
