@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xd solve</title>
+<style>
+:root {
+  --bg: #fff; --fg: #111; --muted: #666; --line: #111; --block: #111;
+  --word: #cfe3ff; --cur: #ffd84d; --wrong: #c22; --rev: #2a6ad0; --shade: #ddd;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161616; --fg: #eee; --muted: #999; --line: #888; --block: #000;
+    --word: #24405f; --cur: #8a6d00; --wrong: #ff6b6b; --rev: #7fb0ff; --shade: #333;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.35 system-ui, sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 12px 16px 40px; }
+h1 { font-size: 20px; margin: 0; }
+.meta { color: var(--muted); font-size: 14px; margin: 2px 0 10px; }
+.layout { display: flex; gap: 24px; align-items: flex-start; }
+.board { flex: 0 0 auto; width: min(100%, 560px); }
+#curclue { min-height: 2.8em; padding: 6px 8px; background: var(--word); margin-bottom: 8px; font-size: 15px; }
+#grid { display: grid; border: 2px solid var(--line); background: var(--line); gap: 1px; user-select: none; touch-action: manipulation; }
+.cell { position: relative; background: var(--bg); aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-weight: 600; text-transform: uppercase; cursor: pointer; overflow: hidden; }
+.cell.block { background: var(--block); cursor: default; }
+.cell.void { background: var(--bg); cursor: default; }
+.cell.shaded { background: var(--shade); }
+.cell.circle::after { content: ""; position: absolute; inset: 1px; border: 1px solid var(--muted); border-radius: 50%; pointer-events: none; }
+.cell.word { background: var(--word); }
+.cell.cur { background: var(--cur); }
+.cell .n { position: absolute; top: 1px; left: 2px; font-size: max(8px, calc(var(--cs) * 0.28)); font-weight: 400; line-height: 1; }
+.cell .v { font-size: calc(var(--cs) * 0.58); line-height: 1; }
+.cell .v.long { font-size: calc(var(--cs) * 0.3); }
+.cell.wrong .v { color: var(--wrong); }
+.cell.wrong::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px solid var(--wrong); transform: rotate(-45deg); }
+.cell.revealed .v { color: var(--rev); }
+.buttons { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+button { font: inherit; font-size: 14px; padding: 5px 12px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); cursor: pointer; }
+button:active { background: var(--word); }
+#status { margin-top: 8px; font-weight: 600; }
+.clues { flex: 1 1 0; display: flex; gap: 20px; min-width: 0; }
+.clues section { flex: 1 1 0; min-width: 0; }
+.clues h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 6px; }
+.clues ol { list-style: none; margin: 0; padding: 0; max-height: 75vh; overflow-y: auto; }
+.clues li { display: flex; gap: 6px; padding: 3px 6px; cursor: pointer; font-size: 14px; }
+.clues li b { min-width: 2em; text-align: right; }
+.clues li.active { background: var(--word); }
+.clues li.cross { box-shadow: inset 3px 0 0 var(--cur); }
+#kbd { position: absolute; left: -1000px; width: 1px; height: 1px; opacity: 0; }
+.notes { margin-top: 16px; color: var(--muted); font-size: 14px; white-space: pre-wrap; }
+#maker textarea { width: 100%; height: 40vh; font: 13px/1.3 ui-monospace, monospace; }
+#maker a { word-break: break-all; }
+.err { color: var(--wrong); }
+@media (max-width: 800px) {
+  .layout { flex-direction: column; }
+  .board { width: 100%; }
+  .clues { width: 100%; }
+  .clues ol { max-height: none; }
+}
+</style>
+</head>
+<body>
+<main>
+<div id="app"></div>
+</main>
+<input id="kbd" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="crossword input">
+<script>
+'use strict';
+const DICT_URL = v => `/xd-d${v}.dict`;
+const CLUE_RE = /^([A-Z])(\d+)\. (.*) ~ (.*)$/;
+const $ = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) k === 'class' ? e.className = v : e.setAttribute(k, v);
+  for (const k of kids) e.append(k);
+  return e;
+};
+const app = document.getElementById('app');
+
+// token format: mirrors xdfile/xdurl.py; change both together
+
+function b64decode(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(s + '='.repeat(-s.length & 3)), c => c.charCodeAt(0));
+}
+function b64encode(bytes) {
+  let s = '';
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function storedBlocks(data) {
+  const parts = [];
+  for (let i = 0; i < data.length; i += 65535) {
+    const chunk = data.subarray(i, i + 65535), n = chunk.length;
+    parts.push(new Uint8Array([0, n & 255, n >> 8, ~n & 255, (~n >> 8) & 255]), chunk);
+  }
+  return parts;
+}
+async function pipe(parts, stream) {
+  return new Uint8Array(await new Response(new Blob(parts).stream().pipeThrough(stream)).arrayBuffer());
+}
+async function decodeToken(token) {
+  const raw = b64decode(token), mode = raw[0], ver = mode >> 1;
+  let dict = new Uint8Array(0);
+  if (ver) {
+    const r = await fetch(DICT_URL(ver));
+    if (!r.ok) throw new Error(`no dictionary v${ver}`);
+    dict = new Uint8Array(await r.arrayBuffer());
+  }
+  const out = await pipe([...storedBlocks(dict), raw.subarray(1)], new DecompressionStream('deflate-raw'));
+  const text = new TextDecoder().decode(out.subarray(dict.length));
+  return mode & 1 ? unslim(text) : text;
+}
+async function encodeText(text) {
+  const s = slim(text);
+  const body = await pipe([new TextEncoder().encode(s ?? text)], new CompressionStream('deflate-raw'));
+  const out = new Uint8Array(body.length + 1);
+  out[0] = s === null ? 0 : 1;
+  out.set(body, 1);
+  return b64encode(out);
+}
+
+
+function splitXd(text) {
+  const lines = text.split('\n');
+  let i = 0;
+  while (i < lines.length && lines[i].trim()) i++;
+  const headers = lines.slice(0, i);
+  while (i < lines.length && !lines[i].trim()) i++;
+  let j = i;
+  while (j < lines.length && lines[j].trim()) j++;
+  return { headers, grid: lines.slice(i, j), head: lines.slice(0, j), rest: lines.slice(j) };
+}
+function headerMap(headers) {
+  const h = {};
+  for (const line of headers) {
+    const k = line.indexOf(':');
+    if (k > 0) h[line.slice(0, k).trim().toLowerCase()] = line.slice(k + 1).trim();
+  }
+  return h;
+}
+function rebusMap(h) {
+  const m = {};
+  for (const p of (h.rebus || '').split(/[\s,]+/)) {
+    const k = p.indexOf('=');
+    if (k > 0) m[p.slice(0, k)] = p.slice(k + 1);
+  }
+  return m;
+}
+function numberGrid(gridLines, rebus) {
+  const rows = gridLines.map(r => [...r.trim()]);
+  const h = rows.length, w = Math.max(...rows.map(r => r.length));
+  const isCell = (y, x) => y >= 0 && y < h && x >= 0 && x < rows[y].length && !'#_'.includes(rows[y][x]);
+  const val = (y, x) => rebus[rows[y][x]] ?? rows[y][x].toUpperCase();
+  const across = [], down = [], nums = {};
+  let num = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < rows[y].length; x++) {
+    if (!isCell(y, x)) continue;
+    const a = !isCell(y, x - 1) && isCell(y, x + 1), d = !isCell(y - 1, x) && isCell(y + 1, x);
+    if (!a && !d) continue;
+    nums[y * w + x] = ++num;
+    for (const [dir, ok, dy, dx, list] of [['A', a, 0, 1, across], ['D', d, 1, 0, down]]) {
+      if (!ok) continue;
+      const cells = [];
+      for (let yy = y, xx = x; isCell(yy, xx); yy += dy, xx += dx) cells.push(yy * w + xx);
+      list.push({ dir, num, cells, answer: cells.map(i => val(Math.floor(i / w), i % w)).join('') });
+    }
+  }
+  return { rows, w, h, isCell, val, nums, words: across.concat(down) };
+}
+function slim(text) {
+  const { headers, grid, head, rest } = splitXd(text);
+  if (!grid.length) return null;
+  const exp = numberGrid(grid, rebusMap(headerMap(headers))).words;
+  const out = [];
+  let k = 0;
+  for (const line of rest) {
+    if (k < exp.length && line.trim()) {
+      const m = CLUE_RE.exec(line), e = exp[k];
+      if (!m || m[1] !== e.dir || +m[2] !== e.num || m[4] !== e.answer || !m[3].trim()) return null;
+      out.push(m[3]);
+      k++;
+    } else out.push(line);
+  }
+  if (k < exp.length) return null;
+  const s = head.concat(out).join('\n');
+  return unslim(s) === text ? s : null;
+}
+function unslim(text) {
+  const { headers, grid, head, rest } = splitXd(text);
+  const exp = numberGrid(grid, rebusMap(headerMap(headers))).words;
+  let k = 0;
+  const out = rest.map(line => {
+    if (k < exp.length && line.trim()) {
+      const e = exp[k++];
+      return `${e.dir}${e.num}. ${line} ~ ${e.answer}`;
+    }
+    return line;
+  });
+  return head.concat(out).join('\n');
+}
+
+function renderMarkup(text) {
+  const frag = document.createDocumentFragment();
+  const tags = { '/': 'i', '*': 'b', '_': 'u', '-': 's' };
+  const re = /\{([\/*_-])(.*?)\1\}/g;
+  let last = 0, m;
+  text = text.replace(/\{\\\\\}|\\/g, ' / ');
+  while ((m = re.exec(text))) {
+    frag.append(text.slice(last, m.index), $(tags[m[1]], {}, m[2]));
+    last = re.lastIndex;
+  }
+  frag.append(text.slice(last));
+  return frag;
+}
+
+
+function play(text, token) {
+  const { headers, grid, rest } = splitXd(text);
+  const h = headerMap(headers);
+  const G = numberGrid(grid, rebusMap(h));
+  const special = (h.special || '').toLowerCase();
+  const clueText = {};
+  const notes = [];
+  for (const line of rest) {
+    const m = CLUE_RE.exec(line);
+    if (m) clueText[m[1] + m[2]] = m[3];
+    else if (line.trim() && !/^[A-Z]?\d+ \^/.test(line)) notes.push(line);
+  }
+  const words = G.words.filter(w => w.cells.length > 1);
+  const wordAt = { A: {}, D: {} };
+  for (const w of words) for (const c of w.cells) wordAt[w.dir][c] = w;
+
+  const storeKey = 'xdsolve:' + token.slice(-48);
+  let fill = {};
+  try { fill = JSON.parse(localStorage.getItem(storeKey)) || {}; } catch (e) {}
+  const save = () => { try { localStorage.setItem(storeKey, JSON.stringify(fill)); } catch (e) {} };
+  const marks = {};
+
+  document.title = h.title || 'xd solve';
+  app.append($('h1', {}, h.title || 'Untitled'),
+    $('div', { class: 'meta' }, [h.author, h.editor && `ed. ${h.editor}`, h.date, h.copyright && `© ${h.copyright}`].filter(Boolean).join(' · ')));
+  const curclue = $('div', { id: 'curclue' });
+  const gridEl = $('div', { id: 'grid' });
+  gridEl.style.gridTemplateColumns = `repeat(${G.w}, 1fr)`;
+  const status = $('div', { id: 'status' });
+  const btn = (label, fn) => { const b = $('button', {}, label); b.onclick = () => { fn(); kbd.focus(); }; return b; };
+  const board = $('div', { class: 'board' }, curclue, gridEl,
+    $('div', { class: 'buttons' }, btn('Check', check), btn('Reveal word', () => reveal(curWord().cells)),
+      btn('Reveal all', () => confirm('Reveal the whole puzzle?') && reveal(Object.keys(cellEls).map(Number))),
+      btn('Clear', () => confirm('Clear all entries?') && clearAll())), status);
+  const lists = {};
+  const cluesEl = $('div', { class: 'clues' });
+  for (const [dir, name] of [['A', 'Across'], ['D', 'Down']]) {
+    const ol = $('ol');
+    for (const w of words.filter(w => w.dir === dir)) {
+      const li = $('li', {}, $('b', {}, String(w.num)), $('span', {}, renderMarkup(clueText[dir + w.num] ?? '')));
+      li.onclick = () => { cur = w.cells.find(c => !fill[c]) ?? w.cells[0]; dir_ = dir; update(); kbd.focus(); };
+      w.li = li;
+      ol.append(li);
+    }
+    lists[dir] = ol;
+    cluesEl.append($('section', {}, $('h2', {}, name), ol));
+  }
+  app.append($('div', { class: 'layout' }, board, cluesEl));
+  if (notes.length) app.append($('div', { class: 'notes' }, notes.join('\n')));
+
+  const cellEls = {};
+  for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
+    const i = y * G.w + x, ch = (G.rows[y] || [])[x];
+    const cls = ['cell'];
+    if (!G.isCell(y, x)) cls.push(ch === '_' || ch === undefined ? 'void' : 'block');
+    else if (/[a-z]/.test(ch) && special) cls.push(special.startsWith('shade') ? 'shaded' : 'circle');
+    const el = $('div', { class: cls.join(' ') });
+    if (G.isCell(y, x)) {
+      if (G.nums[i]) el.append($('span', { class: 'n' }, String(G.nums[i])));
+      el.append($('span', { class: 'v' }));
+      el.onclick = () => { if (cur === i) dir_ = dir_ === 'A' ? 'D' : 'A'; else cur = i; fixDir(); update(); kbd.focus(); };
+      cellEls[i] = el;
+    }
+    gridEl.append(el);
+  }
+  new ResizeObserver(() => gridEl.style.setProperty('--cs', gridEl.clientWidth / G.w + 'px')).observe(gridEl);
+
+  let cur = words[0]?.cells[0] ?? 0, dir_ = 'A';
+  const curWord = () => wordAt[dir_][cur] || wordAt[dir_ === 'A' ? 'D' : 'A'][cur];
+  const fixDir = () => { if (!wordAt[dir_][cur]) dir_ = dir_ === 'A' ? 'D' : 'A'; };
+  const answerAt = i => G.val(Math.floor(i / G.w), i % G.w);
+
+  function update() {
+    const w = curWord(), other = wordAt[w.dir === 'A' ? 'D' : 'A'][cur];
+    for (const [i, el] of Object.entries(cellEls)) {
+      const v = fill[i] || '';
+      const span = el.querySelector('.v');
+      span.textContent = v;
+      span.classList.toggle('long', v.length > 1);
+      el.classList.toggle('cur', +i === cur);
+      el.classList.toggle('word', w.cells.includes(+i));
+      el.classList.toggle('wrong', marks[i] === 'wrong');
+      el.classList.toggle('revealed', marks[i] === 'rev');
+    }
+    for (const x of words) { x.li.classList.toggle('active', x === w); x.li.classList.toggle('cross', x === other); }
+    w.li.scrollIntoView({ block: 'nearest' });
+    if (other) other.li.scrollIntoView({ block: 'nearest' });
+    curclue.replaceChildren($('b', {}, `${w.num}${w.dir} `), renderMarkup(clueText[w.dir + w.num] ?? ''));
+    const cells = Object.keys(cellEls);
+    const done = cells.every(i => fill[i]);
+    status.textContent = done ? (cells.every(i => isRight(+i)) ? 'Solved!' : 'Not quite.') : '';
+  }
+  const isRight = i => { const v = fill[i] || '', a = answerAt(i); return v === a || (a.length > 1 && v === a[0]); };
+  function check() { for (const i of Object.keys(cellEls)) if (fill[i] && !isRight(+i)) marks[i] = 'wrong'; update(); }
+  function reveal(cells) { for (const i of cells) if (!isRight(i)) { fill[i] = answerAt(i); marks[i] = 'rev'; } save(); update(); }
+  function clearAll() { fill = {}; for (const k in marks) delete marks[k]; save(); update(); }
+
+  function step(d) {
+    const w = curWord(), k = w.cells.indexOf(cur) + d;
+    if (k >= 0 && k < w.cells.length) cur = w.cells[k];
+  }
+  function nextWord(d) {
+    const k = (words.indexOf(curWord()) + d + words.length) % words.length;
+    dir_ = words[k].dir;
+    cur = words[k].cells.find(c => !fill[c]) ?? words[k].cells[0];
+  }
+  function move(dy, dx) {
+    const d = dx ? 'A' : 'D';
+    if (dir_ !== d && wordAt[d][cur]) { dir_ = d; return; }
+    let y = Math.floor(cur / G.w) + dy, x = cur % G.w + dx;
+    while (y >= 0 && y < G.h && x >= 0 && x < G.w) {
+      if (cellEls[y * G.w + x]) { cur = y * G.w + x; fixDir(); return; }
+      y += dy; x += dx;
+    }
+  }
+  function type(ch) {
+    fill[cur] = ch.toUpperCase();
+    delete marks[cur];
+    save();
+    const w = curWord(), k = w.cells.indexOf(cur);
+    const next = w.cells.slice(k + 1).find(c => !fill[c]);
+    if (next !== undefined) cur = next;
+    else if (k + 1 < w.cells.length) cur = w.cells[k + 1];
+    else nextWord(1);
+  }
+  function backspace() {
+    if (fill[cur]) { delete fill[cur]; delete marks[cur]; }
+    else { step(-1); delete fill[cur]; delete marks[cur]; }
+    save();
+  }
+  function onKey(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+    if (/^[a-zA-Z0-9]$/.test(k)) type(k);
+    else if (k === 'Backspace') backspace();
+    else if (k === 'Delete') { delete fill[cur]; save(); }
+    else if (k === 'ArrowLeft') move(0, -1);
+    else if (k === 'ArrowRight') move(0, 1);
+    else if (k === 'ArrowUp') move(-1, 0);
+    else if (k === 'ArrowDown') move(1, 0);
+    else if (k === ' ') { dir_ = dir_ === 'A' ? 'D' : 'A'; fixDir(); }
+    else if (k === 'Tab' || k === 'Enter') nextWord(e.shiftKey ? -1 : 1);
+    else return;
+    e.preventDefault();
+    update();
+  }
+  const kbd = document.getElementById('kbd');
+  kbd.addEventListener('keydown', onKey);
+  kbd.addEventListener('input', () => {
+    const v = kbd.value.replace(/[^a-zA-Z0-9]/g, '');
+    if (v) { type(v.slice(-1)); update(); }
+    kbd.value = '';
+  });
+  gridEl.addEventListener('pointerdown', () => setTimeout(() => kbd.focus()));
+  fixDir();
+  update();
+  kbd.focus();
+}
+
+
+function maker() {
+  const ta = $('textarea', { placeholder: 'Paste an .xd file here, or drop one on this box.' });
+  const out = $('p');
+  const go = async () => {
+    try {
+      const token = await encodeText(ta.value.replace(/\r\n?/g, '\n'));
+      const url = location.origin + location.pathname + '?p=' + token;
+      out.replaceChildren(`${url.length} characters: `, $('a', { href: url }, url));
+    } catch (e) { out.replaceChildren($('span', { class: 'err' }, String(e))); }
+  };
+  ta.addEventListener('dragover', e => e.preventDefault());
+  ta.addEventListener('drop', async e => { e.preventDefault(); ta.value = await e.dataTransfer.files[0].text(); go(); });
+  const b = $('button', {}, 'Make link');
+  b.onclick = go;
+  app.append($('div', { id: 'maker' }, $('h1', {}, 'xd solve'),
+    $('p', { class: 'meta' }, 'Plays a crossword packed into the URL. Paste an ', $('a', { href: 'https://github.com/century-arcade/xd/blob/master/doc/xd-format.md' }, '.xd'), ' file to make a link. (Links made by xdfile/xdurl.py are smaller; they use a preset dictionary.)'),
+    ta, $('div', { class: 'buttons' }, b), out));
+}
+
+(async () => {
+  const token = new URLSearchParams(location.search).get('p') || location.hash.slice(1);
+  if (!token) return maker();
+  try {
+    play(await decodeToken(token), token);
+  } catch (e) {
+    app.append($('h1', {}, 'xd solve'), $('p', { class: 'err' }, `Could not decode this puzzle: ${e.message}`));
+  }
+})();
+</script>
+</body>
+</html>
