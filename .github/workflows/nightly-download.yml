@@ -1,18 +1,17 @@
 name: Nightly download
 
 # Downloads yesterday's puzzles from each configured publisher and uploads
-# the raw source zip + import log as artifacts. Runs alongside the droplet's
-# nightly cron — does not commit to gxd, does not update recent-downloads.tsv,
-# does not push anywhere. Currently a comparison tool for verifying parity
-# with the droplet's output before decommissioning it; longer-term plan is
-# for this to become the authoritative job.
+# the raw source zip + import log as artifacts. Does not commit to gxd, does
+# not update recent-downloads.tsv, does not push anywhere.
+#
+# No longer scheduled (2026-10-30). The nightly is gxd-downloader
+# (gitlab.com/alexdej1/gxd-downloader, rabidrat/gxd#71): it fetches each
+# outlet's source as served, archives it under
+# s3://gxd-sources/incoming/gxd-downloader/, and opens the day's merge
+# request on gxd. This workflow and scripts/11-download-puzzles.py stay
+# runnable by hand for comparison.
 
 on:
-  schedule:
-    # 12:00 UTC daily. Because we fetch *yesterday's* puzzles, timing
-    # relative to the droplet doesn't matter — by the time we run, all of
-    # yesterday's content is settled regardless of when each publisher posted.
-    - cron: '0 12 * * *'
   workflow_dispatch: {}
 
 permissions:
