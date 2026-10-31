@@ -50,7 +50,7 @@ button:active { background: var(--word); }
 .clues li b { min-width: 2em; text-align: right; }
 .clues li.active { background: var(--word); }
 .clues li.cross { box-shadow: inset 3px 0 0 var(--cur); }
-#kbd { position: absolute; left: -1000px; width: 1px; height: 1px; opacity: 0; }
+#kbd { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; font-size: 16px; caret-color: transparent; }
 .notes { margin-top: 16px; color: var(--muted); font-size: 14px; white-space: pre-wrap; }
 #maker textarea { width: 100%; height: 40vh; font: 13px/1.3 ui-monospace, monospace; }
 #maker a { word-break: break-all; }
@@ -67,7 +67,7 @@ button:active { background: var(--word); }
 <main>
 <div id="app"></div>
 </main>
-<input id="kbd" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="crossword input">
+<input id="kbd" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" aria-label="crossword input">
 <script>
 'use strict';
 const DICT_URL = v => `/xd-d${v}.dict`;
@@ -218,6 +218,19 @@ function renderMarkup(text) {
 }
 
 
+// kbd sentinel: Android keyboards fire no event for Backspace in an empty input
+const KBD_SENTINEL = '_';
+const kbd = document.getElementById('kbd');
+let prevValue = '';
+function resetKbd() {
+  kbd.value = prevValue = KBD_SENTINEL;
+  kbd.setSelectionRange(1, 1);
+}
+function focusKbd() {
+  kbd.focus({ preventScroll: true });
+  resetKbd();
+}
+
 function play(text, token) {
   const { headers, grid, rest } = splitXd(text);
   const h = headerMap(headers);
@@ -247,7 +260,7 @@ function play(text, token) {
   const gridEl = $('div', { id: 'grid' });
   gridEl.style.gridTemplateColumns = `repeat(${G.w}, 1fr)`;
   const status = $('div', { id: 'status' });
-  const btn = (label, fn) => { const b = $('button', {}, label); b.onclick = () => { fn(); kbd.focus(); }; return b; };
+  const btn = (label, fn) => { const b = $('button', {}, label); b.onclick = () => { fn(); focusKbd(); }; return b; };
   const board = $('div', { class: 'board' }, curclue, gridEl,
     $('div', { class: 'buttons' }, btn('Check', check), btn('Reveal word', () => reveal(curWord().cells)),
       btn('Reveal all', () => confirm('Reveal the whole puzzle?') && reveal(Object.keys(cellEls).map(Number))),
@@ -258,7 +271,7 @@ function play(text, token) {
     const ol = $('ol');
     for (const w of words.filter(w => w.dir === dir)) {
       const li = $('li', {}, $('b', {}, String(w.num)), $('span', {}, renderMarkup(clueText[dir + w.num] ?? '')));
-      li.onclick = () => { cur = w.cells.find(c => !fill[c]) ?? w.cells[0]; dir_ = dir; update(); kbd.focus(); };
+      li.onclick = () => { cur = w.cells.find(c => !fill[c]) ?? w.cells[0]; dir_ = dir; update(); focusKbd(); };
       w.li = li;
       ol.append(li);
     }
@@ -278,7 +291,7 @@ function play(text, token) {
     if (G.isCell(y, x)) {
       if (G.nums[i]) el.append($('span', { class: 'n' }, String(G.nums[i])));
       el.append($('span', { class: 'v' }));
-      el.onclick = () => { if (cur === i) dir_ = dir_ === 'A' ? 'D' : 'A'; else cur = i; fixDir(); update(); kbd.focus(); };
+      el.onclick = () => { if (cur === i) dir_ = dir_ === 'A' ? 'D' : 'A'; else cur = i; fixDir(); update(); focusKbd(); };
       cellEls[i] = el;
     }
     gridEl.append(el);
@@ -364,17 +377,22 @@ function play(text, token) {
     e.preventDefault();
     update();
   }
-  const kbd = document.getElementById('kbd');
-  kbd.addEventListener('keydown', onKey);
-  kbd.addEventListener('input', () => {
-    const v = kbd.value.replace(/[^a-zA-Z0-9]/g, '');
-    if (v) { type(v.slice(-1)); update(); }
-    kbd.value = '';
+  kbd.addEventListener('keydown', e => { if (!e.isComposing && e.keyCode !== 229) onKey(e); });
+  kbd.addEventListener('input', e => {
+    const v = kbd.value;
+    if (v.length < prevValue.length) backspace();
+    else {
+      const added = v.slice(prevValue.length).replace(/[^a-zA-Z0-9]/g, '');
+      if (added) type(added.slice(-1));
+    }
+    prevValue = v;
+    if (!e.isComposing) resetKbd();
+    update();
   });
-  gridEl.addEventListener('pointerdown', () => setTimeout(() => kbd.focus()));
+  kbd.addEventListener('compositionend', () => setTimeout(resetKbd));
   fixDir();
   update();
-  kbd.focus();
+  focusKbd();
 }
 
 
