@@ -6,12 +6,12 @@
 <title>xd solve</title>
 <style>
 :root {
-  --bg: #fff; --fg: #111; --muted: #666; --line: #111; --block: #111;
+  --page: #fff; --bg: #fff; --fg: #111; --muted: #666; --line: #111;
   --word: #cfe3ff; --cur: #ffd84d; --wrong: #c22; --rev: #2a6ad0; --shade: #ddd;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #161616; --fg: #eee; --muted: #999; --line: #888; --block: #000;
+    --page: #161616; --bg: #161616; --fg: #eee; --muted: #999; --line: #888;
     --word: #24405f; --cur: #8a6d00; --wrong: #ff6b6b; --rev: #7fb0ff; --shade: #333;
   }
 }
@@ -23,11 +23,12 @@ h1 { font-size: 20px; margin: 0; }
 .layout { display: flex; gap: 24px; align-items: flex-start; }
 .board { flex: 0 0 auto; width: min(100%, 560px); }
 #curclue { min-height: 2.8em; padding: 6px 8px; background: var(--word); margin-bottom: 8px; font-size: 15px; }
-#grid { display: grid; border: 2px solid var(--line); background: var(--line); gap: 1px; user-select: none; touch-action: manipulation; }
+#grid { --bg: #fff; --fg: #111; --muted: #666; --word: #cfe3ff; --cur: #ffd84d; --wrong: #c22; --rev: #2a6ad0; --shade: #ddd;
+  display: grid; border: 2px solid #111; background: #111; color: var(--fg); gap: 1px; user-select: none; touch-action: manipulation; }
 .cell { position: relative; background: var(--bg); aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
   font-weight: 600; text-transform: uppercase; cursor: pointer; overflow: hidden; }
-.cell.block { background: var(--block); cursor: default; }
-.cell.void { background: var(--bg); cursor: default; }
+.cell.block { background: #111; cursor: default; }
+.cell.void { background: var(--page); cursor: default; }
 .cell.shaded { background: var(--shade); }
 .cell.circle::after { content: ""; position: absolute; inset: 1px; border: 1px solid var(--muted); border-radius: 50%; pointer-events: none; }
 .cell.word { background: var(--word); }
@@ -45,7 +46,7 @@ button:active { background: var(--word); }
 .clues { flex: 1 1 0; display: flex; gap: 20px; min-width: 0; }
 .clues section { flex: 1 1 0; min-width: 0; }
 .clues h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 6px; }
-.clues ol { list-style: none; margin: 0; padding: 0; max-height: 75vh; overflow-y: auto; }
+.clues ol { position: relative; list-style: none; margin: 0; padding: 0; max-height: 75vh; overflow-y: auto; }
 .clues li { display: flex; gap: 6px; padding: 3px 6px; cursor: pointer; font-size: 14px; }
 .clues li b { min-width: 2em; text-align: right; }
 .clues li.active { background: var(--word); }
@@ -72,11 +73,11 @@ button:active { background: var(--word); }
 #sheet .phead { margin: 0 0 2pt; font-weight: bold; }
 #sheet .box .phead:not(:first-child) { margin-top: 6pt; }
 #sheet .footer { position: absolute; right: 0; bottom: 0; text-align: right; font-size: 9pt; }
-@page { size: letter; margin: 0.5in; }
+@page { size: letter; margin: 0; }
 @media print {
   body { background: #fff; }
   main, #kbd { display: none; }
-  #sheet { position: static; }
+  #sheet { position: static; margin: 0.5in; }
 }
 @media (max-width: 800px) {
   .layout { flex-direction: column; }
@@ -342,6 +343,14 @@ function printSheet(h, G, words, clueText, special) {
   window.print();
 }
 
+// scrollList: never scrollIntoView; on phones it drags the page away from the grid
+function scrollList(li) {
+  const ol = li.parentNode;
+  if (ol.scrollHeight <= ol.clientHeight) return;
+  if (li.offsetTop < ol.scrollTop) ol.scrollTop = li.offsetTop;
+  else if (li.offsetTop + li.offsetHeight > ol.scrollTop + ol.clientHeight) ol.scrollTop = li.offsetTop + li.offsetHeight - ol.clientHeight;
+}
+
 function play(text, token) {
   const { headers, grid, rest } = splitXd(text);
   const h = headerMap(headers);
@@ -428,8 +437,8 @@ function play(text, token) {
       el.classList.toggle('revealed', marks[i] === 'rev');
     }
     for (const x of words) { x.li.classList.toggle('active', x === w); x.li.classList.toggle('cross', x === other); }
-    w.li.scrollIntoView({ block: 'nearest' });
-    if (other) other.li.scrollIntoView({ block: 'nearest' });
+    scrollList(w.li);
+    if (other) scrollList(other.li);
     curclue.replaceChildren($('b', {}, `${w.num}${w.dir} `), renderMarkup(clueText[w.dir + w.num] ?? ''));
     const cells = Object.keys(cellEls);
     const done = cells.every(i => fill[i]);
