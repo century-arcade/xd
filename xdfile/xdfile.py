@@ -442,9 +442,13 @@ class xdfile:
                     r += EOL
                 prevdir = cluedir
 
-                cluetext = (clue or "[XXX]").strip()
+                # None means the clue is unknown; "" is a clue published blank
+                cluetext = ("[XXX]" if clue is None else clue).strip()
                 cluetext = " ".join(cluetext.splitlines())
-                r += "%s%s. %s ~ %s" % (cluedir, cluenum, cluetext, answer)
+                if cluetext:
+                    r += "%s%s. %s ~ %s" % (cluedir, cluenum, cluetext, answer)
+                else:
+                    r += "%s%s. ~ %s" % (cluedir, cluenum, answer)
                 r += EOL
 
                 for key, value in self.clue_metadata.get(i, []):
