@@ -699,48 +699,60 @@ def _walk_one_answer(
     grid: List[GridRow],
     rebus_map: Dict[str, RebusExpansion],
 ) -> Optional[Tuple[str, str]]:
-    di = 0
-    for (r, c) in cells:
+    """Match one candidate spelling against the slot's cells.
+
+    At a rebus cell any alt from either direction's expansion is
+    acceptable, tried longest first (1=A|AB, 1=KIT/KAT next to
+    1=KITKAT) but with backtracking: two adjacent Schrödinger cells
+    whose single-letter alts spell another cell's two-letter alt
+    (1=E|A/EA 2=A|I/AI under D-E-A-L...) must not let the first cell
+    swallow 'EA' and strand the second. When no path matches, the error
+    reported is the first one the longest-first walk hit."""
+    first_error: List[Tuple[str, str]] = []
+
+    def fail(err: Tuple[str, str]) -> bool:
+        if not first_error:
+            first_error.append(err)
+        return False
+
+    def walk(ci: int, di: int) -> bool:
+        if ci == len(cells):
+            if di < len(declared):
+                return fail(("XD006", f"answer has {len(declared) - di} extra "
+                                      f"char(s) after position {di}"))
+            return True
+        r, c = cells[ci]
         ch = grid_get(grid, r, c)
         if ch in rebus_map:
             rebus = rebus_map[ch]
-            # Union of across+down alts: any reading is acceptable for
-            # any direction, mirroring the spelled-out answer convention.
             alts = list(rebus.across)
             for a in rebus.down:
                 if a not in alts:
                     alts.append(a)
-            # Longest-first: with unequal-length alts (e.g. 1=A|AB or
-            # 1=KIT/KAT alongside 1=KITKAT), a greedy short match would
-            # consume too few characters and misalign the rest of the slot.
             matched = False
             for alt in sorted(alts, key=len, reverse=True):
                 if declared[di:di + len(alt)].upper() == alt:
-                    di += len(alt)
                     matched = True
-                    break
-            if not matched:
-                if di >= len(declared):
-                    return ("XD006", "answer too short for slot")
-                expected = " or ".join(repr(a) for a in alts)
-                fragment = declared[di:di + max((len(a) for a in alts), default=1)]
-                return ("XD007", f"at position {di + 1}: expected {expected}, "
-                                 f"found {fragment!r}")
-        elif ch == WILDCARD_CHAR:
+                    if walk(ci + 1, di + len(alt)):
+                        return True
+            if matched:
+                return False
             if di >= len(declared):
-                return ("XD006", "answer too short for slot")
-            di += 1  # wildcard accepts anything
-        else:
-            if di >= len(declared):
-                return ("XD006", "answer too short for slot")
-            if declared[di].upper() != ch.upper():
-                return ("XD007", f"at position {di + 1}: expected "
-                                 f"{ch.upper()!r}, found {declared[di]!r}")
-            di += 1
-    if di < len(declared):
-        return ("XD006", f"answer has {len(declared) - di} extra char(s) "
-                         f"after position {di}")
-    return None
+                return fail(("XD006", "answer too short for slot"))
+            expected = " or ".join(repr(a) for a in alts)
+            fragment = declared[di:di + max((len(a) for a in alts), default=1)]
+            return fail(("XD007", f"at position {di + 1}: expected {expected}, "
+                                  f"found {fragment!r}"))
+        if di >= len(declared):
+            return fail(("XD006", "answer too short for slot"))
+        if ch != WILDCARD_CHAR and declared[di].upper() != ch.upper():
+            return fail(("XD007", f"at position {di + 1}: expected "
+                                  f"{ch.upper()!r}, found {declared[di]!r}"))
+        return walk(ci + 1, di + 1)
+
+    if walk(0, 0):
+        return None
+    return first_error[0]
 
 
 def grid_is_rectangular(parsed: ParsedXd) -> bool:

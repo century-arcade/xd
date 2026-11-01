@@ -290,6 +290,23 @@ class TestAnswerValidation:
         down_grid = ["T", "1", "R", "S"]
         assert self._validate("TEARS", down_cells, down_grid, rebus, 1) is None
 
+    def test_rebus_adjacent_schrodinger_cells_backtrack(self):
+        # nyt2018-01-07: 1=E|A/EA 2=A|I/AI side by side under DEALAMEAL /
+        # DAILYMAIL. Longest-first alone lets cell 1 swallow 'EA' and
+        # strands cell 2 on 'L'; the walk must back up and take 'E'.
+        rebus = {"1": xdlint.RebusExpansion(across=["E", "A"], down=["EA"]),
+                 "2": xdlint.RebusExpansion(across=["A", "I"], down=["AI"])}
+        cells = [(0, i) for i in range(4)]
+        assert self._validate("DEAL", cells, ["D12L"], rebus, 0) is None
+        assert self._validate("DAIL", cells, ["D12L"], rebus, 0) is None
+        assert self._validate("DEAL / DAIL", cells, ["D12L"], rebus, 0) is None
+        # Down through cell 1 still takes both letters.
+        assert self._validate("UNEASY", [(i, 0) for i in range(5)],
+                              ["U", "N", "1", "S", "Y"], rebus, 1) is None
+        # A genuine mismatch still reports where the greedy walk failed.
+        result = self._validate("DEXL", cells, ["D12L"], rebus, 0)
+        assert result is not None and result[0] == "XD007"
+
     def test_rebus_literal_slash_cell_unaffected(self):
         # Rebus value '1=/' means the cell content is a literal '/'.
         # Splitting the declared answer on ' / ' must NOT split on the
