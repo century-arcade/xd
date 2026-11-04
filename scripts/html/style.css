@@ -762,3 +762,13 @@ tr.puzzlehl:hover {
 }
 
 /* env nav */
+
+form.subscribe {
+    margin: 8px 0 12px;
+    font-size: 14px;
+}
+
+form.subscribe input[type=email] {
+    width: 16em;
+    max-width: 100%;
+}

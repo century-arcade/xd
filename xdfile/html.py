@@ -164,6 +164,14 @@ def html_footer():
     dt = time.strftime('%F')
     return """
   <hr style="clear:both;"/>
+<form class="subscribe" action="https://buttondown.com/api/emails/embed-subscribe/saulpw" method="post" target="popupwindow">
+  <label for="subscribe-email">Get a monthly-ish email about what I'm making:</label>
+  <input type="email" name="email" id="subscribe-email" placeholder="you@example.com" required />
+  <input type="hidden" name="embed" value="1" />
+  <input type="hidden" name="tag" value="xd" />
+  <input type="hidden" name="tag" value="new" />
+  <input type="submit" value="Subscribe" />
+</form>
 <small><i>Generated on {date}</i>
 <br>
 a <a href="mailto:xd@saul.pw">saul.pw</a> project
