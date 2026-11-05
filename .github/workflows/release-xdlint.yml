@@ -1,0 +1,119 @@
+name: release-xdlint
+
+# Pushing an xdlint-vX.Y.Z tag on master uploads that version of the `xdlint`
+# distribution (just xdlint.py, packaged from packaging/xdlint/) to PyPI, then
+# creates the GitHub release with generated notes and the sdist and wheel
+# attached. The root pyproject.toml (the `xdfile` corpus toolset) is not built.
+#
+#   1. bump __version__ in xdlint.py and merge that to master
+#   2. git tag xdlint-vX.Y.Z <that commit> && git push origin xdlint-vX.Y.Z
+#
+# Uploads use PyPI trusted publishing (no API token). One-time setup on
+# pypi.org, by a project owner (or, before the first release, a pending
+# publisher from any account): add a GitHub publisher with
+#   project: xdlint, owner: century-arcade, repository: xd,
+#   workflow: release-xdlint.yml, environment: pypi
+# GitHub creates the "pypi" environment on the first run if it doesn't
+# exist. A repo admin can add protection rules to it, such as a required
+# reviewer to approve each upload.
+#
+# If a job fails, fix the cause and re-run the workflow: the upload skips
+# files PyPI already has, and the release step updates an existing release.
+
+on:
+  push:
+    tags: ["xdlint-v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0  # full history, for the on-master check below
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.13"
+      - name: check that the tag matches xdlint.__version__
+        run: |
+          version=$(python -c "import xdlint; print(xdlint.__version__)")
+          if [ "$GITHUB_REF_NAME" != "xdlint-v$version" ]; then
+            echo "tag $GITHUB_REF_NAME does not match __version__ $version (expected xdlint-v$version)"
+            exit 1
+          fi
+      - name: check that the tagged commit is on master
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+            echo "tag $GITHUB_REF_NAME points at $GITHUB_SHA, which is not on master"
+            exit 1
+          fi
+      - name: stage xdlint.py and LICENSE into the packaging directory
+        run: cp xdlint.py LICENSE packaging/xdlint/
+      - run: pip install build twine
+      - run: python -m build packaging/xdlint --outdir dist/
+      - run: twine check --strict dist/*
+      - name: check that the dists hold only xdlint
+        run: |
+          python - <<'EOF'
+          import glob, tarfile, zipfile
+          whl = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          top = {n.split("/")[0] for n in whl if not n.split("/")[0].endswith(".dist-info")}
+          assert top == {"xdlint.py"}, f"unexpected wheel contents: {sorted(top)}"
+          sdist = tarfile.open(glob.glob("dist/*.tar.gz")[0]).getnames()
+          assert not any("/xdfile/" in n for n in sdist), "sdist picked up xdfile"
+          print("wheel:", sorted(whl))
+          EOF
+      - name: run the tests against the built wheel
+        run: |
+          pip install "$(ls dist/*.whl)" pytest
+          # copy the test module (not tests/conftest.py, which puts the repo
+          # root on sys.path) so `import xdlint` finds the installed wheel
+          mkdir "$RUNNER_TEMP/t" && cp tests/test_xdlint.py "$RUNNER_TEMP/t/"
+          cd "$RUNNER_TEMP/t"
+          python -c "import xdlint; assert 'site-packages' in xdlint.__file__, xdlint.__file__"
+          xdlint --version
+          pytest -q test_xdlint.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/xdlint
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          skip-existing: true
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - name: create the release, or update it on a re-run
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* \
+              --verify-tag --generate-notes --latest=false \
+              --title "xdlint ${GITHUB_REF_NAME#xdlint-v}"
+          fi

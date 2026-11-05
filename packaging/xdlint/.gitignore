@@ -1,0 +1,6 @@
+# staged from the repo root at build time
+/xdlint.py
+/LICENSE
+/build/
+/dist/
+*.egg-info/

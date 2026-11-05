@@ -1,0 +1,48 @@
+# Packaging for the `xdlint` PyPI distribution: just the root xdlint.py,
+# as a single module with an `xdlint` console script. It is separate from
+# the root pyproject.toml (the `xdfile` corpus toolset), which it leaves alone.
+#
+# xdlint.py and LICENSE live at the repo root; copy them here before building
+# (see README.md, "Building and releasing"). The copies are gitignored.
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xdlint"
+dynamic = ["version"]
+description = "Validator and fixer for the .xd crossword puzzle format"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [
+    { name = "Saul Pwanson", email = "xd@saul.pw" },
+]
+keywords = ["crossword", "puzzles", "xd", "lint", "validator"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Games/Entertainment :: Puzzle Games",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.urls]
+Homepage = "https://github.com/century-arcade/xd"
+Source = "https://github.com/century-arcade/xd/blob/master/xdlint.py"
+Specification = "https://github.com/century-arcade/xdformat"
+Issues = "https://github.com/century-arcade/xd/issues"
+
+[project.scripts]
+xdlint = "xdlint:main"
+
+[tool.setuptools]
+py-modules = ["xdlint"]
+
+[tool.setuptools.dynamic]
+version = { attr = "xdlint.__version__" }
