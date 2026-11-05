@@ -62,6 +62,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
+__version__ = "0.1.0"  # PyPI release version; see packaging/xdlint/README.md
+
 
 # ---------------------------------------------------------------------------
 # Core types
@@ -3501,6 +3503,8 @@ def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    ap.add_argument("--version", action="version",
+                    version=f"xdlint {__version__}")
     ap.add_argument("paths", nargs="*", help=".xd files or directories")
     ap.add_argument("--base", help="git diff base sha/ref (enables diff mode)")
     ap.add_argument("--head", default="HEAD", help="git diff head (default: HEAD)")
