@@ -177,4 +177,4 @@ Includes syntax support for arbitrary clue metadata.
 
 ### 2.0
 
-The 2.0 version of the specification adds support for `## [headers]` for sections of xd content. You can read more in [format specification](https://github.com/century-arcade/master/doc/xd-format.md#format-specification) above.
+The 2.0 version of the specification adds support for `## [headers]` for sections of xd content. You can read more in [format specification](#format-specification) above.

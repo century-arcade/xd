@@ -2,16 +2,16 @@
 
 ## Status
 
-The .xd format spec ([doc/xd-format.md](xd-format.md)) declares the file is "a simple UTF-8 text file, and can often be 7-bit ASCII clean." In practice, the gxd corpus (94k+ puzzles, ingested over years from multiple sources) contains a small fraction of files with byte-level artifacts from at least five different upstream encodings. None of them are inherent to .xd itself — they were inherited from the source .puz / .ipuz / PDF files and propagated through legacy converters.
+The .xd format spec ([xd-format.md](xd-format.md)) declares the file is "a simple UTF-8 text file, and can often be 7-bit ASCII clean." In practice, the gxd corpus (94k+ puzzles, ingested over years from multiple sources) contains a small fraction of files with byte-level artifacts from at least five different upstream encodings. None of them are inherent to .xd itself — they were inherited from the source .puz / .ipuz / PDF files and propagated through legacy converters.
 
 This document catalogues the patterns observed, the diagnostics that distinguish them, and the cleanup pipeline that handles each. It exists because we hit every one of these patterns at least once during a single review pass and had to figure them out from scratch.
 
 The two relevant tools:
 
-- [`xdfile/puz2xd.py`](../xdfile/puz2xd.py) `decode()` — runs at conversion time on every clue/header pulled out of a .puz file. The shared utility lives in [`xdfile/utils.py`](../xdfile/utils.py).
-- [`xdlint.py`](../xdlint.py) rules `XD009` (latin-1 misread of UTF-8) and `XD010` (C1 control [mojibake](https://en.wikipedia.org/wiki/Mojibake)) — run at lint time over .xd files already on disk.
+- [`xdfile/puz2xd.py`](https://github.com/century-arcade/xd/blob/master/xdfile/puz2xd.py) `decode()` — runs at conversion time on every clue/header pulled out of a .puz file. The shared utility lives in [`xdfile/utils.py`](https://github.com/century-arcade/xd/blob/master/xdfile/utils.py).
+- [`xdlint.py`](https://github.com/century-arcade/xd/blob/master/xdlint.py) rules `XD009` (latin-1 misread of UTF-8) and `XD010` (C1 control [mojibake](https://en.wikipedia.org/wiki/Mojibake)) — run at lint time over .xd files already on disk.
 
-Both implementations are kept in lockstep with each other and with the standalone [`puz2xd-standalone.py`](../puz2xd-standalone.py).
+Both implementations are kept in lockstep with each other and with the standalone [`puz2xd-standalone.py`](https://github.com/century-arcade/xd/blob/master/puz2xd-standalone.py).
 
 ---
 
@@ -39,7 +39,7 @@ So *every* C1 control codepoint in our corpus is mojibake. The question is just 
 
 ## 3. cp1252 — the default
 
-The vast majority of C1-control mojibake comes from cp1252. The fixer [`xdlint.py`](../xdlint.py) `XD010` defaults to this mapping; the same logic lives in [`xdfile/utils.py`](../xdfile/utils.py) `clean_c1_controls()`.
+The vast majority of C1-control mojibake comes from cp1252. The fixer [`xdlint.py`](https://github.com/century-arcade/xd/blob/master/xdlint.py) `XD010` defaults to this mapping; the same logic lives in [`xdfile/utils.py`](https://github.com/century-arcade/xd/blob/master/xdfile/utils.py) `clean_c1_controls()`.
 
 Reference table for the C1 range in cp1252 (the slots marked `—` are undefined and pass through unchanged):
 
@@ -92,7 +92,7 @@ Some older publisher feeds (Newsday late-1990s/early-2000s, NYSun 2007, SimonSch
 | 0x8B | ‹ | ï | rare |
 | 0x9B | › | ¢ | rare |
 
-The fixer does **not** auto-handle these — cp1252 is right for most C1 occurrences, and per-publisher detection isn't reliable enough to swap defaults. Instead, the [XD010 finding message](../xdlint.py) shows all three candidates (cp1252, Mac Roman, cp437):
+The fixer does **not** auto-handle these — cp1252 is right for most C1 occurrences, and per-publisher detection isn't reliable enough to swap defaults. Instead, the [XD010 finding message](https://github.com/century-arcade/xd/blob/master/xdlint.py) shows all three candidates (cp1252, Mac Roman, cp437):
 
 ```
 C1 control U+0082 at col 12 (cp1252: '‚', Mac Roman: 'Ç', cp437: 'é')
@@ -178,7 +178,7 @@ Similar artifacts appeared at byte 0x80 in BG 2009-2011 files for `°` (`90° on
 
 ## 9. The decode pipeline (puz2xd.decode)
 
-[`xdfile/puz2xd.py`](../xdfile/puz2xd.py) `decode()` runs at conversion time on every clue, header, and metadata field pulled from a .puz. Order of operations:
+[`xdfile/puz2xd.py`](https://github.com/century-arcade/xd/blob/master/xdfile/puz2xd.py) `decode()` runs at conversion time on every clue, header, and metadata field pulled from a .puz. Order of operations:
 
 1. **Strip orphan `Â`** before a C1 control: `\xc2\xXX` UTF-8 misread as latin-1 produces `Â + control`. Drop the `Â` so `clean_c1_controls` handles the trailer.
 2. **NBSP collapse**: `\xc3\xa0` (UTF-8 `à` read as latin-1, `Ã` + NBSP) → `à` first, so the collapse can't leave `Ã `; then `\xc2\xa0` (UTF-8 NBSP read as latin-1) and standalone `\xa0` → space.
@@ -210,7 +210,7 @@ The two lossy bulk replacements that the legacy decode used to do — `\xc3\x82 
 
 The finding messages list candidates from cp1252, Mac Roman, and cp437 so a reviewer can pick the right answer when an auto-fix can't.
 
-`XD009` runs **before** `XD010` in the fix order — see [`FIX_ORDER`](../xdlint.py). This matters for triple-mojibake cases (§6d): `Â` collapses to `` after XD009, which XD010's trailer pass then reconstructs to `"`.
+`XD009` runs **before** `XD010` in the fix order — see [`FIX_ORDER`](https://github.com/century-arcade/xd/blob/master/xdlint.py). This matters for triple-mojibake cases (§6d): `Â` collapses to `` after XD009, which XD010's trailer pass then reconstructs to `"`.
 
 ---
 
