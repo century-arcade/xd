@@ -1,0 +1,19 @@
+# Netlify builds xd.saul.pw from this repository (the Makefile's `netlify`
+# target), including a deploy preview for every pull request. That build
+# takes about nine minutes and has nothing to show for a change that only
+# touches the project site in docs/ or top-level Markdown (README.md etc.).
+#
+# This file sets only the ignore rule; the build command and publish
+# directory stay as configured in the Netlify UI.
+#
+# Netlify runs `ignore` with Bash: exit 0 skips the build, anything else
+# builds. The command exits 0 only when nothing changed outside docs/ and
+# top-level *.md files (`glob` keeps `*` from matching across `/`, so
+# www/*.md, which the site build reads, still triggers a build). When
+# Netlify has no cached build, CACHED_COMMIT_REF equals COMMIT_REF; the
+# first test then fails and the build runs. If git cannot find the cached
+# commit, git diff exits 128 and the build runs too.
+# Docs: https://docs.netlify.com/configure-builds/ignore-builds/
+
+[build]
+  ignore = "[ \"$CACHED_COMMIT_REF\" != \"$COMMIT_REF\" ] && git diff --quiet \"$CACHED_COMMIT_REF\" \"$COMMIT_REF\" -- . ':(exclude)docs' ':(exclude,glob)*.md'"
