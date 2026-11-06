@@ -557,7 +557,6 @@ def build_metadata(mzip, stats, outdir):
     date = pd.to_datetime(nullable(pz.Date), format='%Y-%m-%d', errors='coerce')
     year = pd.to_numeric(pz.Date.str.extract(r'^(\d{4})')[0], errors='coerce').astype('Int64')
     wh = pz.Size.str.extract(r'^(\d+)x(\d+)')
-    a1d1 = pz.A1_D1.str.split('_', n=1, expand=True)
     puzzles = pd.DataFrame({
         'xdid': pz.xdid,
         'date': date.dt.date,
