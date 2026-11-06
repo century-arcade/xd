@@ -8,6 +8,8 @@
 #
 #   <outroot>/xd-clues/     data/pubid=<pubid>/clues.parquet, README.md,
 #                           dataset-metadata.json
+#   <outroot>/xd-answers/   answers.parquet, answers_total.parquet, README.md,
+#                           dataset-metadata.json (counted from the xd-clues rows)
 #   <outroot>/xd-metadata/  puzzles.parquet, stats.parquet, similar.parquet,
 #                           README.md, dataset-metadata.json
 #
@@ -269,7 +271,155 @@ def build_clues(czip, counts, outdir):
         os.makedirs(d, exist_ok=True)
         t = pa.Table.from_pandas(part, schema=schema, preserve_index=False)
         pq.write_table(t, os.path.join(d, 'clues.parquet'), compression='zstd')
-    return nums
+    return nums, cl
+
+
+def cell_rule_table(nums):
+    return f"""| | clue rows |
+|:--|--:|
+| rows in `clues.tsv` | {fmt(nums['rows_in'])} |
+| dropped: no year of publication | {fmt(nums['rows_noyear_dropped'])} |
+| year set to null ({fmt(nums['pubyears_small'])} of {fmt(nums['pubyears'])} publication-years, merged into {fmt(nums['pubdecades_merged'])} publication-decades) | {fmt(nums['rows_nulled'])} |
+| dropped: merged cell under {MIN_CELL} puzzles ({fmt(nums['pubdecades_dropped'])} publication-decades) | {fmt(nums['rows_small_dropped'])} |
+| **rows kept** | **{fmt(nums['rows_out'])}** |"""
+
+
+# ---- xd-answers -----------------------------------------------------------
+
+def build_answers(cl, outdir):
+    'answer lexicon from the clue rows kept for xd-clues, so it reveals no more'
+    os.makedirs(outdir, exist_ok=True)
+    ans = (cl.groupby(['answer', 'pubid', 'decade'], sort=True).size()
+             .rename('n').reset_index())
+    tot = ans.groupby('answer', sort=True).agg(
+        n_total=('n', 'sum'), n_pubs=('pubid', 'nunique'),
+        first_decade=('decade', 'min'), last_decade=('decade', 'max')).reset_index()
+    aschema = pa.schema([('answer', pa.string()), ('pubid', pa.string()),
+                         ('decade', pa.int16()), ('n', pa.int32())])
+    tschema = pa.schema([('answer', pa.string()), ('n_total', pa.int32()),
+                         ('n_pubs', pa.int16()), ('first_decade', pa.int16()),
+                         ('last_decade', pa.int16())])
+    pq.write_table(pa.Table.from_pandas(ans, schema=aschema, preserve_index=False),
+                   os.path.join(outdir, 'answers.parquet'), compression='zstd')
+    pq.write_table(pa.Table.from_pandas(tot, schema=tschema, preserve_index=False),
+                   os.path.join(outdir, 'answers_total.parquet'), compression='zstd')
+    return {'answers_rows': len(ans), 'answers_total_rows': len(tot),
+            'clue_rows': int(ans.n.sum())}
+
+
+def answers_card(snapshot, built, srcdate, cnums, anums, coverage, sizes, provenance):
+    first = (f"The answer lexicon of the xd Crossword Corpus, a collection of published "
+             f"crosswords from 1913 to today: {fmt(anums['answers_total_rows'])} distinct "
+             f"answers, with how often each was used in each publication and decade. "
+             f"It has no clue text, no grids and no dates.")
+    yaml = f"""---
+pretty_name: xd Crossword Corpus answers
+license: other
+license_name: xd-corpus-terms
+license_link: {DATASETS_URL}
+language:
+- en
+tags:
+{chr(10).join('- ' + t for t in TAGS)}
+size_categories:
+- {size_category(anums['answers_rows'])}
+configs:
+- config_name: answers
+  default: true
+  data_files:
+  - split: train
+    path: answers.parquet
+- config_name: answers_total
+  data_files:
+  - split: train
+    path: answers_total.parquet
+---
+"""
+    body = f"""
+# xd-answers
+
+{first}
+
+This lexicon is published first; the clue text follows in a later snapshot.
+
+Snapshot **{snapshot}**, built {built} from the `xd-clues.zip` and
+`xd-metadata.zip` published at [xd.saul.pw/data](https://xd.saul.pw/data)
+on {srcdate} (see Provenance). Snapshots are fixed: cite the version you
+used. The same snapshot is published on [Hugging Face](https://huggingface.co/datasets/{OWNER}/xd-answers)
+and [Kaggle](https://www.kaggle.com/datasets/{OWNER}/xd-answers). The
+[xd Crossword Corpus]({CORPUS_URL}) is maintained by Saul Pwanson and Alex
+DeJarnatt.
+
+## Files
+
+### `answers.parquet` ({fmt(anums['answers_rows'])} rows, {human_size(sizes['answers'])})
+
+One row per answer, publication and decade, sorted by answer.
+
+| column | type | |
+|:--|:--|:--|
+| `answer` | string | the answer, upper case, as entered in the grid |
+| `pubid` | string | publication identifier, as in the corpus (`nyt`, `lat`, `wsj`, ...) |
+| `decade` | int | decade of publication, e.g. `1990` |
+| `n` | int | number of clues with this answer in this publication and decade |
+
+### `answers_total.parquet` ({fmt(anums['answers_total_rows'])} rows, {human_size(sizes['answers_total'])})
+
+One row per answer, sorted by answer.
+
+| column | type | |
+|:--|:--|:--|
+| `answer` | string | |
+| `n_total` | int | number of clues with this answer, in all publications |
+| `n_pubs` | int | number of publications that used it |
+| `first_decade`, `last_decade` | int | first and last decade it was used |
+
+A count is of clue rows: an answer used twice in one puzzle counts twice.
+
+## How it was built
+
+The counts are made from exactly the clue rows that the `xd-clues` snapshot
+of the same version keeps, so this dataset never reveals more than that one.
+Those rows follow the rules for public derived data in
+[DATASETS.md]({DATASETS_URL}): no grids or clue numbers; year, not date;
+contest puzzles with redacted grids left out; and a minimum cell size of
+{MIN_CELL} puzzles. A publication-year with fewer than {MIN_CELL} puzzles in
+the corpus keeps only its decade; the rows so coarsened in one
+publication-decade form one cell, and where that cell still has fewer than
+{MIN_CELL} puzzles, its rows are dropped. Puzzle counts come from
+`stats.tsv`, which counts only puzzles with a full date, so the rule errs
+toward coarsening. Counts here are by decade only.
+
+In this snapshot:
+
+{cell_rule_table(cnums)}
+
+The {fmt(anums['clue_rows'])} rows kept are counted into
+{fmt(anums['answers_rows'])} answer-publication-decade rows and
+{fmt(anums['answers_total_rows'])} distinct answers.
+
+## Coverage
+
+{COVERAGE_NOTE}
+
+{coverage}
+
+## Provenance
+
+{provenance}
+
+## Terms
+
+{TERMS}
+
+A publication can ask to be left out of future snapshots; see
+[DATASETS.md]({DATASETS_URL}).
+
+## Citing
+
+{CITATION}
+"""
+    return yaml + body, first
 
 
 def clues_card(snapshot, built, srcdate, nums, coverage, npubs, npuzzles, nbytes, provenance):
@@ -591,7 +741,7 @@ def write_text(path, text):
 
 
 def main():
-    ap = argparse.ArgumentParser(description='build xd-clues and xd-metadata dataset snapshots')
+    ap = argparse.ArgumentParser(description='build xd-clues, xd-answers and xd-metadata dataset snapshots')
     ap.add_argument('--snapshot', required=True, help='version, e.g. 2026.11')
     ap.add_argument('-o', '--output', required=True, help='output root (one directory per dataset)')
     ap.add_argument('clues_zip')
@@ -611,7 +761,8 @@ def main():
 
     # xd-metadata first: it checks puzzles.tsv before anything is written for clues
     mdir = os.path.join(args.output, 'xd-metadata')
-    if os.path.exists(mdir) or os.path.exists(os.path.join(args.output, 'xd-clues')):
+    if any(os.path.exists(os.path.join(args.output, d))
+           for d in ['xd-metadata', 'xd-clues', 'xd-answers']):
         sys.exit(f'{args.output} already holds a snapshot; remove it first')
     mnums = build_metadata(mzip, stats, mdir)
     sizes = {k: os.path.getsize(os.path.join(mdir, k + '.parquet'))
@@ -625,15 +776,26 @@ def main():
     write_kaggle(mdir, 'xd-metadata', 'xd Crossword Corpus metadata', first)
 
     cdir = os.path.join(args.output, 'xd-clues')
-    cnums = build_clues(czip, counts, cdir)
+    cnums, cl = build_clues(czip, counts, cdir)
     card, first = clues_card(args.snapshot, built, zip_date(czip, 'xd/clues.tsv'),
                              cnums, coverage, npubs, npuzzles, dir_size(cdir),
                              provenance_section(args.snapshot, built, 'xd-clues', csrc))
     write_text(os.path.join(cdir, 'README.md'), card)
     write_kaggle(cdir, 'xd-clues', 'xd Crossword Corpus clues', first)
 
+    adir = os.path.join(args.output, 'xd-answers')
+    log('writing answers...')
+    anums = build_answers(cl, adir)
+    asizes = {k: os.path.getsize(os.path.join(adir, k + '.parquet'))
+              for k in ['answers', 'answers_total']}
+    card, first = answers_card(args.snapshot, built, zip_date(czip, 'xd/clues.tsv'),
+                               cnums, anums, coverage, asizes,
+                               provenance_section(args.snapshot, built, 'xd-answers', csrc))
+    write_text(os.path.join(adir, 'README.md'), card)
+    write_kaggle(adir, 'xd-answers', 'xd Crossword Corpus answers', first)
+
     report = {'snapshot': args.snapshot, 'built': built,
-              'xd-clues': cnums, 'xd-metadata': mnums,
+              'xd-clues': cnums, 'xd-answers': anums, 'xd-metadata': mnums,
               'coverage': {'publications': npubs, 'puzzles': npuzzles}}
     print(json.dumps(report, indent=2))
 
