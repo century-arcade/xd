@@ -1,5 +1,7 @@
 # xd
 
+This repository is the home of the xd Crossword Corpus project: its site is https://centuryarcade.org/xd/, and its policy documents (access, collection, editorial, datasets, preservation, governance) are in [`docs/`](docs/).
+
 The xd project includes a [text format for crossword puzzles](doc/xd-format.md) and a pipeline for downloading, parsing, analyzing puzzles, and producing the website and released data at [xd.saul.pw](https://xd.saul.pw).
 
 ## Validating .xd files
