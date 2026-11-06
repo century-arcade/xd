@@ -12,7 +12,8 @@
 #                           README.md, dataset-metadata.json
 #
 # README.md is the Hugging Face dataset card; dataset-metadata.json is for
-# `kaggle datasets create`, with the owner left as OWNER to fill in.
+# `kaggle datasets create`. Both are published under OWNER on Hugging Face
+# and Kaggle.
 #
 # Minimum cell size: a publication-year with fewer than MIN_CELL puzzles
 # (counted in stats.tsv) keeps its decade but loses its year. The rows nulled
@@ -22,6 +23,7 @@
 
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import re
@@ -35,6 +37,8 @@ import pyarrow.parquet as pq
 
 
 MIN_CELL = 5
+
+OWNER = 'century-arcade'  # Hugging Face organization and Kaggle owner
 
 CORPUS_URL = 'https://centuryarcade.org/xdcorpus/'
 DATASETS_URL = CORPUS_URL + 'DATASETS.html'
@@ -84,6 +88,35 @@ def read_tsv(zf, name):
 
 def zip_date(zf, name):
     return datetime.date(*zf.getinfo(name).date_time[:3])
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with open(path, 'rb') as fp:
+        for block in iter(lambda: fp.read(1 << 20), b''):
+            h.update(block)
+    return h.hexdigest()
+
+
+def provenance_section(snapshot, built, name, sources):
+    '''sources: [(zip path, member names)]; times are the zip entries' own,
+    the local time of the machine that ran `make analyze`'''
+    lines = [f'Dataset `{OWNER}/{name}`, snapshot **{snapshot}**, built {built} by',
+             '[`scripts/30-mkdatasets.py`](https://github.com/century-arcade/xd/blob/master/scripts/30-mkdatasets.py)',
+             'in [century-arcade/xd](https://github.com/century-arcade/xd) from these public',
+             'zips, as published at [xd.saul.pw/data](https://xd.saul.pw/data):',
+             '',
+             '| source | built | SHA-256 |',
+             '|:--|:--|:--|']
+    for path, members in sources:
+        zf = zipfile.ZipFile(path)
+        when = max(datetime.datetime(*zf.getinfo(m).date_time) for m in members)
+        lines.append(f'| `{os.path.basename(path)}` | {when:%Y-%m-%d %H:%M} | `{sha256(path)}` |')
+    lines += ['',
+              'The build time is the timestamp of the files inside each zip. The zips do',
+              'not yet record which commit of the corpus they were built from; this',
+              'section will name it once the zip builders record it.']
+    return '\n'.join(lines)
 
 
 def nullable(s):
@@ -239,7 +272,7 @@ def build_clues(czip, counts, outdir):
     return nums
 
 
-def clues_card(snapshot, built, srcdate, nums, coverage, npubs, npuzzles, nbytes):
+def clues_card(snapshot, built, srcdate, nums, coverage, npubs, npuzzles, nbytes, provenance):
     first = (f"The clues and answers of the xd Crossword Corpus, a collection of "
              f"published crosswords from 1913 to today: {fmt(nums['rows_out'])} rows from "
              f"{nums['pubids_out']} publications, each with the publication and year it "
@@ -270,7 +303,9 @@ configs:
 
 Snapshot **{snapshot}**, built {built} from the `xd-clues.zip` and
 `xd-metadata.zip` published at [xd.saul.pw/data](https://xd.saul.pw/data)
-on {srcdate}. Snapshots are fixed: cite the version you used. The
+on {srcdate} (see Provenance). Snapshots are fixed: cite the version you
+used. The same snapshot is published on [Hugging Face](https://huggingface.co/datasets/{OWNER}/xd-clues)
+and [Kaggle](https://www.kaggle.com/datasets/{OWNER}/xd-clues). The
 [xd Crossword Corpus]({CORPUS_URL}) is maintained by Saul Pwanson and Alex
 DeJarnatt.
 
@@ -327,6 +362,10 @@ In this snapshot:
 {COVERAGE_NOTE}
 
 {coverage}
+
+## Provenance
+
+{provenance}
 
 ## Terms
 
@@ -414,7 +453,7 @@ def build_metadata(mzip, stats, outdir):
     return nums
 
 
-def metadata_card(snapshot, built, srcdate, nums, coverage, npubs, npuzzles, sizes):
+def metadata_card(snapshot, built, srcdate, nums, coverage, npubs, npuzzles, sizes, provenance):
     first = (f"Metadata for the {fmt(nums['puzzles'])} puzzles in the xd Crossword Corpus, "
              f"published crosswords from 1913 to today: date, size, title, constructor, "
              f"editor and copyright line for each puzzle, puzzle counts by publication, "
@@ -454,9 +493,12 @@ configs:
 {first}
 
 Snapshot **{snapshot}**, built {built} from the `xd-metadata.zip` published
-at [xd.saul.pw/data](https://xd.saul.pw/data) on {srcdate}. Snapshots are
-fixed: cite the version you used. The [xd Crossword Corpus]({CORPUS_URL}) is
-maintained by Saul Pwanson and Alex DeJarnatt.
+at [xd.saul.pw/data](https://xd.saul.pw/data) on {srcdate} (see Provenance).
+Snapshots are fixed: cite the version you used. The same snapshot is published
+on [Hugging Face](https://huggingface.co/datasets/{OWNER}/xd-metadata) and
+[Kaggle](https://www.kaggle.com/datasets/{OWNER}/xd-metadata). The
+[xd Crossword Corpus]({CORPUS_URL}) is maintained by Saul Pwanson and Alex
+DeJarnatt.
 
 The puzzles themselves are not here: most are under copyright. See
 [ACCESS.md]({ACCESS_URL}).
@@ -515,6 +557,10 @@ Pairs of puzzles of the same size whose grids match by more than 30%.
 
 {coverage}
 
+## Provenance
+
+{provenance}
+
 ## Terms
 
 {TERMS}
@@ -529,7 +575,7 @@ Pairs of puzzles of the same size whose grids match by more than 30%.
 def write_kaggle(outdir, name, title, description):
     meta = {
         'title': title,
-        'id': f'OWNER/{name}',
+        'id': f'{OWNER}/{name}',
         'licenses': [{'name': 'other'}],
         'description': description,
         'keywords': KAGGLE_KEYWORDS,
@@ -570,15 +616,19 @@ def main():
     mnums = build_metadata(mzip, stats, mdir)
     sizes = {k: os.path.getsize(os.path.join(mdir, k + '.parquet'))
              for k in ['puzzles', 'stats', 'similar']}
+    msrc = [(args.metadata_zip, ['xd/puzzles.tsv', 'xd/stats.tsv', 'xd/similar.tsv'])]
+    csrc = [(args.clues_zip, ['xd/clues.tsv']), (args.metadata_zip, ['xd/stats.tsv'])]
     card, first = metadata_card(args.snapshot, built, zip_date(mzip, 'xd/puzzles.tsv'),
-                                mnums, coverage, npubs, npuzzles, sizes)
+                                mnums, coverage, npubs, npuzzles, sizes,
+                                provenance_section(args.snapshot, built, 'xd-metadata', msrc))
     write_text(os.path.join(mdir, 'README.md'), card)
     write_kaggle(mdir, 'xd-metadata', 'xd Crossword Corpus metadata', first)
 
     cdir = os.path.join(args.output, 'xd-clues')
     cnums = build_clues(czip, counts, cdir)
     card, first = clues_card(args.snapshot, built, zip_date(czip, 'xd/clues.tsv'),
-                             cnums, coverage, npubs, npuzzles, dir_size(cdir))
+                             cnums, coverage, npubs, npuzzles, dir_size(cdir),
+                             provenance_section(args.snapshot, built, 'xd-clues', csrc))
     write_text(os.path.join(cdir, 'README.md'), card)
     write_kaggle(cdir, 'xd-clues', 'xd Crossword Corpus clues', first)
 
