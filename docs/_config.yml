@@ -27,6 +27,10 @@ readme_index:
 # lowercase directory URL (ACCESS.md -> /access/). Pages with lowercase file
 # names (xd-format.md, assessments/) get directory URLs from their names.
 permalink: pretty
+
+# Kept in the repository, not published: old ops notes.
+exclude:
+  - archive
 defaults:
   - scope: { path: "ACCESS.md" }
     values: { permalink: /access/ }

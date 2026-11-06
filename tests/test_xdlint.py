@@ -971,7 +971,7 @@ class TestInfoRules:
 
     def test_xd208_em_dash_not_flagged(self):
         # Em dash (U+2014) is corpus convention for FITB markers; intentional
-        # exception per doc/character-encoding.md §9 step 7.
+        # exception per docs/character-encoding.md §9 step 7.
         text = SIMPLE.replace("A1. First ~ ABC", "A1. — marker ~ ABC")
         f = run_rule("XD208", text)
         assert f == []

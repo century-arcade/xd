@@ -9,8 +9,8 @@ Companion documents:
   puzzles, how they are named and shelved, and source archives.
 - REVIEWING.md (in the private corpus repository): what to check in an import MR.
 - In the xdformat repo: [xd-format.md](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md) (the format).
-- In the xd repo: [doc/character-encoding.md](https://github.com/century-arcade/xd/blob/master/doc/character-encoding.md) (decoding and
-  typography), [doc/rebus-conventions.md](https://github.com/century-arcade/xd/blob/master/doc/rebus-conventions.md) (rebus and
+- On this site: [character-encoding.md](character-encoding.md) (decoding and
+  typography), [rebus-conventions.md](rebus-conventions.md) (rebus and
   quantum cells).
 
 Each convention below is marked:
@@ -63,7 +63,7 @@ Each convention below is marked:
 - **The em dash (U+2014) is kept** as Unicode. Publishers use it both as
   typography and as a fill-in-the-blank marker (`Persona non — ~ GRATA`).
   **[established]** Don't flatten em dashes across the corpus, because some are
-  Mac Roman `ó` mojibake that still need review ([doc/character-encoding.md](https://github.com/century-arcade/xd/blob/master/doc/character-encoding.md)
+  Mac Roman `ó` mojibake that still need review ([character-encoding.md](character-encoding.md)
   §7).
 - **Fill-in-the-blank keeps the publisher's form**: `___` or `—`, whichever the
   source used. **[practice]**
@@ -139,7 +139,7 @@ Each convention below is marked:
   answer never goes in the notes, because solving software shows the notes
   before the solve.
 - **`Special:`** and **`Rebus:`** follow the [spec](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md) and
-  [doc/rebus-conventions.md](https://github.com/century-arcade/xd/blob/master/doc/rebus-conventions.md).
+  [rebus-conventions.md](rebus-conventions.md).
   Circles and shading are preserved. **[established]**
 
 ## Identifiers and file names
@@ -193,7 +193,7 @@ CONTRIBUTING.md, "xdids" and
 - **A square nothing decides.** When both crossing clues allow more than one
   letter and nothing in the puzzle settles it, the square can hold both, as
   a Schrödinger rebus cell (see
-  [doc/rebus-conventions.md](https://github.com/century-arcade/xd/blob/master/doc/rebus-conventions.md)),
+  [rebus-conventions.md](rebus-conventions.md)),
   whatever the key says. Recording just one possible answer is also
   acceptable. **[practice]**
 

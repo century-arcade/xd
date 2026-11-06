@@ -9,7 +9,7 @@
 """
 xdlint.py - authoritative validator for the .xd crossword format.
 
-Stdlib-only. The .xd format is specified in doc/xd-format.md; this script
+Stdlib-only. The .xd format is specified in docs/xd-format.md; this script
 enforces that spec and a curated set of style/quality rules derived from
 patterns that have repeatedly required hand-fixing in our own xd file corpus.
 
@@ -1794,10 +1794,10 @@ def _(ctx):
 
 
 # Typography characters that puz2xd's decode() flattens to ASCII on import
-# (see doc/character-encoding.md §9 step 7 and step 2). Files imported
+# (see docs/character-encoding.md §9 step 7 and step 2). Files imported
 # pre-flatten or via non-puz2xd pipelines retain these. Em dash (U+2014)
 # is *not* in this set: corpus convention keeps it as Unicode (FITB marker
-# in NYT/Wapost/Eltana, per doc/character-encoding.md §11).
+# in NYT/Wapost/Eltana, per docs/character-encoding.md §11).
 _TYPOGRAPHY_FLATTEN = {
     "‘": "'",    # left single quote
     "’": "'",    # right single quote
