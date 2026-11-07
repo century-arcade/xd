@@ -15,9 +15,16 @@ decisions live in the corpus repository's commit history and merge requests.
 - **The Hugging Face organization is `century-arcade`**
   (https://huggingface.co/century-arcade), matching the GitHub organization
   and the domain.
+- **The `puzzles-pre1965` release is under review.** The renewal check
+  ([assessments/copyright-renewal-2026.md](assessments/copyright-renewal-2026.md))
+  found the Times puzzles of 1942 to 1963 in that release still under
+  copyright. The maintainers will decide the release's future in light of
+  it; no decision yet.
 - **A DOI through Zenodo.** The Zenodo record describes the corpus as a
-  whole, but its files are the policy documents; the corpus stays private.
-  CC-BY-4.0 applies to the documents only, not to the puzzles.
+  whole; its files are a snapshot of the xd repository, not the puzzles, and
+  the corpus stays private. The record is under the MIT license, and the
+  policy documents in `docs/` may also be used under CC-BY-4.0. Neither
+  applies to the puzzles.
 - **A statement on AI.** [AI.md](AI.md) says the corpus holds only
   human-made puzzles, discloses the maintainers' own use of AI tools, and
   proposes terms against using derived data or samples to generate

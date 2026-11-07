@@ -8,14 +8,16 @@ Companion documents:
 - The import guide (CONTRIBUTING.md in the private corpus repository): how to submit
   puzzles, how they are named and shelved, and source archives.
 - REVIEWING.md (in the private corpus repository): what to check in an import MR.
-- In the xd repo: [doc/xd-format.md](https://github.com/century-arcade/xd/blob/master/doc/xd-format.md) (the format),
-  [doc/character-encoding.md](https://github.com/century-arcade/xd/blob/master/doc/character-encoding.md) (decoding and
+- In the xdformat repo: [xd-format.md](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md) (the format).
+- In the xd repo: [doc/character-encoding.md](https://github.com/century-arcade/xd/blob/master/doc/character-encoding.md) (decoding and
   typography), [doc/rebus-conventions.md](https://github.com/century-arcade/xd/blob/master/doc/rebus-conventions.md) (rebus and
   quantum cells).
 
 Each convention below is marked:
 
-- **[established]**: written in the spec, the lint rules or REVIEWING.md.
+- **[established]**: written down and agreed, as defined in
+  [GOVERNANCE.md](GOVERNANCE.md); editorial rules are written in the spec,
+  the lint rules or REVIEWING.md.
 - **[practice]**: what merged imports already do, but not written down until
   now. Confirm or change.
 - **[proposed]**: under discussion (October 2026), not yet a rule.
@@ -26,7 +28,8 @@ Each convention below is marked:
    puzzle from any source should yield the same grid, clues and headers,
    byte for byte (see
    CONTRIBUTING.md, "Versions of a puzzle"
-   for what to do when they don't). The notes are the exception: they carry
+   for what to do when they don't). The notes are the exception
+   **[practice]**: they carry
    what a reader needs to know about the puzzle (text published with it,
    errata, corrections to what was published), so two otherwise identical
    files can differ there. Where a puzzle came from and how it was made
@@ -37,6 +40,8 @@ Each convention below is marked:
    and headings are the publisher's. Obvious mistakes (a typo, a misprinted
    answer letter, damage in transfer) are corrected to what was meant;
    anything the publisher did on purpose (wordplay, a gimmick) stays.
+   The corpus favors intent: where it's clear what was meant, correct to
+   that, whoever made the mistake.
 3. **Corrections that change what was published are noted; bookkeeping is
    not.** **[practice]** When the `.xd` corrects an answer or grid letter the
    publisher got wrong, or applies published errata, the notes say what was
@@ -133,7 +138,7 @@ Each convention below is marked:
   header, which the spec allows. The prompt is also given in the notes. The
   answer never goes in the notes, because solving software shows the notes
   before the solve.
-- **`Special:`** and **`Rebus:`** follow the [spec](https://github.com/century-arcade/xd/blob/master/doc/xd-format.md) and
+- **`Special:`** and **`Rebus:`** follow the [spec](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md) and
   [doc/rebus-conventions.md](https://github.com/century-arcade/xd/blob/master/doc/rebus-conventions.md).
   Circles and shading are preserved. **[established]**
 
@@ -260,11 +265,17 @@ Which puzzles we collect is in [COLLECTION.md](COLLECTION.md).
 
 ## Open questions
 
+- **Feature and sub-series names.** A recurring feature's name that is
+  distinct from the puzzle's title (GAMES's "World's Most Ornery Crossword")
+  has no home yet. `Category:` is the nearest existing header (about 4,300
+  files use it). **[proposed]**
 - **Date titles from the outlet.** Many shelves arrive titled with the
   outlet's name and a date: about 23,000 `nytimes/` files (`NY Times, ...`)
   and about 5,000 `latimes/` files. Should the outlet's name be taken out
-  and the date put in the form above? This runs against "the puzzle as
-  published", so it is not a rule yet.
+  and the date put in the form above? Under principle 2 the headings are
+  the publisher's, so this is right only where the outlet's name was added
+  by a downloader rather than printed with the puzzle; until that is
+  checked shelf by shelf, it is not a rule yet.
 - **`Notes:` header or Section 4.** About 2,600 files use a `Notes:` header,
   because `puz2xd` writes a `.puz` file's notes there and `xdfile.py` lists
   `notes` as a known header. Section 4 is preferred, except for a one-line

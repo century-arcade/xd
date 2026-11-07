@@ -36,8 +36,10 @@ Two things, in order of importance:
   to a second service, and cloned on the maintainers' machines and by other
   contributors. Any complete clone is the whole corpus.
 - **Originals.** The file each puzzle was converted from is kept, unchanged,
-  in a checksummed archive in cloud storage, and a receipts table links every
-  puzzle to its original and its source. Fixes are made to the `.xd` file,
+  in a checksummed archive in cloud storage, and a receipts table links nearly
+  every puzzle to its original and its source. A few early bulk imports have
+  no receipts, and some source archives from before 2025 were lost (see
+  "Limits and known risks"). Fixes are made to the `.xd` file,
   never to the original.
 - **Checks.** Every contribution is checked by continuous integration before
   it is merged: format validity, identifiers, shelving, dates and receipts.
@@ -52,8 +54,8 @@ Two things, in order of importance:
 - Every puzzle accepted into the corpus is kept indefinitely, with its
   provenance, unless removed under the rule below.
 - The original source files are kept as received.
-- Changes to puzzles are recorded in history and, where they alter what was
-  published, explained in the puzzle's notes (see [EDITORIAL.md](EDITORIAL.md)).
+- Changes to puzzles are recorded in history and, where they change an
+  answer or apply errata, explained in the puzzle's notes (see [EDITORIAL.md](EDITORIAL.md)).
 - The corpus can be handed over whole at any time: a clone of the repository
   and a copy of the source archives are everything there is.
 - We assess our own preservation capability once a year, publish the result in

@@ -4,9 +4,9 @@ Home of the corpus: https://centuryarcade.org/xd/
 
 The xd Crossword Corpus is the world's largest collection of crossword puzzles, with more than 160,000 published crosswords
 from over 160 publications (as of November 2026), from 1913 to today, kept in a plain-text format for
-research and preservation. Every puzzle is stored as one [`.xd` file](https://github.com/century-arcade/xdformat)
+research and preservation. Every puzzle is stored as one [`.xd` file](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md)
 holding its grid, clues, answers and publication details, together with a record
-of where it came from.
+of where it came from for nearly every puzzle.
 
 The corpus is maintained by Saul Pwanson and Alex DeJarnatt as a volunteer
 project of [Century Arcade](https://github.com/century-arcade).
@@ -61,7 +61,7 @@ are welcome too; see the end of that page.
 |---|---|
 | [xdformat](https://github.com/century-arcade/xdformat) | The `.xd` file format specification, and converters from `.puz` and `.ipuz`. |
 | [xd](https://github.com/century-arcade/xd) | The project's home: this site and its policy documents, and the pipeline that imports, checks and analyzes the corpus and builds xd.saul.pw. |
-| The corpus | The corpus itself: a private repository, with the provenance of every puzzle. Access on request. |
+| The corpus | The corpus itself: a private repository, with the provenance of nearly every puzzle. Access on request. |
 | [The Cross(word) Reference](https://crosswordreference.com) | Browsing and search. |
 | [Every Puzzle Project](https://github.com/EveryPuzzleProject) | A sister project digitizing historical crosswords from scans, which feeds the corpus. |
 

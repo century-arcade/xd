@@ -3,8 +3,9 @@
 *Draft, November 2026. Marked **[established]** where it describes what we
 already do, **[proposed]** where it is new.*
 
-The puzzles in the corpus are copyrighted by their publishers and constructors.
-We hold them for research, under the terms below, and we do not publish them.
+Most of the puzzles in the corpus are copyrighted by their publishers and
+constructors. We hold them for research, under the terms below, and we do not
+publish puzzles that are still under copyright.
 This document says what is available, to whom, and on what terms.
 
 ## What the corpus is for
@@ -27,8 +28,9 @@ From most to least open:
    **[established]**
 2. **Derived data.** Datasets built from the corpus that do not reproduce
    puzzles: clue and answer pairs, answer frequencies, grid statistics,
-   publication and constructor metadata. Provided on request for a stated
-   research purpose, and in some cases published openly. **[proposed]** Which
+   publication and constructor metadata. Most of it is published openly
+   (see [DATASETS.md](DATASETS.md)); other cuts on request, for a stated
+   research purpose. **[proposed]** Which
    derived datasets can be public is decided case by case and recorded in
    [DECISIONS.md](DECISIONS.md).
 3. **Samples.** A random or targeted sample of complete puzzles, for a purpose
@@ -40,7 +42,8 @@ From most to least open:
 
 ## How to ask
 
-Open an issue in this repository or contact a maintainer, saying who you are,
+Open an issue in this repository, or write to xd@saul.pw if you would rather
+not ask in public, saying who you are,
 what you want to do, and which form of access you need. We answer within a
 few weeks. We say yes to most research requests; the questions we ask are
 whether the purpose is research, whether a less open form of access would do,
@@ -54,8 +57,8 @@ purpose. **[proposed]**
 
 By accepting access to the corpus or to derived data you agree:
 
-- To use it for research and not for solving, republishing, or any product
-  that delivers puzzles to solvers.
+- To use it for research, and not for republishing or for any product that
+  delivers puzzles to solvers.
 - Not to give it, or any substantial part of it, to anyone else. People who
   need it can ask us.
 - To cite the corpus in anything you publish that uses it (see
