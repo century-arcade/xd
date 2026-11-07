@@ -6,8 +6,7 @@ xd is a crossword puzzle processing pipeline. It defines the `.xd` plain-text fo
 - `xdfile/tests/` — pytest tests
 - `crossword/` — Local fork of the `crossword` Python library (used by puz2xd)
 - `scripts/` — Utility scripts for processing and web serving
-- `docs/` — The project site (GitHub Pages, https://centuryarcade.org/xd/): the corpus's policy documents
-- `doc/` — Documentation including `xd-format.md` (the format spec)
+- `docs/` — The project site (GitHub Pages, https://centuryarcade.org/xd/): the corpus's policy documents and the character-encoding and rebus notes (the format spec itself is in the xdformat repo: https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md); `docs/archive/` holds old ops notes, kept in the repo but not published
 - `gxd/` — puzzle archive (this is a different git repo that is cloned into this location by scripts).
 
 # Important files

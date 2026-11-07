@@ -14,7 +14,7 @@ The xd project includes a [text format for crossword puzzles](https://github.com
     xdlint.py --no-experimental ...        # skip rules interpreting unspec'd extensions
     xdlint.py --profile gxd ...            # also apply gxd's editorial policy
 
-See [`doc/rebus-conventions.md`](doc/rebus-conventions.md) for the rebus / quantum / Schrödinger conventions the linter recognizes (these are extensions to the spec, not yet formalized).
+See [`docs/rebus-conventions.md`](docs/rebus-conventions.md) for the rebus / quantum / Schrödinger conventions the linter recognizes (these are extensions to the spec, not yet formalized).
 
 ### `--profile gxd`
 
@@ -37,7 +37,7 @@ The gxd corpus has editorial conventions beyond the format, written in gxd's `ED
 
 The two rules for new imports apply only to puzzles being added, since existing files are not changed: in `--base` mode they run on files the diff adds (not modified ones), and in path mode only with `--new-imports`.
 
-See [`doc/rebus-conventions.md`](doc/rebus-conventions.md) for the rebus / quantum / Schrödinger conventions the linter recognizes (these are extensions to the spec, not yet formalized).
+See [`docs/rebus-conventions.md`](docs/rebus-conventions.md) for the rebus / quantum / Schrödinger conventions the linter recognizes (these are extensions to the spec, not yet formalized).
 
 ## Requirements
 

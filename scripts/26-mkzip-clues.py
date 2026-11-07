@@ -18,7 +18,7 @@ def main():
 
     outf.log = False
     outf.toplevel = 'xd'
-    outf.write_file('README', open('doc/zip-README').read())
+    outf.write_file('README', open('scripts/zip-README').read())
 
     # skip clues from redacted contest puzzles (whole puzzle is all X's)
     puzzles = {}

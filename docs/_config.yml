@@ -25,8 +25,12 @@ readme_index:
 
 # Clean URLs: no .html, no capitals. Each policy page is served at a
 # lowercase directory URL (ACCESS.md -> /access/). Pages with lowercase file
-# names (xd-format.md, assessments/) get directory URLs from their names.
+# names (character-encoding.md, assessments/) get directory URLs from their names.
 permalink: pretty
+
+# Kept in the repository, not published: old ops notes.
+exclude:
+  - archive
 defaults:
   - scope: { path: "ACCESS.md" }
     values: { permalink: /access/ }

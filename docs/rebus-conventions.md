@@ -2,7 +2,7 @@
 
 ## Status
 
-The current spec ([doc/xd-format.md](xd-format.md), v3.0) defines a `Rebus:` header for cells that hold a multi-character or non-standard string:
+The current spec ([xd-format.md](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md), v3.0) defines a `Rebus:` header for cells that hold a multi-character or non-standard string:
 
 > Digits, most symbols, and printable unicode characters (if needed) can be used to indicate rebus cells. The 'Rebus' header provides the translation:
 >
@@ -20,7 +20,7 @@ The validator at the project root (`xdlint.py`) currently accepts all of these p
 
 A rebus key expands to a single string, used the same way in both directions.
 
-**Example: [`gxd/nytimes/1955/nyt1955-01-01.xd`](../gxd/nytimes/1955/nyt1955-01-01.xd) — quoted in the spec itself**
+**Example: `gxd/nytimes/1955/nyt1955-01-01.xd` — quoted in the spec itself**
 
 ```
 Rebus: 1=HEART 2=DIAMOND 3=SPADE 4=CLUB
@@ -43,7 +43,7 @@ Cell `1` expands to `HEART` whether the slot is read across or down. The declare
 
 Rebus key expands to a single non-letter character (often punctuation or a math symbol). Doesn't conflict with the spec — it's just an unusual choice of expansion.
 
-**Example: [`gxd/avclub/2017/avc2017-11-01.xd`](../gxd/avclub/2017/avc2017-11-01.xd)** — themed "Let's Roll":
+**Example: `gxd/avclub/2017/avc2017-11-01.xd`** — themed "Let's Roll":
 
 ```
 Rebus: 1=/
@@ -56,7 +56,7 @@ A52. Low-quality ~ CRUMMY
 
 Cell `1` is a literal `/` character. The puzzle theme uses literal slashes inside answers.
 
-**Example: [`gxd/nysun/2005/nys2005-12-30.xd`](../gxd/nysun/2005/nys2005-12-30.xd)** — math operators:
+**Example: `gxd/nysun/2005/nys2005-12-30.xd`** — math operators:
 
 ```
 Rebus: 1=/ 2=* 3=+ 4=-
@@ -74,7 +74,7 @@ In ~19 corpus puzzles, the rebus value contains a non-trivial `/` (both halves n
 
 Each `<a>/<b>` cell is genuinely ambiguous — it can be read as either letter `<a>` or letter `<b>` in any direction. The puzzle is constructed so that every clue that crosses a rebus cell yields a valid word with either choice. The themed slot itself typically has **two** valid answers (one per letter set), and both answer the same clue.
 
-**Example: [`gxd/newyorker/2023/tny2023-07-14.xd`](../gxd/newyorker/2023/tny2023-07-14.xd)** — "A Freudian Puzzle":
+**Example: `gxd/newyorker/2023/tny2023-07-14.xd`** — "A Freudian Puzzle":
 
 ```
 Rebus: 1=C/P 2=I/E 3=G/N 4=A/I 5=R/S
@@ -95,7 +95,7 @@ D9.  RadioShack feature   ~ CAPITALR/S
 
 The traditional quantum pattern: an `<a>/<b>` cell reads as multi-letter `<a>` going one way and multi-letter `<b>` going the other. The convention puts the across half first (`<across>/<down>`); the orderings can flip cell-by-cell so each direction's word works out. **Each clue has a single fixed answer** — only one half yields a real word in each direction. Unlike §3a, the cell is *not* ambiguous: across and down each pin down their own reading. The two halves are themed (a name, a candy bar, an antonym pair).
 
-**Example: [`gxd/nytimes/2024/nyt2024-01-18.xd`](../gxd/nytimes/2024/nyt2024-01-18.xd)** — Vivien Leigh:
+**Example: `gxd/nytimes/2024/nyt2024-01-18.xd`** — Vivien Leigh:
 
 ```
 Rebus: 1=IE/EI 2=EI/IE 3=EI/IE 4=IE/EI 5=EI/IE 6=IE/EI 7=EI/IE 8=IE/EI
@@ -113,7 +113,7 @@ D4.  What Columbus thought he'd reached in 1492          ~ THIE/EINDEI/IES
 - The half-orderings flip cell-by-cell (`1=IE/EI` but `2=EI/IE`) precisely so the across word works in every across slot and the down word works in every down slot.
 - The declared answers `VIVIE/EINLEI/IEGH` and `THIE/EINDEI/IES` are inline forms — they embed both halves at every rebus cell; the reader extracts the directional letters. The actual answers are `VIVIENLEIGH` and `THEINDIES`, each fixed for its direction.
 
-**Example: [`gxd/nytimes/2025/nyt2025-09-21.xd`](../gxd/nytimes/2025/nyt2025-09-21.xd)** — "Gimme a Break!":
+**Example: `gxd/nytimes/2025/nyt2025-09-21.xd`** — "Gimme a Break!":
 
 ```
 Rebus: 1=KIT/KAT 2=KIT/KAT 3=KIT/KAT 4=KIT/KAT 5=KIT/KAT
@@ -124,7 +124,7 @@ D18. Regular at a park with half-pipes, informally         ~ SKIT/KATERAT
 
 Every rebus cell is `KIT` across and `KAT` down. A23 = **KABUKITHEATER** (kabuki theater); D18 (which crosses A23 at cell `1`) = **SKATERAT** (skate rat). The other across rebus answers — `WRECKITRALPH`, `TIKITORCHES`, `TESTKITCHEN`, `FOSTERKITTEN` — all use `KIT`; the other down rebus answers — `TONKATSU`, `LOOKATMENOW`, `MEERKATS`, `SNEAKATTACK` — all use `KAT`. Each clue has one answer.
 
-**Example: [`gxd/nytimes/2025/nyt2025-08-27.xd`](../gxd/nytimes/2025/nyt2025-08-27.xd)** — UP/DOWN theme:
+**Example: `gxd/nytimes/2025/nyt2025-08-27.xd`** — UP/DOWN theme:
 
 ```
 Rebus: 1=UP/DOWN 2=UP/DOWN 3=UP/DOWN 4=UP/DOWN
@@ -139,7 +139,7 @@ Across reading uses `UP`, down reading uses `DOWN`. A18 = **IMUPFORWHATEVER**; D
 
 This is the trickiest pattern: `<a>/<b>` means "either single letter `a` or single letter `b`" in one direction (Schrödinger choice), and "the multi-letter rebus `ab`" in the other direction. **The choice of which direction is which is theme-driven and not encoded in the syntax.**
 
-**Example: [`gxd/nytimes/2025/nyt2025-09-11.xd`](../gxd/nytimes/2025/nyt2025-09-11.xd)**:
+**Example: `gxd/nytimes/2025/nyt2025-09-11.xd`**:
 
 ```
 Rebus: 1=T/W 2=W/T 3=H/D 4=R/D
@@ -171,7 +171,7 @@ So in the *same puzzle*, `<a>/<b>` means one thing across and another thing down
 
 A directional pattern (like §3b) where the two halves have **different lengths**. The across reading uses one expansion and the down reading uses the other; each clue has one fixed answer. The "wit" is typically that the two halves sound the same or otherwise relate phonetically.
 
-**Example: [`gxd/nytimes/2025/nyt2025-01-02.xd`](../gxd/nytimes/2025/nyt2025-01-02.xd)** — "PH/F" phonetic theme:
+**Example: `gxd/nytimes/2025/nyt2025-01-02.xd`** — "PH/F" phonetic theme:
 
 ```
 Rebus: 1=PH/F
@@ -188,7 +188,7 @@ Every rebus cell is `PH` across and `F` down. A1 = **ALPHA** (`AL` + `PH` + `A`,
 
 Exactly **one** corpus puzzle uses `|` in a Rebus value, and it does so to disambiguate the asymmetric pattern of §3c.
 
-**Example: [`gxd/nytimes/2021/nyt2021-11-04.xd`](../gxd/nytimes/2021/nyt2021-11-04.xd)**:
+**Example: `gxd/nytimes/2021/nyt2021-11-04.xd`**:
 
 ```
 Rebus: 1=SE/S|E 2=S|C/SC 3=E|G/EG 4=GH/G|H 5=A|B/AB 6=A|P/AP 7=NL/N|L 8=TN/T|N
