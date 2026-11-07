@@ -9,6 +9,10 @@ All public data from xd is available in three .zip archives:
 
 - [xd-clues.zip](/xd-clues.zip)  (67MB), over 6,000,000 answer/clue usages, grouped by publication-year
 
+The clues and the metadata are also published as versioned snapshots, in Parquet, on Hugging Face and Kaggle (links to come once they are up).
+Each snapshot is fixed, so a result can name the version it used, and the clue snapshots apply a minimum cell size: a publication-year with fewer than 5 puzzles is coarsened to its decade or left out.
+What is published, and the terms we ask people to honor, are in [DATASETS.md](https://centuryarcade.org/xdcorpus/DATASETS.html).
+
 ## Source code
 
 - Browse the entire source code at [github.com/century-arcade/xd](https://github.com/century-arcade/xd).
