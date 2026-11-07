@@ -2,7 +2,7 @@
 
 ## Status
 
-The current spec ([xd-format.md](xd-format.md), v3.0) defines a `Rebus:` header for cells that hold a multi-character or non-standard string:
+The current spec ([xd-format.md](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md), v3.0) defines a `Rebus:` header for cells that hold a multi-character or non-standard string:
 
 > Digits, most symbols, and printable unicode characters (if needed) can be used to indicate rebus cells. The 'Rebus' header provides the translation:
 >
