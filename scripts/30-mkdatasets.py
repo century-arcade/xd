@@ -3,7 +3,7 @@
 # Usage: $0 --snapshot 2026.11 -o <outroot> xd-clues.zip xd-metadata.zip
 #
 # Builds the versioned dataset snapshots published on Hugging Face and Kaggle
-# (tier (b) in https://centuryarcade.org/xdcorpus/DATASETS.html) from the two
+# (tier (b) in https://centuryarcade.org/xd/datasets/) from the two
 # public zips that `make analyze` writes. Reads nothing from gxd/.
 #
 #   <outroot>/xd-clues/     data/pubid=<pubid>/clues.parquet, README.md,
@@ -42,10 +42,10 @@ MIN_CELL = 5
 
 OWNER = 'century-arcade'  # Hugging Face organization and Kaggle owner
 
-CORPUS_URL = 'https://centuryarcade.org/xdcorpus/'
-DATASETS_URL = CORPUS_URL + 'DATASETS.html'
-ACCESS_URL = CORPUS_URL + 'ACCESS.html'
-AI_URL = CORPUS_URL + 'AI.html'
+CORPUS_URL = 'https://centuryarcade.org/xd/'
+DATASETS_URL = CORPUS_URL + 'datasets/'
+ACCESS_URL = CORPUS_URL + 'access/'
+AI_URL = CORPUS_URL + 'ai/'
 CITING_URL = CORPUS_URL + '#citing'
 
 TAGS = ['crossword', 'crosswords', 'puzzles', 'clues', 'corpus']
@@ -62,7 +62,7 @@ the corpus itself and [AI.md]({AI_URL}) for using the data to train models."""
 
 CITATION = """\
 > Pwanson, Saul and DeJarnatt, Alex. (2026). *The xd Crossword Corpus.*
-> Century Arcade. https://centuryarcade.org/xdcorpus/
+> Century Arcade. https://centuryarcade.org/xd/
 
 Use the year the corpus was accessed. Earlier work cited it as
 "Pwanson, Saul. (2019). xd Crossword Corpus. http://xd.saul.pw"; that is the
