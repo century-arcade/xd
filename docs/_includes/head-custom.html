@@ -1,0 +1,46 @@
+{% comment %}
+  Added to the <head> of every page by the jekyll-theme-primer layout.
+  The theme's jekyll-seo-tag already writes <link rel="canonical"> and
+  <meta name="description">, so they are not repeated here.
+  The Dataset description is for Google Dataset Search; it goes on the
+  front page only.
+{% endcomment %}
+{% if page.url == "/" %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "name": "The xd Crossword Corpus",
+  "alternateName": "xd corpus",
+  "description": "The xd Crossword Corpus is the world's largest collection of crossword puzzles, with more than 160,000 published crosswords from over 160 publications, from 1913 to today, kept in a plain-text format for research and preservation. Every puzzle is stored as one .xd file holding its grid, clues, answers and publication details, together with a record of where it came from. Most puzzles are still under copyright, so the corpus is private; researchers can request aggregate statistics, derived datasets, samples, or the full collection.",
+  "url": "https://centuryarcade.org/xd/",
+  "sameAs": "https://github.com/century-arcade/xd",
+  "creator": [
+    {
+      "@type": "Person",
+      "name": "Saul Pwanson"
+    },
+    {
+      "@type": "Person",
+      "name": "Alex DeJarnatt"
+    }
+  ],
+  "publisher": {
+    "@type": "Organization",
+    "name": "Century Arcade",
+    "url": "https://centuryarcade.org"
+  },
+  "temporalCoverage": "1913/..",
+  "keywords": [
+    "crossword",
+    "crossword puzzle",
+    "corpus",
+    "puzzles",
+    "newspaper"
+  ],
+  "isAccessibleForFree": false,
+  "conditionsOfAccess": "Available on request for research, in forms from derived data to the full corpus, under terms that forbid redistribution or use for solving and require citation; see https://centuryarcade.org/xd/access/."
+}
+</script>
+<!-- Once a Zenodo record exists, add its DOI to the Dataset above as "identifier". -->
+{% endif %}
