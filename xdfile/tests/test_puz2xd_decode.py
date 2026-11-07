@@ -9,7 +9,7 @@ decode() does with the resulting string. This also keeps the tests
 runnable in CI without shipping copyrighted .puz binaries.
 
 Each case's comment cites the corpus .xd file the bytes came from, so
-future maintainers can cross-reference. See doc/character-encoding.md
+future maintainers can cross-reference. See docs/character-encoding.md
 for the full taxonomy of mojibake patterns these tests cover.
 """
 from xdfile.puz2xd import decode
