@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you publish research or results that use the corpus, please cite it as below. Use the year the corpus was accessed."
+title: "The xd Crossword Corpus"
+type: dataset
+authors:
+  - family-names: Pwanson
+    given-names: Saul
+  - family-names: DeJarnatt
+    given-names: Alex
+url: "https://centuryarcade.org/xd/"
+repository-code: "https://github.com/century-arcade/xd"
+version: "2026.11"
+date-released: 2026-11-06
+abstract: >-
+  The xd Crossword Corpus is the world's largest collection of crossword
+  puzzles, with more than 160,000 published crosswords from over 160
+  publications, from 1913 to today, kept in a plain-text format for research
+  and preservation. Every puzzle is stored as one .xd file holding its grid,
+  clues, answers and publication details, together with a record of where it
+  came from for nearly every puzzle. Most puzzles are still under copyright, so the corpus itself is
+  private and available for research on request.
+keywords:
+  - crossword
+  - crossword puzzles
+  - corpus
+  - puzzles
+  - newspapers
+  - digital preservation

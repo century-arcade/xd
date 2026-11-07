@@ -1,0 +1,48 @@
+# GitHub Pages site for the xd Crossword Corpus: https://centuryarcade.org/xd/
+#
+# README.md is the front page (jekyll-readme-index, on by default on GitHub
+# Pages), and every other .md file is published as .html with its relative
+# links rewritten (jekyll-optional-front-matter, jekyll-relative-links).
+# The schema.org Dataset metadata is in _includes/head-custom.html.
+
+title: The xd Crossword Corpus
+description: >-
+  More than 160,000 published crosswords from over 160 publications, 1913 to
+  today, kept in plain text for research and preservation.
+url: https://centuryarcade.org
+baseurl: /xd
+lang: en-US
+theme: jekyll-theme-primer
+# Short subtitle for the front page's <title>; without it jekyll-seo-tag
+# appends the whole description.
+tagline: Published crosswords, 1913 to today
+
+# Serve the .md files only as rendered .html, not also as raw copies.
+optional_front_matter:
+  remove_originals: true
+readme_index:
+  remove_originals: true
+
+# Clean URLs: no .html, no capitals. Each policy page is served at a
+# lowercase directory URL (ACCESS.md -> /access/). Pages with lowercase file
+# names (xd-format.md, assessments/) get directory URLs from their names.
+permalink: pretty
+defaults:
+  - scope: { path: "ACCESS.md" }
+    values: { permalink: /access/ }
+  - scope: { path: "AI.md" }
+    values: { permalink: /ai/ }
+  - scope: { path: "COLLECTION.md" }
+    values: { permalink: /collection/ }
+  - scope: { path: "CONTRIBUTING.md" }
+    values: { permalink: /contributing/ }
+  - scope: { path: "DATASETS.md" }
+    values: { permalink: /datasets/ }
+  - scope: { path: "DECISIONS.md" }
+    values: { permalink: /decisions/ }
+  - scope: { path: "EDITORIAL.md" }
+    values: { permalink: /editorial/ }
+  - scope: { path: "GOVERNANCE.md" }
+    values: { permalink: /governance/ }
+  - scope: { path: "PRESERVATION.md" }
+    values: { permalink: /preservation/ }
