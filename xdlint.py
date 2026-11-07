@@ -9,7 +9,8 @@
 """
 xdlint.py - authoritative validator for the .xd crossword format.
 
-Stdlib-only. The .xd format is specified in docs/xd-format.md; this script
+Stdlib-only. The .xd format is specified in xdformat's doc/xd-format.md
+(https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md); this script
 enforces that spec and a curated set of style/quality rules derived from
 patterns that have repeatedly required hand-fixing in our own xd file corpus.
 

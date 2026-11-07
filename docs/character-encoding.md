@@ -2,7 +2,7 @@
 
 ## Status
 
-The .xd format spec ([xd-format.md](xd-format.md)) declares the file is "a simple UTF-8 text file, and can often be 7-bit ASCII clean." In practice, the gxd corpus (94k+ puzzles, ingested over years from multiple sources) contains a small fraction of files with byte-level artifacts from at least five different upstream encodings. None of them are inherent to .xd itself — they were inherited from the source .puz / .ipuz / PDF files and propagated through legacy converters.
+The .xd format spec ([xd-format.md](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md)) declares the file is "a simple UTF-8 text file, and can often be 7-bit ASCII clean." In practice, the gxd corpus (94k+ puzzles, ingested over years from multiple sources) contains a small fraction of files with byte-level artifacts from at least five different upstream encodings. None of them are inherent to .xd itself — they were inherited from the source .puz / .ipuz / PDF files and propagated through legacy converters.
 
 This document catalogues the patterns observed, the diagnostics that distinguish them, and the cleanup pipeline that handles each. It exists because we hit every one of these patterns at least once during a single review pass and had to figure them out from scratch.
 
