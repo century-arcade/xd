@@ -86,7 +86,7 @@ To reach 3:
 
 ### I. Content preservation — current 3, target 3
 
-Why 3: the whole design is content preservation. Plain-text .xd with a published spec; formats identified and content characterized at import and corpus-wide (xdlint, the corpus checks, corpus-report); quality problems found and tracked (encoding damage, blank clues, placeholder grids, missing answers); preservation actions (re-import with decode fixes, overrides.tsv, header sweeps) recorded in git with who, when, what and why; editorial conventions that state which properties must be kept (the puzzle as published, originals never edited); the needs of current users (research, solvers, tooling) understood. Preservation watch is informal, but the format choice makes it low-risk.
+Why 3: the whole design is content preservation. Plain-text .xd with a published spec; formats identified and content characterized at import and corpus-wide (xdlint, the corpus checks, corpus-report); quality problems found and tracked (encoding damage, blank clues, placeholder grids, missing answers); preservation actions (re-import with decode fixes, overrides.tsv, header sweeps) recorded in git with who, when, what and why; editorial conventions that state which properties must be kept (the puzzle as the publisher meant it, originals never edited); the needs of current users (research, solvers, tooling) understood. Preservation watch is informal, but the format choice makes it low-risk.
 
 Target 3. Several level 4 examples already hold (version control, quality control on actions). Not a priority to push further.
 

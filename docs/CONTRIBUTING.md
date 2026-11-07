@@ -7,7 +7,9 @@
 If you edit, construct or publish crosswords, we would like to keep yours.
 This page says what we do with puzzles we are given, who can see them, and
 what you can ask of us. The short version: your originals are kept safe and
-unchanged, the puzzles are never offered to solvers, and you stay in control
+unchanged, the corpus never offers the puzzles to solvers (the Every
+Puzzle Project's review site shows puzzles while they are under review, as
+that project's own pages), and you stay in control
 of how your work is represented.
 
 ## Why we are asking
@@ -26,11 +28,13 @@ already holds more than 160,000 puzzles from over 160 publications, back to
   whatever format, is stored unchanged in a checksummed archive. We never edit
   originals.
 - **Each puzzle is converted to one plain-text file** holding its grid, clues,
-  answers, title, constructor, editor, date and copyright line, as published.
-  Obvious misprints are corrected and the correction noted; nothing you did
-  on purpose is changed. The conventions are in [EDITORIAL.md](EDITORIAL.md).
-- **Every puzzle carries its provenance**: where it came from, when, and from
-  whom, so your contribution is always identifiable as yours.
+  answers, title, constructor, editor, date and copyright line, as the
+  publisher meant them: obvious misprints are corrected and noted, nothing
+  you did on purpose is changed, and headers are normalized as described in
+  [EDITORIAL.md](EDITORIAL.md).
+- **Puzzles carry their provenance**: where each came from, when, and from
+  whom, so your contribution is always identifiable as yours. This holds for
+  nearly every puzzle in the corpus; a few early bulk imports have none.
 - **The corpus is private.** It lives in a repository that is not public, with
   more than one copy in more than one place. How it is kept is described in
   [PRESERVATION.md](PRESERVATION.md).
@@ -74,7 +78,7 @@ clippings, or a link to an online archive. Complete runs are ideal, but
 partial ones are welcome; gaps can be filled later. If you are not sure what
 you have, send a sample and we will tell you what we can do with it.
 
-Send it, or ask us anything, at xd@centuryarcade.org. Large archives can be shared
+Send it, or ask us anything, at xd@saul.pw. Large archives can be shared
 however is convenient for you.
 
 ## What you get back

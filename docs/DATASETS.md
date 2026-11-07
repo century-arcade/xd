@@ -24,10 +24,10 @@ copyrighted puzzle be rebuilt**.
 Complete puzzles that are out of copyright:
 
 - **Before 1931**: public domain in the United States outright. The
-  corpus holds about 700: *Judge* magazine 1924 to 1930 (digitized by the
+  corpus holds 459: *Judge* magazine 1924 to 1930 (304, digitized by the
   [Every Puzzle Project](https://github.com/EveryPuzzleProject)), the 1924
-  Simon & Schuster book, and a few single puzzles. **[proposed]**
-- ***Judge*, 1931 to 1939**: about 300 puzzles. US copyright in works
+  Simon & Schuster book (150), and 5 single puzzles. **[proposed]**
+- ***Judge*, 1931 to 1939**: 227 puzzles. US copyright in works
   published 1931 to 1963 lasted only if renewed in the 28th year, and a
   check of the renewal records
   ([assessments/copyright-renewal-2026.md](assessments/copyright-renewal-2026.md))
