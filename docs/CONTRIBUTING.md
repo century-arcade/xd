@@ -29,7 +29,7 @@ already holds more than 160,000 puzzles from over 160 publications, back to
   originals.
 - **Each puzzle is converted to one plain-text file** holding its grid, clues,
   answers, title, constructor, editor, date and copyright line, as the
-  publisher meant them: obvious misprints are corrected and noted, nothing
+  publisher meant them: obvious misprints are corrected and recorded, nothing
   you did on purpose is changed, and headers are normalized as described in
   [EDITORIAL.md](EDITORIAL.md).
 - **Puzzles carry their provenance**: where each came from, when, and from
@@ -78,7 +78,7 @@ clippings, or a link to an online archive. Complete runs are ideal, but
 partial ones are welcome; gaps can be filled later. If you are not sure what
 you have, send a sample and we will tell you what we can do with it.
 
-Send it, or ask us anything, at xd@saul.pw. Large archives can be shared
+Send it, or ask us anything, at xd@centuryarcade.org. Large archives can be shared
 however is convenient for you.
 
 ## What you get back

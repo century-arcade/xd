@@ -42,7 +42,7 @@ From most to least open:
 
 ## How to ask
 
-Open an issue in this repository, or write to xd@saul.pw if you would rather
+Open an issue in this repository, or write to xd@centuryarcade.org if you would rather
 not ask in public, saying who you are,
 what you want to do, and which form of access you need. We answer within a
 few weeks. We say yes to most research requests; the questions we ask are

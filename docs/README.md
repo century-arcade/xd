@@ -32,7 +32,7 @@ We welcome puzzles from any publication that meets the collection scope in
 part of a published series. If you edit, construct or publish crosswords,
 [CONTRIBUTING.md](CONTRIBUTING.md) says what we do with puzzles we are given,
 who can see them, and what to send. Send puzzles, or questions, to
-xd@saul.pw. Volunteers who want to convert and submit puzzles themselves
+xd@centuryarcade.org. Volunteers who want to convert and submit puzzles themselves
 are welcome too; see the end of that page.
 
 ## Policies
