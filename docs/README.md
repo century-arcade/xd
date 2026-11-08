@@ -8,8 +8,8 @@ research and preservation. Every puzzle is stored as one [`.xd` file](https://gi
 holding its grid, clues, answers and publication details, together with a record
 of where it came from for nearly every puzzle.
 
-The corpus is maintained by Saul Pwanson and Alex DeJarnatt as a volunteer
-project of [Century Arcade](https://github.com/century-arcade).
+The corpus is maintained by [Saul Pwanson](https://saul.pw/) and [Alex DeJarnatt](https://alexdej.com/) as a volunteer
+project of [Century Arcade](https://github.com/century-arcade), with technical help from [Anja Kefala](https://github.com/anjakefala/).
 
 ## Explore
 
@@ -85,10 +85,15 @@ Open an issue in [this repository](https://github.com/century-arcade/xd), or fin
 
 ## Acknowledgments
 
-We owe a debt of gratitude to:
+We thank the following people for their contributions to the xd Crossword Corpus:
 
-- Barry Haldiman, for his diligent collection of thousands of puzzles from the 2000s and 2010s
-- David Steinberg and the [Pre-Shortzian Puzzle Project (PSPP)](https://www.preshortzianpuzzleproject.com/), for inspiration
-- [Parker Higgins](https://parkerhiggins.net/), for developing and maintaining [xword-dl](https://github.com/thisisparker/xword-dl), which has been indispensable for collection
-- The hundreds of editors and thousands of constructors who delight us with their creations.
-- [Arthur Wynne](https://en.wikipedia.org/wiki/Arthur_Wynne), for kicking the whole thing off on [December 21, 1913](https://tcampbell.substack.com/p/arthur-wynne).
+- Barry Haldiman
+- [Roy Leban](https://royleban.com/)
+- [Alex Boisvert](https://alexboisvert.com/)
+- [Mike Selinker](https://www.selinker.com/)
+- Evan Birnholz
+- Quiara Vasquez
+- [Enrique Henestroza Anguiano](https://datalexic.com/)
+- Alex Bajcz
+- Daniel Kirkdorffer
+- [jmviz](https://github.com/jmviz)
