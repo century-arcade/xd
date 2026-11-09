@@ -11,12 +11,12 @@ of where it came from for nearly every puzzle.
 The corpus is maintained by [Saul Pwanson](https://saul.pw/) and [Alex DeJarnatt](https://alexdej.com/) as a volunteer
 project of [Century Arcade](https://github.com/century-arcade), with technical help from [Anja Kefala](https://github.com/anjakefala/).
 
-## Explore
+## Sites using the corpus
 
-- [The Cross(word) Reference](https://crosswordreference.com): browse and search puzzles,
-  clues and answers across the corpus.
-- [xd.saul.pw](https://xd.saul.pw): statistics, reports and corpus-wide analyses,
-  rebuilt nightly.
+- [The Cross(word) Reference](https://crosswordreference.com): browse and search puzzles, clues, and answers across the corpus.
+- [xd.saul.pw](https://xd.saul.pw): Saul's original plagiarism analysis, plus statistics and reports. 
+- [Spread the Word(list)](https://www.spreadthewordlist.com/): clue database build on the xd Crossword Corpus.
+- [Puzzmo Crossword Data](https://data.puzzmo.com/xwd): search clues and answers in the corpus.
 
 ## Use the corpus
 
@@ -97,3 +97,6 @@ We thank the following people for their contributions to the xd Crossword Corpus
 - Alex Bajcz
 - Daniel Kirkdorffer
 - [jmviz](https://github.com/jmviz)
+- [Jim Horne](https://xwordinfo.com/)
+
+Additionally we thank David Steinberg, Jim Horne, and the rest of the team behind [Pre-Shortzian Puzzle Project](http://www.preshortzianpuzzleproject.com/) for inspiring our project.

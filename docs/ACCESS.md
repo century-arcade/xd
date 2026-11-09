@@ -10,10 +10,8 @@ This document says what is available, to whom, and on what terms.
 
 ## What the corpus is for
 
-The corpus exists so that crosswords can be studied: their language, their
-history, their construction, their editing, and the people who made them.
-**[established]** It is not a place to get puzzles to solve. Puzzles for
-solving are available from their publishers, and we point people there.
+The corpus exists so that crosswords can be studied and preserved as literary works.
+**[established]** It is not a source of puzzles to solve. Puzzles for solving are available from their publishers, and we point people there.
 
 ## Forms of access
 
