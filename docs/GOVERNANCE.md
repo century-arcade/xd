@@ -1,6 +1,6 @@
 # Governance
 
-*Draft, November 2026.*
+*Draft, November 2026, for a corpus begun in 2016 (see [HISTORY.md](HISTORY.md)).*
 
 ## Maintainers
 
