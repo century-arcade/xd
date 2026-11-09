@@ -17,6 +17,10 @@ without redistributing anyone's puzzles.
 The principle behind every public dataset: **nothing we publish lets a
 copyrighted puzzle be rebuilt**.
 
+The data is offered as it is, without warranty, and it carries the corpus's
+errors; what we can and cannot promise about rights and accuracy is in
+[ACCESS.md](ACCESS.md#what-we-can-and-cannot-promise).
+
 ## Three tiers
 
 ### (a) Public full content

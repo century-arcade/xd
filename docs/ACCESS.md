@@ -87,6 +87,35 @@ the repository. Volunteers who convert and submit puzzles themselves get
 access in order to do so, and the same terms apply to the rest of the
 corpus. The import guide is in the private corpus repository.
 
+## What we can and cannot promise
+
+**Rights.** We do not own the puzzles. Copyright in them stays with the
+publishers and constructors who hold it, and nothing here transfers,
+licenses or weakens it. For most of the corpus we hold no licence. We keep
+the puzzles privately for research, and publish only data that cannot
+rebuild a puzzle, in the belief that both are lawful; no court has said so,
+and we have not asked one. A rights holder who disagrees should tell us
+rather than wonder: we remove puzzles on request (above), and we keep a
+record of each publication we have told what we hold. Anyone who receives
+data from us is responsible for their own use of it. Our terms say what we
+ask of you; they are not advice about what the law allows. **[proposed]**
+
+**Accuracy.** The puzzles were converted from many sources over many years:
+publishers' files, solvers' downloads, scanned pages read by OCR, and
+hand-typed transcriptions. Headers are normalized, some dates are inferred
+from filenames or page order, and constructor names are recorded as we
+found them until someone tells us otherwise. Errors exist. We fix the ones
+we find and the ones reported to us, and every fix is a recorded change, but
+the corpus is not the publisher's authoritative text and should not be cited
+as if it were. Counts and statistics describe what we hold, not what was
+published. **[proposed]**
+
+**Data.** The corpus and the public datasets are offered as they are, without
+warranty. They change between versions as errors are fixed and puzzles are
+added or removed, and a dataset can be withdrawn if a rights question
+requires it. Cite the version you used (see
+[README.md](README.md#citing)). **[proposed]**
+
 ## Review
 
 This policy is reviewed once a year with the project's preservation
