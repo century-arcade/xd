@@ -18,7 +18,7 @@ That was the moment the collection became a corpus. A body of puzzles that could
 
 ## 2016–2025: the corpus
 
-The corpus moved into its own repository, gxd, in May 2016, with a receipts file that records where every puzzle came from. The big publications were loaded over that summer: Universal and USA Today in July, the New York Times, Newsday and CrosSynergy in August, the Los Angeles Times in September. By December 2016 the corpus held 71,000 puzzles.
+The collection is older than its repository. Saul had been gathering puzzles for months before the March story, and the 52,000 it was built on were already on his disk. In May 2016 he opened gxd, a git repository for the puzzles with a receipts file that records where each one came from, and committed the collection over the summer, publication by publication: Universal and USA Today in July, the New York Times, Newsday and CrosSynergy in August, the Los Angeles Times in September. That is why the chart above begins in May 2016 and climbs so steeply that year. By December 2016 the repository held 71,000 puzzles.
 
 For the next nine years it grew quietly, mostly by a nightly download of the publications that post their puzzles, with occasional archives contributed by constructors and collectors. [Anja Kefala](https://github.com/anjakefala/) helped with the tooling throughout **[check]**, and [xd.saul.pw](https://xd.saul.pw) published statistics from the corpus: puzzles by publication and year, the most common answers, the grids that reuse each other. By the end of 2025 the corpus held 90,000 puzzles.
 

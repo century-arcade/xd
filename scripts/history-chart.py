@@ -15,11 +15,16 @@ import csv
 import sys
 from datetime import date
 
+# The collection predates the repository: the gxd history starts in May 2016, and the puzzles
+# committed over that summer were the collection Saul already had. The public record (the
+# FiveThirtyEight coverage of March 2016) puts it at about 52,000 puzzles then; the dashed line
+# draws that estimate from the start of the year to the first commit.
+BEFORE_REPO = (date(2016, 1, 1), 52_000)
+
 EVENTS = [
     # (date, label, dy) dy nudges the label up (negative) or down to avoid overlaps
-    (date(2016, 3, 4), "FiveThirtyEight story", -58),
-    (date(2016, 8, 26), "NYT, Newsday, CrosSynergy imported", -28),
-    (date(2022, 6, 1), "", 0),
+    (date(2016, 3, 4), "FiveThirtyEight story", 30),
+    (date(2016, 8, 26), "the collection is committed to gxd", -46),
     (date(2026, 9, 25), "The Cross Reference", -74),
     (date(2026, 10, 9), "Every Puzzle Project imports", -46),
     (date(2026, 11, 6), "centuryarcade.org", -18),
@@ -83,7 +88,15 @@ def main(src, out):
     fill = d + f" L{xpos(last[0]):.1f},{ypos(0):.1f} Z"
     o.append(f'<path d="{fill}" fill="{LINE}" fill-opacity="0.08" stroke="none"/>')
 
+    # the collection before the repository: a dashed estimate up to the first commit
+    bx0, bx1, by = xpos(BEFORE_REPO[0]), xpos(first[0]), ypos(BEFORE_REPO[1])
+    o.append(f'<line x1="{bx0:.1f}" x2="{bx1:.1f}" y1="{by:.1f}" y2="{by:.1f}" stroke="{LINE}" '
+             f'stroke-width="2" stroke-dasharray="5 4" stroke-opacity="0.7"/>')
+    o.append(f'<text class="e" x="{xpos(EVENTS[0][0]) + 8:.1f}" y="{by - 18:.1f}">about {BEFORE_REPO[1]:,} puzzles collected before the repository</text>')
+
     def total_at(day):
+        if day < first[0]:
+            return BEFORE_REPO[1]
         t = 0
         for dd, tt in pts:
             if dd > day:
@@ -102,8 +115,8 @@ def main(src, out):
         o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="{INK}"/>')
         o.append(f'<text class="e" x="{tx:.1f}" y="{y + dy:.1f}" text-anchor="{anchor}">{label}</text>')
 
-    o.append(f'<text class="t" x="{L}" y="{T-14}">Puzzles in the corpus, by day of the gxd repository\'s history. '
-             f'The record begins {first[0]:%B %Y}; the collection behind the March 2016 story already held about 52,000.</text>')
+    o.append(f'<text class="t" x="{L}" y="{T-14}">Puzzles in the corpus, by day of the gxd repository\'s history, from {first[0]:%B %Y}. '
+             f'Dashed: the collection before the repository, as counted in March 2016.</text>')
     o.append(f'<text class="t" x="{W-R}" y="{H-6}" text-anchor="end">{last[1]:,} puzzles on {last[0].day} {last[0]:%B %Y}</text>')
     o.append("</svg>")
     open(out, "w", encoding="utf-8", newline="\n").write("\n".join(o) + "\n")
