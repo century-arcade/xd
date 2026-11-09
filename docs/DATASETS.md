@@ -1,6 +1,6 @@
 # Datasets
 
-*Draft, November 2026. Marked **[practice]** where it describes what we
+*Draft, November 2026, for a corpus begun in 2016 (see [HISTORY.md](HISTORY.md)). Marked **[practice]** where it describes what we
 already publish, **[proposed]** where it is new.*
 
 ## Purpose

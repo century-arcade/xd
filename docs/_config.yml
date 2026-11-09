@@ -48,5 +48,7 @@ defaults:
     values: { permalink: /editorial/ }
   - scope: { path: "GOVERNANCE.md" }
     values: { permalink: /governance/ }
+  - scope: { path: "HISTORY.md" }
+    values: { permalink: /history/ }
   - scope: { path: "PRESERVATION.md" }
     values: { permalink: /preservation/ }

@@ -8,7 +8,7 @@ research and preservation. Every puzzle is stored as one [`.xd` file](https://gi
 holding its grid, clues, answers and publication details, together with a record
 of where it came from for nearly every puzzle.
 
-The corpus is maintained by [Saul Pwanson](https://saul.pw/) and [Alex DeJarnatt](https://alexdej.com/) as a volunteer
+The corpus was created by [Saul Pwanson](https://saul.pw/) in 2016 and is currently maintained by [Alex DeJarnatt](https://alexdej.com/) as a volunteer
 project of [Century Arcade](https://github.com/century-arcade), with technical help from [Anja Kefala](https://github.com/anjakefala/).
 
 ## Sites using the corpus
@@ -52,6 +52,7 @@ are welcome too; see the end of that page.
 - [GOVERNANCE.md](GOVERNANCE.md): who maintains the corpus and how decisions are
   made.
 - [DECISIONS.md](DECISIONS.md): a dated log of decisions.
+- [HISTORY.md](HISTORY.md): where the corpus came from, 2016 to today.
 - [assessments/](assessments/): yearly self-assessments of the project's
   preservation capability.
 

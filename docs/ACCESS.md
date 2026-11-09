@@ -1,6 +1,6 @@
 # Access to the corpus
 
-*Draft, November 2026. Marked **[established]** where it describes what we
+*Draft, November 2026, for a corpus begun in 2016 (see [HISTORY.md](HISTORY.md)). Marked **[established]** where it describes what we
 already do, **[proposed]** where it is new.*
 
 Most of the puzzles in the corpus are copyrighted by their publishers and

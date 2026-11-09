@@ -1,6 +1,6 @@
 # AI and the corpus
 
-*Draft, November 2026. Marks as in [GOVERNANCE.md](GOVERNANCE.md).*
+*Draft, November 2026, for a corpus begun in 2016 (see [HISTORY.md](HISTORY.md)). Marks as in [GOVERNANCE.md](GOVERNANCE.md).*
 
 ## What the corpus is
 
