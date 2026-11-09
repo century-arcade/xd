@@ -47,7 +47,7 @@
 <text class="e" x="88.5" y="276.2" text-anchor="start">FiveThirtyEight story</text>
 <line x1="117.4" x2="117.4" y1="190.6" y2="232.6" stroke="#6b7a72" stroke-opacity="0.6"/>
 <circle cx="117.4" cy="232.6" r="3" fill="#6b7a72"/>
-<text class="e" x="123.4" y="186.6" text-anchor="start">the collection is committed to gxd</text>
+<text class="e" x="123.4" y="186.6" text-anchor="start">the collection is committed to git</text>
 <line x1="850.5" x2="850.5" y1="103.9" y2="173.9" stroke="#6b7a72" stroke-opacity="0.6"/>
 <circle cx="850.5" cy="173.9" r="3" fill="#6b7a72"/>
 <text class="e" x="844.5" y="99.9" text-anchor="end">The Cross Reference</text>
@@ -57,6 +57,6 @@
 <line x1="858.9" x2="858.9" y1="55.4" y2="69.4" stroke="#6b7a72" stroke-opacity="0.6"/>
 <circle cx="858.9" cy="69.4" r="3" fill="#6b7a72"/>
 <text class="e" x="852.9" y="51.4" text-anchor="end">centuryarcade.org</text>
-<text class="t" x="70" y="26">Puzzles in the corpus, by day of the gxd repository's history, from May 2016. Dashed: the collection before the repository, as counted in March 2016.</text>
+<text class="t" x="70" y="26">Puzzles in the corpus, by day of the git repository's history, from May 2016. Dashed: the collection before the repository, as counted in March 2016.</text>
 <text class="t" x="870" y="374" text-anchor="end">162,819 puzzles on 9 November 2026</text>
 </svg>

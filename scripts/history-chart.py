@@ -24,7 +24,7 @@ BEFORE_REPO = (date(2016, 1, 1), 52_000)
 EVENTS = [
     # (date, label, dy) dy nudges the label up (negative) or down to avoid overlaps
     (date(2016, 3, 4), "FiveThirtyEight story", 30),
-    (date(2016, 8, 26), "the collection is committed to gxd", -46),
+    (date(2016, 8, 26), "the collection is committed to git", -46),
     (date(2026, 9, 25), "The Cross Reference", -74),
     (date(2026, 10, 9), "Every Puzzle Project imports", -46),
     (date(2026, 11, 6), "centuryarcade.org", -18),
@@ -115,7 +115,7 @@ def main(src, out):
         o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="{INK}"/>')
         o.append(f'<text class="e" x="{tx:.1f}" y="{y + dy:.1f}" text-anchor="{anchor}">{label}</text>')
 
-    o.append(f'<text class="t" x="{L}" y="{T-14}">Puzzles in the corpus, by day of the gxd repository\'s history, from {first[0]:%B %Y}. '
+    o.append(f'<text class="t" x="{L}" y="{T-14}">Puzzles in the corpus, by day of the git repository\'s history, from {first[0]:%B %Y}. '
              f'Dashed: the collection before the repository, as counted in March 2016.</text>')
     o.append(f'<text class="t" x="{W-R}" y="{H-6}" text-anchor="end">{last[1]:,} puzzles on {last[0].day} {last[0]:%B %Y}</text>')
     o.append("</svg>")
