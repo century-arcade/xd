@@ -6,9 +6,9 @@ The xd Crossword Corpus is the world's largest collection of crossword puzzles, 
 from over 160 publications (as of November 2026), from 1913 to today, kept in a plain-text format for
 research and preservation. Every puzzle is stored as one [`.xd` file](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md)
 holding its grid, clues, answers and publication details, together with a record
-of where it came from for nearly every puzzle. Saul Pwanson began the corpus in 2016; how it came to be is in [HISTORY.md](HISTORY.md).
+of where it came from for nearly every puzzle.
 
-The corpus is maintained by [Saul Pwanson](https://saul.pw/) and [Alex DeJarnatt](https://alexdej.com/) as a volunteer
+The corpus was created by [Saul Pwanson](https://saul.pw/) in 2016 and is currently maintained by [Alex DeJarnatt](https://alexdej.com/) as a volunteer
 project of [Century Arcade](https://github.com/century-arcade), with technical help from [Anja Kefala](https://github.com/anjakefala/).
 
 ## Sites using the corpus
