@@ -7,6 +7,7 @@
 
 from xdfile.utils import get_args, open_output
 from xdfile import corpus
+from xdfile import ids
 
 def main():
     args = get_args("save all clues in simple .tsv")
@@ -14,8 +15,8 @@ def main():
 
     outf.write_row("PublicationId Date Answer Clue".split())
     for xd in corpus(*args.inputs):
-        pubid = xd.publication_id()
-        dt = xd.date()
+        pubid = ids.pubid(xd)
+        dt = ids.date(xd)
         for pos, clue, answer in xd.clues:
             outf.write_row((pubid or "", dt or "", answer, clue))
 

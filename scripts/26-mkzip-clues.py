@@ -5,6 +5,7 @@
 # outputs clues.tsv with all clues/answers by pubyear
 
 from xdfile import utils
+from xdfile import ids
 import xdfile
 
 
@@ -25,8 +26,8 @@ def main():
     for xd in xdfile.corpus():
         if xd.is_redacted():
             continue
-        pubid = xd.publication_id()
-        pubyear = (pubid, str(xdfile.year_from_date(xd.date() or "")))
+        pubid = ids.pubid(xd)
+        pubyear = (pubid, str(xdfile.year_from_date(ids.date(xd) or "")))
         puzzles.setdefault(pubyear, []).append(xd)
 
     # one pubyear at a time: all 8.9M clue rows at once costs several GB, which

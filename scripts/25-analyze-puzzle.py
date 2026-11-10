@@ -10,6 +10,7 @@ from queries.similarity import find_similar_to, find_clue_variants, load_clues, 
 from xdfile.utils import get_args, open_output, info
 from xdfile import corpus, iter_corpus, ClueAnswer
 from xdfile import utils, metadatabase as metadb
+from xdfile import ids
 
 
 def main():
@@ -25,7 +26,7 @@ def main():
         if mainxd.is_redacted():
             continue  # answers are all 'X' — skip grid comparison
 
-        if mainxd.xdid() in prev_similar:
+        if ids.xdid(mainxd) in prev_similar:
             continue  # skip reprocessing .xd that are already in similar.tsv
 
         """ find similar grids (pct, xd) for the mainxd in the corpus.
@@ -39,11 +40,11 @@ def main():
             break
 
         if similar_grids:
-            info("similar: " + " ".join(("%s=%s" % (xd2.xdid(), pct))
+            info("similar: " + " ".join(("%s=%s" % (ids.xdid(xd2), pct))
                                        for pct, xd1, xd2 in similar_grids))
 
-        mainpubid = mainxd.publication_id()
-        maindate = mainxd.date()
+        mainpubid = ids.pubid(mainxd)
+        maindate = ids.date(mainxd)
 
         # go over each clue/answer, find all other uses, other answers, other possibilities.
         # these are added directly to similar.tsv
@@ -91,12 +92,12 @@ def main():
 
         # summary row to similar.tsv
         metadb.append_row('gxd/similar', [
-            mainxd.xdid(),   # xdid
+            ids.xdid(mainxd),   # xdid
             int(100*sum(pct/100.0 for pct, xd1, xd2 in similar_grids)),  # similar_grid_pct
             nstaleclues,  # reused_clues
             nstaleanswers,  # reused_answers
             ntotalclues,  # total_clues
-            " ".join(("%s=%s" % (xd2.xdid(), pct)) for pct, xd1, xd2 in similar_grids)  # matches
+            " ".join(("%s=%s" % (ids.xdid(xd2), pct)) for pct, xd1, xd2 in similar_grids)  # matches
             ])
 
 

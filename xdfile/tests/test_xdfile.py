@@ -4,6 +4,7 @@ import datetime
 
 from xdfile.utils import parse_pathname, parse_date_from_filename, parse_pubid, dated_xdid
 from xdfile.xdfile import xdfile as XDFile
+from xdfile import ids
 
 test_selection = 'nyt1955-01-01.xd'
 
@@ -50,8 +51,10 @@ def test_pubid_ending_in_digit_takes_a_hyphen():
     assert dated_xdid('7xw', '2021-01-01') == '7xw2021-01-01'
     assert dated_xdid('club72', '2020-01-01') == 'club72-2020-01-01'
     xd = XDFile('Title: t\n\n\nA\n\n\nA1. c ~ A\n', 'club72-2020-01-01.xd')
-    assert xd.date() == '2020-01-01'
-    assert xd.xdid() == 'club72-2020-01-01'
+    assert ids.date(xd) == '2020-01-01'
+    assert ids.year(xd) == '2020'
+    assert ids.pubid(xd) == 'club72'
+    assert ids.xdid(xd) == 'club72-2020-01-01'
 
 
 def test_parse_pubid_source_filenames():
@@ -128,4 +131,11 @@ def test_number_slug():
 def test_xdid_non_integer_number():
     xd = XDFile('Title: T\nNumber: 219.5\n\n\nAB\nCD\n\n\nA1. x ~ AB\n',
                 'gxd/indie/nediger/nediger-219_5.xd')
-    assert xd.xdid() == 'nediger-219_5'
+    assert ids.xdid(xd) == 'nediger-219_5'
+
+
+def test_puzzle_without_filename_has_no_pubid():
+    # the class no longer needs a pubid: ids are functions of a puzzle and its filename
+    xd = XDFile('Title: t\nDate: 1955-01-01\n\n\nAB\nCD\n\n\nA1. c ~ AB\nA3. c ~ CD\n\nD1. c ~ AC\nD2. c ~ BD\n')
+    assert ids.pubid(xd) is None
+    assert xd.date() == '1955-01-01'

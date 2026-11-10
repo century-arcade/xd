@@ -8,6 +8,7 @@ from collections import namedtuple
 from .utils import COLSEP, EOL
 
 from xdfile import utils
+from xdfile import ids
 
 
 RECEIPTS_TSV = "gxd/receipts.tsv"
@@ -278,11 +279,11 @@ def xd_recent_download(pubid, dt):
 
 def update_puzzles_row(xd):
     # INSERT only for now
-    if xd.xdid() in xd_puzzles_dict():
+    if ids.xdid(xd) in xd_puzzles_dict():
         raise Error('record already exists; UPDATE not implemented')
 
     fields = [
-        xd.xdid(),                   # xdid
+        ids.xdid(xd),                   # xdid
         xd.get_header("Date"),
         "%dx%d%s%s" % (xd.width(), xd.height(), xd.get_header("Rebus") and "R" or "", xd.get_header("Special") and "S" or ""),
 
