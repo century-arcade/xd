@@ -139,3 +139,25 @@ def test_puzzle_without_filename_has_no_pubid():
     xd = XDFile('Title: t\nDate: 1955-01-01\n\n\nAB\nCD\n\n\nA1. c ~ AB\nA3. c ~ CD\n\nD1. c ~ AC\nD2. c ~ BD\n')
     assert ids.pubid(xd) is None
     assert xd.date() == '1955-01-01'
+
+
+def _xd(headers, filename):
+    return XDFile(headers + '\n\nAB\nCD\n\n\nA1. c ~ AB\nA3. c ~ CD\n\nD1. c ~ AC\nD2. c ~ BD\n', filename)
+
+
+def test_xdid_of_a_corpus_file_is_its_filename():
+    # the same-date suffix is part of the id
+    assert ids.xdid(_xd('Date: 2014-12-24\n', 'avclub/2014/avc2014-12-24a.xd')) == 'avc2014-12-24a'
+    # a dated file that also has a Number header keeps its dated id
+    assert ids.xdid(_xd('Number: 303\nDate: 2003-03-02\n', 'mm2003-03-02.xd')) == 'mm2003-03-02'
+    # the number keeps the width the file has
+    assert ids.xdid(_xd('Number: 948\n', 'crosswordsclub/cc-0948.xd')) == 'cc-0948'
+    assert ids.xdid(_xd('Date: 2015-05-13\n', 'club722015-05-13.xd')) == 'club722015-05-13'
+    # no Number or Date header at all
+    assert ids.xdid(_xd('Title: t\n', 'nytimes/packs/genius/nytpack-16023.xd')) == 'nytpack-16023'
+
+
+def test_xdid_of_a_source_file_comes_from_its_headers():
+    assert ids.xdid(_xd('Number: 948\n', 'cc-0948.puz')) == 'cc-948'
+    assert ids.xdid(_xd('Number: 219.5\n', 'nediger.puz')) == 'nediger-219_5'
+    assert ids.xdid(_xd('Date: 2003-03-02\n', 'mm030302.puz')) == 'mm2003-03-02'

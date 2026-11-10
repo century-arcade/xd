@@ -11,7 +11,7 @@ xdfile, whoever made it: the corpus loader, a converter, a test.
 
 import re
 
-from .utils import parse_pubid, parse_pathname, dated_xdid
+from .utils import parse_pubid, parse_pathname, dated_xdid, xdid_from_path
 
 
 def number_slug(num):
@@ -45,7 +45,17 @@ def year(xd):
 
 
 def xdid(xd):
-    """The puzzle's id, from its pubid and its Number or Date."""
+    """The puzzle's id.
+
+    A file in the corpus is named by its xdid, so its name is its id:
+    `avc2014-12-24a.xd` is avc2014-12-24a, whatever its headers say. For any
+    other puzzle (a source file, a puzzle with no filename) the id is put
+    together from the pubid and the Number or Date header; the importer's
+    own rules for a new puzzle are in catalog.deduce_xdid.
+    """
+    if xd.filename and xd.filename.lower().endswith('.xd'):
+        return xdid_from_path(xd.filename)
+
     pub = pubid(xd)
     num = xd.get_header("Number")
     if num:
