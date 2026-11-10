@@ -40,7 +40,8 @@ Two things, in order of importance:
   every puzzle to its original and its source. A few early bulk imports have
   no receipts, and some source archives from before 2025 were lost (see
   "Limits and known risks"). Fixes are made to the `.xd` file,
-  never to the original.
+  never to the original. [ARCHIVING.md](ARCHIVING.md) gives the same
+  practice as guidelines for anyone keeping crosswords of their own.
 - **Checks.** Every contribution is checked by continuous integration before
   it is merged: format validity, identifiers, shelving, dates and receipts.
   A scheduled job checks that every registered source archive is still
