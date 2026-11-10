@@ -36,6 +36,8 @@ defaults:
     values: { permalink: /access/ }
   - scope: { path: "AI.md" }
     values: { permalink: /ai/ }
+  - scope: { path: "ARCHIVING.md" }
+    values: { permalink: /archiving/ }
   - scope: { path: "COLLECTION.md" }
     values: { permalink: /collection/ }
   - scope: { path: "CONTRIBUTING.md" }

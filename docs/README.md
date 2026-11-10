@@ -49,6 +49,8 @@ are welcome too; see the end of that page.
   data to train models.
 - [PRESERVATION.md](PRESERVATION.md): how the corpus is kept, and what we
   commit to.
+- [ARCHIVING.md](ARCHIVING.md): guidelines for anyone archiving crosswords
+  of their own.
 - [GOVERNANCE.md](GOVERNANCE.md): who maintains the corpus and how decisions are
   made.
 - [DECISIONS.md](DECISIONS.md): a dated log of decisions.
