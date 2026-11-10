@@ -16,6 +16,7 @@ import subprocess
 import sys
 
 from xdfile import utils, sample
+from xdfile import ids
 import xdfile
 
 
@@ -60,12 +61,12 @@ def candidates_from_corpus(args):
         if xd.is_redacted():
             nredacted += 1
             continue
-        if not sample.in_window(xd.date(), args.since, args.before):
+        if not sample.in_window(ids.date(xd), args.since, args.before):
             nwindow += 1
             continue
-        corpus[xd.xdid()] = xd
+        corpus[ids.xdid(xd)] = xd
     utils.info('excluded %d redacted, %d outside date window' % (nredacted, nwindow))
-    cands = [sample.Candidate(x, xd.publication_id(), xd.date()) for x, xd in corpus.items()]
+    cands = [sample.Candidate(x, ids.pubid(xd), ids.date(xd)) for x, xd in corpus.items()]
     return cands, corpus
 
 
@@ -131,9 +132,9 @@ def main():
             contents = open(xd.filename, 'rb').read()
         except OSError:
             contents = xd.to_unicode().encode('utf-8')
-        pubid = xd.publication_id()
+        pubid = ids.pubid(xd)
         outf.write_file('%s/%s.xd' % (pubid, xdid), contents)
-        manifest.append('%s\t%s\t%s\t%s\t%s' % (xdid, pubid, xd.date(), xd.sizestr(), 'R' if xd.rebus() else ''))
+        manifest.append('%s\t%s\t%s\t%s\t%s' % (xdid, pubid, ids.date(xd), xd.sizestr(), 'R' if xd.rebus() else ''))
 
     readme = '\n'.join([
         'xd sample: %d puzzles' % len(selected),

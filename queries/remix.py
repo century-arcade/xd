@@ -6,6 +6,7 @@ import random
 from xdfile.utils import get_args, open_output, find_files, debug, info, error, get_log, COLUMN_SEPARATOR, EOL
 from xdfile.utils import parse_tsv, parse_pathname, iso8601
 from xdfile import xdfile, BLOCK_CHAR
+from xdfile import ids
 
 
 # for a given grid
@@ -170,12 +171,12 @@ def main():
         remixed = set()
         for pubid, pub_clues in list(all_clues.items()):
             try:
-                if pubid == xd.publication_id():
+                if pubid == ids.pubid(xd):
                     continue  # don't use same publisher's clues
 
                 nmissing = reclue(xd, pub_clues)
 
-                outfn = "%s-%s.xd" % (xd.xdid(), pubid)
+                outfn = "%s-%s.xd" % (ids.xdid(xd), pubid)
 
                 if nmissing == 0:
                     nmutated = 0
@@ -189,7 +190,7 @@ def main():
                 else:
                     debug("%s missing %d clues" % (outfn, nmissing))
 
-                    missing_tsv += COLUMN_SEPARATOR.join([ xd.xdid(), pubid, str(nmissing) ]) + EOL
+                    missing_tsv += COLUMN_SEPARATOR.join([ ids.xdid(xd), pubid, str(nmissing) ]) + EOL
 
             except Exception as e:
                 error("remix error %s" % str(e))

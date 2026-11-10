@@ -10,6 +10,7 @@ import sqlite3
 import sys
 
 from xdfile import iter_corpus
+from xdfile import ids
 from xdfile.utils import get_args, info
 
 
@@ -57,7 +58,7 @@ def main():
 
         cur.execute('INSERT INTO puzzles VALUES (?,?,?,?,?,?,?,?,?,?)', (
             xd.filename,
-            xd.xdid(),
+            ids.xdid(xd),
             xd.get_header("Date"),
             size,
             xd.get_header("Title"),
@@ -70,7 +71,7 @@ def main():
 
         for pos, clue, answer in xd.iterclues():
             if pos:
-                cur.execute('INSERT INTO clues VALUES (?, ?, ?, ?)', (xd.xdid(), pos, answer, clue))
+                cur.execute('INSERT INTO clues VALUES (?, ?, ?, ?)', (ids.xdid(xd), pos, answer, clue))
 
     info("creating index...")
     cur.execute('CREATE INDEX IF NOT EXISTS puzzles_size_date ON puzzles(size, date)')

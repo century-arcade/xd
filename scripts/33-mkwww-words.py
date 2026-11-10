@@ -3,6 +3,7 @@
 from xdfile.utils import args_parser, get_args, open_output
 from xdfile.html import th, td, mkhref, html_select_options
 from xdfile import clues, metadatabase as metadb, utils
+from xdfile import ids
 import xdfile
 
 
@@ -44,7 +45,7 @@ def main():
     all_uses = {}
 
     # skip clues from redacted contest puzzles (whole puzzle is all X's)
-    redacted = {xd.xdid() for xd in xdfile.corpus() if xd.is_redacted()}
+    redacted = {ids.xdid(xd) for xd in xdfile.corpus() if xd.is_redacted()}
     for ca in clues():
         if ca.xdid() in redacted:
             continue

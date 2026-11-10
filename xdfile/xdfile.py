@@ -14,8 +14,10 @@ try:
 except ImportError:
     import json as _json_lib
 
-from .utils import parse_pathname, progress, parse_pubid, dated_xdid, find_files, get_args, memoize, xdid_from_path
+from .utils import parse_pathname, progress, dated_xdid, find_files, get_args, memoize, xdid_from_path
 from .utils import error, warn, info
+from . import ids
+from .ids import number_slug  # noqa: F401  (kept importable from here)
 
 g_corpus = []  # list of xdfile
 g_all_clues = []  # list of ClueAnswer
@@ -68,21 +70,13 @@ def parse(fn):
 
 
 class xdfile:
-    def __init__(self, xd_contents=None, filename=None, pubid=None):
+    def __init__(self, xd_contents=None, filename=None):
         self.filename = filename
         self.headers = {}  # [key] -> value or list of values
         self.grid = []  # list of string rows
         self.clues = []  # list of (("A", 21), "{*Bold*}, {/italic/}, {_underscore_}, or {-overstrike-}", "MARKUP")
         self.clue_metadata = {}  # [index in self.clues] -> list of (key, value)
         self.notes = ""
-
-        if filename:
-            self._publication_id = pubid or parse_pubid(filename)
-        else:
-            self._publication_id = pubid
-
-        if not self._publication_id:
-            raise Error("No Publication Id in '%s'" % filename)
 
         if xd_contents:
             self.parse_xd(xd_contents)
@@ -103,27 +97,9 @@ class xdfile:
     def sizestr(self):
         return "%dx%d%s%s" % (self.width(), self.height(), self.get_header("Rebus") and "R" or "", self.get_header("Special") and "S" or "")
 
-    def xdid(self):
-        num = self.get_header("Number")
-        if num:
-            return '%s-%s' % (self._publication_id, number_slug(num))
-
-        assert self.date()
-        return dated_xdid(self._publication_id, self.date())
-
     def date(self):
-        dt = self.get_header("Date")
-        if not dt and self._publication_id:
-            dt = parse_pathname(self.filename).base[len(self._publication_id):]
-            if dt[:1] == '-' and dt[1:5].isdigit() and dt[5:6] == '-':  # club72-2020-01-01
-                dt = dt[1:]
-        return dt
-
-    def year(self):
-        return self.date().split('-')[0]
-
-    def publication_id(self):  # "nyt"
-        return self._publication_id
+        """The Date header. For a corpus puzzle's date, pubid, year or xdid see ids.py."""
+        return self.get_header("Date")
 
     def iterdiffs(self, other):
         for k in set(self.headers.keys()) | set(other.headers.keys()):
@@ -506,7 +482,6 @@ def _xd_to_dict(xd):
         'headers': dict(xd.headers),
         'grid': list(xd.grid),
         'notes': xd.notes,
-        'pubid': xd._publication_id,
         # JSON has no tuples; lists round-trip back to tuples on load
         'clues': [[list(pos), clue, answer] for pos, clue, answer in xd.clues],
         # JSON object keys are strings; indexes go back to ints on load
@@ -521,7 +496,6 @@ def _dict_to_xd(d):
     xd.headers = d['headers']
     xd.grid = d['grid']
     xd.notes = d['notes']
-    xd._publication_id = d['pubid']
     xd.clues = [(tuple(pos), clue, answer) for pos, clue, answer in d['clues']]
     # .get: caches written before clue metadata was parsed don't have it
     xd.clue_metadata = {int(i): [tuple(kv) for kv in kvs] for i, kvs in d.get('clue_metadata', {}).items()}
@@ -555,8 +529,8 @@ def _load_corpus_cache_file(path):
     with open(path, mode='rb') as f:
         for line in f:
             xd = _dict_to_xd(_json_lib.loads(line))
-            cache[xd.xdid()] = xd
-            progress(xd.xdid(), every=1000)
+            cache[ids.xdid(xd)] = xd
+            progress(ids.xdid(xd), every=1000)
     progress()
     elapsed = time.perf_counter() - t0
     info("loaded %d puzzles from cache in %.2fs, done" % (len(cache), elapsed))
@@ -586,7 +560,7 @@ def _build_corpus_cache(cache_path):
                     raise
                 continue
 
-            cache[xd.xdid()] = xd
+            cache[ids.xdid(xd)] = xd
             if cache_fp:
                 cache_fp.write(_jsonl_dumps(_xd_to_dict(xd)))
                 cache_fp.write(b'\n')
@@ -653,13 +627,6 @@ def corpus_contents():
     return ret
 
 
-def number_slug(num):
-    num = str(num).strip()
-    if num.isdigit():
-        return '%03d' % int(num)
-    return re.sub(r'[^A-Za-z0-9]', '_', num)
-
-
 def year_from_date(dt):
     try:
         return int(dt.split('-')[0])
@@ -698,8 +665,8 @@ def clues():
     if not g_all_clues:
         info("extracting clues from %d puzzles..." % len(corpus()))
         for xd in corpus():
-            pubid = xd.publication_id()
-            dt = xd.date() or ""
+            pubid = ids.pubid(xd)
+            dt = ids.date(xd) or ""
             for pos, clue, answer in xd.iterclues():
                 ca = ClueAnswer(pubid, dt, answer, clue)
                 g_all_clues.append(ca)

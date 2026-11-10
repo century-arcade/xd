@@ -5,6 +5,7 @@ from collections import Counter
 
 from xdfile.utils import debug
 from xdfile import utils, metadatabase as metadb
+from xdfile import ids
 from xdfile import dow_from_date
 import xdfile
 
@@ -31,7 +32,7 @@ def main():
 
     pubyears = {} # set()
     for xd in xdfile.corpus():
-        puby = (xd.publication_id(), xd.year())
+        puby = (ids.pubid(xd), ids.year(xd))
         if puby not in pubyears:
             pubyears[puby] = []
         pubyears[puby].append(xd)
@@ -83,7 +84,7 @@ def main():
             nxd = len(byweekday[weekday])
             public_xdids = []  # Empty for now
             for xd in byweekday[weekday]:
-                xdid = xd.xdid()
+                xdid = ids.xdid(xd)
                 if (year.isdigit() and int(year) <= 1965) or xdid in public_xdids:
                     npublic += 1
 

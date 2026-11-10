@@ -5,6 +5,7 @@ import xdfile
 from calendar import HTMLCalendar
 from datetime import date
 from xdfile import utils
+from xdfile import ids
 
 from queries.similarity import grid_similarity
 
@@ -440,7 +441,7 @@ def grid_diff_html(xd, compare_with=None):
 
         similarity_pct = " (%d%%)" % real_pct
 
-    xdlink = mktag('div', tagclass='xdid', inner=mkhref("%s %s" % (xd.xdid(), similarity_pct), '/pub/' + xd.xdid()))
+    xdlink = mktag('div', tagclass='xdid', inner=mkhref("%s %s" % (ids.xdid(xd), similarity_pct), '/pub/' + ids.xdid(xd)))
     if compare_with is not None:
         r += xdlink
     else:

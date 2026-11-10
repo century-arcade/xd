@@ -13,6 +13,7 @@ import html
 from xdfile.utils import find_files, progress, debug, info
 from xdfile import ClueAnswer
 from xdfile import metadatabase as metadb
+from xdfile import ids
 import xdfile
 
 
@@ -22,14 +23,14 @@ def esc(s):
 
 def prev_uses(pub_uses, mainxd, mainclue):
     sortable_uses = []
-    mainxdid = mainxd.xdid()
+    mainxdid = ids.xdid(mainxd)
     if pub_uses:
         for pubid, uses in pub_uses.items():
             # show the earliest unboiled clue
             for u in sorted(uses, key=lambda x: x.date or ""):
                 # only show those published earlier
-                if u.date and u.date <= mainxd.date():
-                    if pubid == mainxdid and u.date == mainxd.date():
+                if u.date and u.date <= ids.date(mainxd):
+                    if pubid == mainxdid and u.date == ids.date(mainxd):
                         pass
                     else:
                         sortable_uses.append((u.date, u, 1))
@@ -47,7 +48,7 @@ def html_other_clues(mainanswer, mainclue, mainxd):
             # then find all clues besides this one
             clue_usages = []
             for ca in load_clues().get(bc, []):
-                if ca.answer == mainanswer and ca.date < mainxd.date():
+                if ca.answer == mainanswer and ca.date < ids.date(mainxd):
                     clue_usages.append(ca)
 
             if clue_usages:
@@ -83,7 +84,7 @@ def main():
     # ~20 info() lines spread evenly so CI logs stay readable for any list size
     info_every = max(1, len(xds_todo) // 20)
     for npuzzle, mainxd in enumerate(xds_todo):
-        mainxdid = mainxd.xdid()
+        mainxdid = ids.xdid(mainxd)
         progress(mainxdid)
         if npuzzle and npuzzle % info_every == 0:
             info("  ... %d/%d (%.0f%%) deepclues generated" % (npuzzle, len(xds_todo), 100 * npuzzle / len(xds_todo)))
@@ -91,7 +92,7 @@ def main():
         metadb.xd_similar(mainxdid)
 
         xddates = {}
-        xddates[mainxdid] = mainxd.date() # Dict to store XD dates for further sort
+        xddates[mainxdid] = ids.date(mainxd) # Dict to store XD dates for further sort
 
         # these are added directly to similar.tsv
         nstaleclues = 0
@@ -114,7 +115,7 @@ def main():
             pub_uses = {}  # [pubid] -> set(ClueAnswer)
 
             deepcl_html = [] # Temporary to be replaced late
-            mainca = ClueAnswer(mainxdid, mainxd.date(), mainanswer, mainclue)
+            mainca = ClueAnswer(mainxdid, ids.date(mainxd), mainanswer, mainclue)
 
             # 'grid position' column
             deepcl_html.append('<td class="pos">%s.</td>' % pos)

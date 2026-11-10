@@ -10,6 +10,7 @@ from xdfile.utils import warn
 from xdfile.utils import debug, progress, info
 #from xdfile import xdfile, corpus, ClueAnswer, BLOCK_CHAR
 from xdfile import metadatabase as metadb
+from xdfile import ids
 import xdfile
 import operator
 
@@ -48,7 +49,7 @@ def main():
         debug('generating diffs for %s (%d matches)' % (mainxdid, len(matches)))
 
         xddates = {}
-        xddates[mainxdid] = mainxd.date() # Dict to store XD dates for further sort
+        xddates[mainxdid] = ids.date(mainxd) # Dict to store XD dates for further sort
         html_grids = {}
         html_clues = {}
         # Store in list to make further formatting as html table easier
@@ -74,7 +75,7 @@ def main():
                 continue
             if xd.is_redacted():
                 continue  # answers are all 'X' — skip from diff comparison
-            xddates[xdid] = xd.date()
+            xddates[xdid] = ids.date(xd)
             # output each grid
             html_grids[xdid] = grid_diff_html(xd, compare_with=mainxd)
             diff_l = []

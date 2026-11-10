@@ -13,6 +13,7 @@ import random
 
 from xdfile.utils import get_args, find_files, open_output, COLUMN_SEPARATOR, EOL, debug
 from xdfile import xdfile, corpus, clues
+from xdfile import ids
 
 
 g_boiled_clues = { }  # ["boiled clue"] = list(ClueAnswer(dt, pubid, clue, answer))
@@ -74,7 +75,7 @@ def find_similar_to(needle, haystack, min_pct=0.3):
             similarity = 0
 
         if similarity >= min_similarity:
-            if needle.xdid() != xd.xdid(): # skip if same puzzle
+            if ids.xdid(needle) != ids.xdid(xd): # skip if same puzzle
                 # recompute with slower metric
                 similarity = grid_similarity(needle, xd)
                 if similarity >= 25:
@@ -103,7 +104,7 @@ def unboil(bc):
 def load_clues():
     if not g_boiled_clues:
         # skip clues from redacted contest puzzles (whole puzzle is all X's)
-        redacted = {xd.xdid() for xd in corpus() if xd.is_redacted()}
+        redacted = {ids.xdid(xd) for xd in corpus() if xd.is_redacted()}
         for ca in clues():
             if ca.xdid() in redacted:
                 continue
@@ -126,7 +127,7 @@ def load_clues():
 def load_answers():
     if not g_answers:
         # skip clues from redacted contest puzzles (whole puzzle is all X's)
-        redacted = {xd.xdid() for xd in corpus() if xd.is_redacted()}
+        redacted = {ids.xdid(xd) for xd in corpus() if xd.is_redacted()}
         for ca in clues():
             if ca.xdid() in redacted:
                 continue
