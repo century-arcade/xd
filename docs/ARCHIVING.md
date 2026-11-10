@@ -6,15 +6,13 @@
 
 Crosswords get lost. A venue closes, a website lapses, a hard drive dies, and a run of puzzles thousands of people solved is gone. This page says how to keep puzzles readable for a century with a folder and a spreadsheet.
 
-It starts from Laura Braunstein's talk "Future-Proof Your Puzzle Archive" at Crossword Con in April 2025 **[check: link Laura and the slides]**. She quoted Thomas Hyry **[check: link Hyry and the source of the quote]**: archives are less about saving records than about acknowledging and managing loss. You will not save everything, and you don't have to. Collecting everything is a habit. Deciding what to keep is a plan, and a plan is what lasts.
+This proposal was inspired by Laura Braunstein's talk "Future-Proof Your Puzzle Archive" at Crossword Con in April 2025 ([video](https://www.youtube.com/watch?v=xxZpUFBzdj8), [slides](https://docs.google.com/presentation/d/14VD5loMkncWrag8M0T7wZcqlRTEv4PwFRrt2KphDXHk/edit?usp=sharing)). She quoted librarian Thomas Hyry: archives are less about saving records than about acknowledging and managing loss. You will not save everything, and you don't have to. Collecting everything is a habit. Deciding what to keep is a plan, and a plan is what lasts. We thank Laura for the talk, and for publishing her slides under CC BY-NC so others can build on them.
 
-Her five steps are right: make a plan, organize, use durable formats, keep copies in more than one place, and build in accountability. We differ on one point. She says never to archive `.puz` files. We say keep the file you were given, whatever it is, and make a readable copy beside it. A `.puz` file isn't the problem. Converting a puzzle through `.puz`, and throwing away the original, is.
-
-We thank Laura for the talk, and for publishing her slides under CC BY-NC so others can build on them.
+Here at Century Arcade we have a decade's experience collecting and saving crosswords. What follows are our recommendations for keeping your own.
 
 ## The guidelines
 
-### 1. Decide what you keep
+### 1. Decide what to keep
 
 Write it down in one sentence. "Every puzzle I published, as published." "Every puzzle my venue ran, with the constructor's notes." Drafts and test-solve notes are yours to keep or not. Decide once, not for every file.
 
@@ -38,13 +36,19 @@ For every original, keep one row in a spreadsheet saved as plain text (`.tsv` or
 
 Never change a row. If a file moves or is replaced, add a new row. The corpus keeps the same record in its `receipts.tsv` and `source-archives.tsv`.
 
+[xdfetch](https://github.com/century-arcade/xdfetch), our puzzle downloader, keeps this record for you: it saves the original file as served and writes a receipt row for each one.
+
 ### 4. Make a readable copy
 
-Beside each original, keep a copy a person can read with no software. We recommend [`.xd`](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md): one plain-text file per puzzle, with the headers, the grid as rows of letters, every clue with its answer, and the notes. It holds rebus squares, circles and shading, odd shapes, accented letters and the full byline. Any text editor opens it, and the 160,000 puzzles of the xd Crossword Corpus are in it. The converters are in [this repository](https://github.com/century-arcade/xd).
+Beside each original, keep a copy a person can read without special software.
 
-XML and PDF are also fine. XML is a durable text format, and a PDF shows the puzzle as solvers saw it.
+`.puz` has two big problems as an archival format: first, it's a proprietary binary format, requiring software to read and make sense of it. Second, that it's been frozen in time for almost 20 years; it lacks new features that are becoming common in crosswords, such that important information is lost when puzzles are written solely as `.puz` files.
 
-Make it from the original, not from a `.puz` made from the original. A `.puz` has no way to mark squares outside a puzzle's shape, keeps one author field where the byline had two constructors and an editor, holds only Latin-1 characters, and stores rebus squares and notes in extensions that many tools drop **[check: .puz limits]**. Once the original is gone, that loss is permanent.
+`.xml` and `.json` are better, when written directly from a crossword program, but can introduce a serious problem when defined on an ad hoc basis, which is that modern puzzles manifest a surprising number of difficult edge cases: character encoding, rebus entries, "Schrödinger" squares, odd shapes, unusual clue numbering, and so on.
+
+We recommend [`.xd`](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md): one plain-text file per puzzle, headers, grid, clues with answers, notes. Any text editor opens it. The 160,000 puzzles in the xd Crossword Corpus are in it, converters exist for all major crossword formats, and a robust linter is available to check syntax. The conventions for rebus squares, circles and shading, Schrödinger squares, odd shapes and multi-author bylines were all worked out by key stakeholders over months. That work is done, and it's what you get for free.
+
+Including a pdf or jpg of the puzzle as it appeared in print or on a web site is not a bad idea as well.
 
 ### 5. Name and arrange files so a stranger can find them
 
@@ -61,39 +65,43 @@ Add a `README.txt` at the top saying whose archive it is, what it holds, and how
 
 ### 6. Keep a second copy you don't control
 
-A second copy on your own laptop is not a second copy. Put one where it fails for different reasons: a friend's drive, a cloud account that isn't the one you use every day, a library, the corpus. Copy the whole folder, receipts and all, and check the fingerprints.
+A second copy on your own laptop is not a second copy. Put one where it fails for different reasons: a friend's drive, a cloud account that isn't the one you use every day, a library. Copy the whole folder, receipts and all, and check the fingerprints.
 
-### 7. Say what you hold, and to whom
+### 7. Say what you hold
 
-An archive no one knows about dies with its keeper. Tell someone what you have and where: a friend, your editor, a library, us. The crossword world doesn't need one place that holds the only copy. It needs one place that knows what exists, and many places that keep it: centralized collection and curation, distributed preservation.
+An archive no one knows about dies with its keeper. Tell someone what you have and where: a friend, your editor, a library.
+
+Better, [send it to us](CONTRIBUTING.md). The corpus is one collection, kept in many copies, and a puzzle in it is as safe as we know how to make it. Your originals are stored exactly as received, with their fingerprints, and never shared; the readable copies join the corpus. That page says what we do with what you send and what you can ask of us.
 
 ### 8. Look at it once a year
 
-Check every fingerprint against the record, open a few files in each format, add the year's new puzzles, and confirm the second copy is still there and current. Braunstein suggests an archive buddy who does the same, so you remind each other.
+Check every fingerprint against the record, open a few files in each format, add the year's new puzzles, and confirm the second copy is still there and current. Laura suggests an archive buddy who does the same, so you remind each other.
 
 ## Metadata
 
-Here is where each column of Braunstein's metadata template goes in an `.xd` file or the record in step 3.
+Two records hold everything a stranger needs to know about a puzzle: the receipt row from step 3, which says where the file came from, and the headers of its readable copy, which say what the puzzle is.
 
-| Template column | Where it goes |
-|---|---|
-| Filename | the record's `file` |
-| Puzzle Title | `Title:` |
-| Puzzle Type | an extra header, which the spec allows, or the notes **[check: should the corpus name one?]** |
-| Collaborator | `Author:`, constructors joined with "and"; `Editor:` for the editor |
-| Theme | the notes; a contest's prompt and answer go in `Meta:` |
-| Dimensions | the grid itself |
-| Published (YYYY-MM-DD) | `Date:` |
-| Venue Name | the publication, which the corpus records in each puzzle's identifier |
-| Venue URL | the record's `source` |
-| Fee | not recorded |
-| Rights | not recorded; `Copyright:` holds the printed rights line |
-| Notes | the notes |
+The receipt, one row per original:
 
-The corpus doesn't record Fee or Rights. A fee is private between constructor and venue. Rights change after publication: they revert, or are sold or licensed again. The corpus records what was printed, not the contract. A constructor should keep both anyway. The fee is your history of what the work paid. The rights tell you what you can republish, and when.
+| field | required | what it is |
+|---|---|---|
+| file | yes | the path in your archive |
+| sha256 | yes | the fingerprint of the file's bytes |
+| received | yes | the date you got it, `YYYY-MM-DD` |
+| source | yes | the address you downloaded it from, or the person who sent it |
+| notes | no | anything else, in plain words |
 
-## Giving your archive to the corpus
+The headers, at the top of each `.xd` file:
 
-Send us the originals, the record and the readable copies, and we will check the copies, add the puzzles to the corpus, and keep your originals unchanged with their fingerprints. [CONTRIBUTING.md](CONTRIBUTING.md) says what happens to puzzles we are given, who can see them, and what you can ask of us.
+| header | required | what it is |
+|---|---|---|
+| Title | yes | as published; omit it if the puzzle had none |
+| Author | yes | the byline as printed, constructors and all |
+| Editor | no | the editor, if credited |
+| Copyright | if printed | the rights line as printed |
+| Date | yes | the date published, `YYYY-MM-DD` |
+| Number | no | the puzzle's number in its series |
 
-xdfetch, a puzzle downloader we are writing, is a reference implementation of the record-keeping in steps 2 and 3 **[check: link once public]**.
+The notes section at the end of the file takes the rest: the theme, the venue, a contest's answer, anything the file doesn't show. Everything else a template might ask for is already there: the dimensions are the grid, the venue is in the filename and the source. If you keep more, keep it in the receipt's notes or the `.xd` notes rather than in a column no one else will read.
+
+Laura's metadata template, published with her talk, is a good checklist for a constructor's own records and covers some things we don't ask for.
