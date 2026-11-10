@@ -224,8 +224,19 @@ def find_pubid(rowstr):
 
     implicit = set()
     for pubid in metadb.xd_publications().keys():
-        if re.search(r'\b%s(\d|-)' % re.escape(pubid), rowstr, flags=re.IGNORECASE):
+        # A pubid that ends in a digit (club72) is followed by a hyphen, or in
+        # a few older names a full date; any other digit after it belongs to
+        # a longer number (`tpfa2024-03-01` is tpfa's, not tpfa2's).
+        after = r'(-|\d{4}-\d{2}-\d{2})' if pubid[-1:].isdigit() else r'(\d|-)'
+        if re.search(r'\b%s%s' % (re.escape(pubid), after), rowstr, flags=re.IGNORECASE):
             implicit.add(pubid)
+
+    if len(implicit) > 1:
+        # A series' pubid may be its parent's plus a digit (tpfa, tpfa4), so
+        # `tpfa4-001` matches both: the longer one is the match.
+        longest = max(implicit, key=len)
+        if all(longest.startswith(p) for p in implicit):
+            implicit = {longest}
 
     if len(implicit) == 1:
         return implicit.pop()
@@ -285,7 +296,7 @@ def deduce_xdid(xd, pubid, mdtext, strict=False):
 
     dt = xd.get_header("Date")
     if dt:
-        return "%s%s" % (pubid, dt)
+        return utils.dated_xdid(pubid, dt)
 
     if strict:
         return None

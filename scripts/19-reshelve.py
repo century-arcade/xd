@@ -27,7 +27,8 @@ def main():
         if newpubid and newpubid != oldpubid:
             seqnum = utils.parse_seqnum(r.xdid or r.SourceFilename)
             if seqnum:
-                newxdid = newpubid + seqnum
+                # seqnum keeps a hyphen it was found with (a number, or a date after one)
+                newxdid = newpubid + seqnum if seqnum.startswith('-') else utils.dated_xdid(newpubid, seqnum)
                 utils.info("changing xdid from '%s' to '%s'" % (r.xdid, newxdid))
                 d["xdid"] = newxdid
             else:

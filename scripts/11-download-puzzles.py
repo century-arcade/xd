@@ -13,7 +13,7 @@ import puz
 import datetime
 import time
 
-from xdfile import metadatabase as metadb
+from xdfile import utils, metadatabase as metadb
 from xdfile.utils import get_args, log, error, warn, summary, open_output, datestr_to_datetime, args_parser
 from xdfile.metadatabase import xd_puzzle_sources, xd_recent_download, xd_recents_header
 
@@ -21,7 +21,7 @@ from xword_dl import by_keyword
 
 
 def construct_xdid(pubabbr, dt):
-    return pubabbr + dt.strftime("%Y-%m-%d")
+    return utils.dated_xdid(pubabbr, dt.strftime("%Y-%m-%d"))
 
 # Returns `True` if the puzzle for `date` was successfully downloaded.
 def download_puzzles(outf, puzsrc, pubid, date, xwordid, fallback_latest=True):
@@ -31,7 +31,7 @@ def download_puzzles(outf, puzsrc, pubid, date, xwordid, fallback_latest=True):
     if puzsrc['xword-dl_id']:
         # unicode=True: xword-dl writes a UTF-8 (v2.0) .puz instead of folding
         # emoji to ":name:" shortcodes and other non-Latin-1 text to ASCII.
-        filename_t = pubid + "%Y-%m-%d"  # wap2026-04-01
+        filename_t = utils.dated_xdid(pubid, "%Y-%m-%d")  # wap2026-04-01
         try:
             # `content` is always a a puz.Puz object
             log("%s: fetching via xword-dl" % xdid)
