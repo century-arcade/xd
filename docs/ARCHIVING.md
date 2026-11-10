@@ -40,7 +40,7 @@ Never change a row. If a file moves or is replaced, add a new row. The corpus ke
 
 ### 4. Make a readable copy
 
-Beside each original, keep a copy a person can read with no software. We recommend [`.xd`](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md): one plain-text file per puzzle, with the headers, the grid as rows of letters, every clue with its answer, and the notes. It holds rebus squares, circles and shading, odd shapes, accented letters and the full byline. Any text editor opens it, and the 160,000 puzzles of the xd Crossword Corpus are in it. The converters are in [xdformat](https://github.com/century-arcade/xdformat).
+Beside each original, keep a copy a person can read with no software. We recommend [`.xd`](https://github.com/century-arcade/xdformat/blob/master/doc/xd-format.md): one plain-text file per puzzle, with the headers, the grid as rows of letters, every clue with its answer, and the notes. It holds rebus squares, circles and shading, odd shapes, accented letters and the full byline. Any text editor opens it, and the 160,000 puzzles of the xd Crossword Corpus are in it. The converters are in [this repository](https://github.com/century-arcade/xd).
 
 XML and PDF are also fine. XML is a durable text format, and a PDF shows the puzzle as solvers saw it.
 
