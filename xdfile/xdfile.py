@@ -14,7 +14,7 @@ try:
 except ImportError:
     import json as _json_lib
 
-from .utils import parse_pathname, progress, parse_pubid, find_files, get_args, memoize, xdid_from_path
+from .utils import parse_pathname, progress, parse_pubid, dated_xdid, find_files, get_args, memoize, xdid_from_path
 from .utils import error, warn, info
 
 g_corpus = []  # list of xdfile
@@ -109,12 +109,14 @@ class xdfile:
             return '%s-%s' % (self._publication_id, number_slug(num))
 
         assert self.date()
-        return '%s%s' % (self._publication_id, self.date())
+        return dated_xdid(self._publication_id, self.date())
 
     def date(self):
         dt = self.get_header("Date")
         if not dt and self._publication_id:
             dt = parse_pathname(self.filename).base[len(self._publication_id):]
+            if dt[:1] == '-' and dt[1:5].isdigit() and dt[5:6] == '-':  # club72-2020-01-01
+                dt = dt[1:]
         return dt
 
     def year(self):
@@ -686,7 +688,7 @@ class ClueAnswer:
         return (self.pubid, year_from_date(self.date))
 
     def xdid(self):
-        return self.pubid + self.date
+        return dated_xdid(self.pubid, self.date)
 
     def __str__(self):
         return '[%s%s] %s' % (self.pubid, self.date, self.clue)

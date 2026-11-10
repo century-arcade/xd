@@ -58,7 +58,7 @@ def main():
             if dow:  # Might be empty date or only a year
                 byweekday[dow].append(xd)
 
-        for r in metadb.xd_similar(pubid + str(year)):
+        for r in metadb.xd_similar(utils.dated_xdid(pubid, str(year))):
             if r.match_pct < 25:
                 continue
             xd = xdfile.get_xd(r.xdid)

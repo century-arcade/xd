@@ -23,7 +23,8 @@ def test_letters_only_pubid(pubs):
 def test_pubid_with_digits(pubs):
     pubs("club72", "7xw")
     assert catalog.find_pubid("x|club72-0001.puz") == "club72"
-    assert catalog.find_pubid("x|club722020-01-01.puz") == "club72"
+    assert catalog.find_pubid("x|club72-2020-01-01.puz") == "club72"
+    assert catalog.find_pubid("x|club722020-01-01.puz") == "club72"    # older form, no hyphen
     assert catalog.find_pubid("x|7xw2021-01-01.puz") == "7xw"
 
 
