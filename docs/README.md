@@ -88,20 +88,21 @@ Open an issue in [this repository](https://github.com/century-arcade/xd), or fin
 
 ## Acknowledgments
 
-We thank the following people for their contributions to the xd Crossword Corpus:
+We thank the following individuals for their contributions to the xd Crossword Corpus:
 
 - Barry Haldiman
+- Quiara Vasquez
+- Ben Zimmer
+- Evan Birnholz
+- David Steinberg
+- Ben Tausig
 - [Roy Leban](https://royleban.com/)
 - [Alex Boisvert](https://alexboisvert.com/)
 - [Mike Selinker](https://www.selinker.com/)
-- David Steinberg
-- Evan Birnholz
-- Quiara Vasquez
-- Ben Zimmer
 - [Enrique Henestroza Anguiano](https://datalexic.com/)
 - Alex Bajcz
 - Daniel Kirkdorffer
 - [jmviz](https://github.com/jmviz)
 - [Jim Horne](https://xwordinfo.com/)
 
-Additionally we thank David Steinberg, Jim Horne, and the rest of the team behind [Pre-Shortzian Puzzle Project](http://www.preshortzianpuzzleproject.com/) for inspiring our project.
+Additionally we'd like to think the whole team behind [Pre-Shortzian Puzzle Project](http://www.preshortzianpuzzleproject.com/) for inspiring our project.
