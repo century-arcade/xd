@@ -94,8 +94,10 @@ We thank the following people for their contributions to the xd Crossword Corpus
 - [Roy Leban](https://royleban.com/)
 - [Alex Boisvert](https://alexboisvert.com/)
 - [Mike Selinker](https://www.selinker.com/)
+- David Steinberg
 - Evan Birnholz
 - Quiara Vasquez
+- Ben Zimmer
 - [Enrique Henestroza Anguiano](https://datalexic.com/)
 - Alex Bajcz
 - Daniel Kirkdorffer
