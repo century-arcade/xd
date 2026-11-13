@@ -13,7 +13,7 @@ WWWZIP=/tmp/${NOW}-www.zip
 S3_REGION=us-west-2
 S3_WWW=s3://xd.saul.pw
 
-.PHONY: gxd.sqlite clean clean-cache sample sample-plan
+.PHONY: publicdomain gxd.sqlite clean clean-cache sample sample-plan
 
 all: analyze gridmatches website
 
@@ -95,6 +95,12 @@ sample:
 
 sample-plan:
 	scripts/28-mkzip-sample.py -c ${GXD_DIR} --seed ${SAMPLE_SEED} ${SAMPLE_ARGS} --dry-run
+
+# Full puzzles in the US public domain by date (published more than 95 years
+# ago), for a GitHub release. Tier (a) of docs/DATASETS.md.
+publicdomain:
+	mkdir -p ${PUB_DIR}
+	scripts/31-mkzip-publicdomain.py -c ${GXD_DIR} -o ${PUB_DIR}/xd-puzzles-publicdomain.zip
 
 gxd.zip:
 	find ${GXD_DIR} -name '*.xd' -print | sort | zip $@ -@
