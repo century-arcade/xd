@@ -119,6 +119,16 @@ class TestRebusParsing:
         assert r.across == ["/"]
         assert r.down == ["/"]
 
+    def test_one_sided_half_reads_nothing_that_way(self):
+        # 'PERP/' reads PERP across and nothing down; '/CON' the reverse.
+        r = xdlint.parse_rebus_value("PERP/")
+        assert r.across == ["PERP"]
+        assert r.down == [""]
+        assert r.is_directional
+        r = xdlint.parse_rebus_value("/CON")
+        assert r.across == [""]
+        assert r.down == ["CON"]
+
     def test_pipe_with_one_part_is_literal(self):
         # 'A|' has an empty part, so it's not a Schrödinger operator.
         r = xdlint.parse_rebus_value("A|")
@@ -315,6 +325,18 @@ class TestAnswerValidation:
         # 3-cell across slot: I, /, O — declared "I/O".
         assert self._validate("I/O", [(0, 0), (0, 1), (0, 2)],
                               ["I1O"], rebus, 0) is None
+
+    def test_one_sided_rebus_across_letters_down_empty(self):
+        # Row SU10ACS with 1=PERP/ 0=: across reads SUPERPACS, and a down
+        # through cell 1 or cell 0 reads nothing there.
+        rebus = {"1": xdlint.parse_rebus_value("PERP/"),
+                 "0": xdlint.parse_rebus_value("")}
+        row = ["SU10ACS"]
+        assert self._validate("SUPERPACS", [(0, i) for i in range(7)],
+                              row, rebus, 0) is None
+        grid = ["T", "I", "1", "0", "E"]
+        assert self._validate("TIE", [(i, 0) for i in range(5)],
+                              grid, rebus, 1) is None
 
     def test_rebus_variable_length_alts_match_longest_first(self):
         """Regression test for the alt-by-length sort fix.
