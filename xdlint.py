@@ -512,7 +512,8 @@ class RebusExpansion:
         '/' separates across vs down readings:  1=IE/EI
         '|' separates Schrödinger alternates:   1=A|B  (any letter, any direction)
         Both compose, '|' precedence within '/' halves: 1=SE/S|E
-        Empty halves of '/' mean literal slash: 1=/   (cell is the '/' character)
+        One empty half reads nothing that way:  1=PERP/  (PERP across, empty down)
+        '/' alone is a literal slash:           1=/   (cell is the '/' character)
 
     For non-quantum rebus, across == down == [single value].
     """
@@ -546,13 +547,15 @@ def parse_rebus_value(value: str) -> RebusExpansion:
         slash_idx = value.index("/")
         before = value[:slash_idx]
         after = value[slash_idx + 1:]
-        if before and after:
-            # Directional split.
+        if before or after:
+            # Directional split.  One empty half means the cell reads
+            # nothing in that direction: 1=PERP/ is PERP across and
+            # empty down (letters behind bars that the Downs pass through).
             return RebusExpansion(
                 across=_split_alternatives(before),
                 down=_split_alternatives(after),
             )
-        # Empty half(s): '/' is the literal cell content, not an operator.
+        # Both halves empty: '/' is the literal cell content, not an operator.
     alts = _split_alternatives(value)
     return RebusExpansion(across=alts, down=alts)
 
