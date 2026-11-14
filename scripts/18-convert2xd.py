@@ -23,6 +23,7 @@ from xdfile.ccxml2xd import parse_ccxml
 from xdfile.uxml2xd import parse_uxml
 from xdfile.ujson2xd import parse_ujson
 from xdfile.puz2xd import parse_puz
+from xdfile.ipuz2xd import parse_ipuz
 from xdfile.xwordinfo2xd import parse_xwordinfo
 
 from xdfile import catalog
@@ -86,6 +87,7 @@ def main():
         '.xml': [parse_ccxml, parse_uxml],
         '.json': [parse_ujson],
         '.puz': [parse_puz],
+        '.ipuz': [parse_ipuz],
         '.html': [parse_xwordinfo],
         '.pdf': [],
         '.jpg': [],

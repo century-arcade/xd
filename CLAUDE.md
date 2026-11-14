@@ -13,6 +13,7 @@ xd is a crossword puzzle processing pipeline. It defines the `.xd` plain-text fo
 - `xdfile/xdfile.py` — Core `xdfile` class: parse_xd(), to_unicode(), grid/clue iteration
 - `xdfile/utils.py` — Utilities: parse_pathname(), parse_date_from_filename(), file I/O
 - `xdfile/puz2xd.py` — .puz → .xd converter (module version, used as library)
+- `xdfile/ipuz2xd.py` — .ipuz → .xd converter (stdlib JSON; keeps omitted cells as `_`, records bars on `xd.bars` but cannot emit them)
 - `puz2xd-standalone.py` — .puz → .xd converter (standalone script, duplicates decode/xdfile logic)
 - `xdfile/__init__.py` — Just `from .xdfile import *`
 
