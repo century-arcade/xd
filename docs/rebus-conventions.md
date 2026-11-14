@@ -184,6 +184,32 @@ Every rebus cell is `PH` across and `F` down. A1 = **ALPHA** (`AL` + `PH` + `A`,
 
 ---
 
+### 3e. One-sided halves: a cell that reads nothing one way
+
+A `/` with letters on one side only means the cell reads nothing in the
+other direction. `1=PERP/` reads PERP across and nothing down; `1=/CON`
+would be the reverse. Pair it with an empty rebus (`0=`, as in
+`nyt2024-02-15.xd`), which reads nothing either way, for squares that hold
+no letter at all.
+
+**Example: `gxd/ocregister/ocr2017-09-28.xd`** ("Behind Bars"). PERP, CON
+and FELON are printed spread across 5, 4 and 6 squares of three Across
+answers, and the Downs pass straight through those squares:
+
+```
+Rebus: 0= 1=PERP/ 2=CON/ 3=FELON/
+
+SU10000ACS#RATS
+
+A17. They can't directly support candidates ~ SUPERPACS
+D3. Reason for sudden death ~ TIEGAME
+```
+
+Only `/` alone (`1=/`, §2) stays a literal slash. No corpus file used a
+one-sided half before this one, so the rule changes no existing reading.
+
+---
+
 ## 4. Combined `/` and `|` (asymmetric explicit)
 
 Exactly **one** corpus puzzle uses `|` in a Rebus value, and it does so to disambiguate the asymmetric pattern of §3c.
@@ -315,7 +341,7 @@ For discussion, not a recommendation:
 >
 > - If the value contains `/` with non-empty halves, the halves are alternative readings. When *both* halves are single letters, the corpus treats them as Schrödinger letter-alternatives valid in either direction (§3a). When *either* half is multi-letter, the corpus treats them as `<across>/<down>` directional expansions with one fixed answer per direction (§3b, §3d). The syntax does not disambiguate these — tooling must rely on the half-length pattern (and on slot length and clue count for the §3c asymmetric case).
 > - Within each half (or in a value with no `/`), if `|` separates non-empty parts, those parts are Schrödinger letter-alternatives — any of them is valid in any direction the slot is read.
-> - A value where `/` has empty halves on either side (e.g. `1=/`) is the literal value, not an operator.
+> - A value that is `/` alone (`1=/`) is the literal value, not an operator. A `/` with one empty half (`1=PERP/`) reads nothing in that direction (§3e).
 > - Multiple clues at the same position are legal only when the slot contains at least one Schrödinger cell in that direction.
 > - Declared answers contain whole words. When a slot has multiple valid readings, they are listed `~ A / B` (or `~ A | B`). The inline form (rebus expansion embedded inside an answer at each cell) is deprecated.
 
