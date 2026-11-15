@@ -17,6 +17,7 @@ project of [Century Arcade](https://github.com/century-arcade), with technical h
 - [xd.saul.pw](https://xd.saul.pw): Saul's original plagiarism analysis, plus statistics and reports. 
 - [Spread the Word(list)](https://www.spreadthewordlist.com/): clue database build on the xd Crossword Corpus.
 - [Puzzmo Crossword Data](https://data.puzzmo.com/xwd): search clues and answers in the corpus.
+- [Ugleh's Grid Search](https://ugleh.com/gridsearch/): find published puzzles that match a custom block pattern.
 
 ## Use the corpus
 
