@@ -27,8 +27,9 @@ A person made the puzzle: chose the answers and wrote the clues.
 
 The puzzle belongs to a publication series with at least 10 puzzles: a regular recurring feature
 in a newspaper or magazine, a numbered series on a blog or web site, a book or published 
-collection, or an app that adds puzzles regularly. Below that, we feel a publication isn't worth the 
-effort to add, except in special circumstances.
+collection, an app that adds puzzles regularly, or a crossword tournament, counted across all
+the years it was held (see "Tournament puzzles" below). Below that, we feel a publication isn't
+worth the effort to add, except in special circumstances.
 
 - Contributions of fewer than 10 puzzles are still encouraged, provided they
   are part of a larger series. They form a placeholder until more can be 
@@ -47,6 +48,33 @@ at least 10 people could plausibly have seen and solved it. This rules out:
 - unpublished drafts;
 - blogs and apps with few readers or users;
 - one-off or novelty puzzles for advertisements, photo shoots, etc
+
+
+## Tournament puzzles **[proposed]**
+
+Puzzles written for a crossword-solving tournament are in scope. A tournament
+prints only a handful of puzzles each time it's held, so rules 3 and 4 apply
+to it this way:
+
+- **The tournament is the series.** Its puzzles are counted across every year
+  it was held, not one year at a time: the Indie 500 printed 6 to 9 puzzles a
+  year, 41 over its five years. A tournament that has printed fewer than 10
+  in all may still be added, as the start of a series, if it's likely to be
+  held again or its puzzles are hard to find any other way.
+- **A tournament held once** (a library's one-day contest, a fundraiser)
+  is a one-off and falls under the noteworthy exception below. Historical
+  contests usually qualify, such as the championships of the 1920s, whose
+  puzzles may survive only in a newspaper report.
+- **The whole packet counts**: the competition puzzles, the final in each
+  division's version, and any warm-up, tiebreaker or bonus puzzle printed
+  with them.
+- **Audience.** A tournament's field and its solve-at-home buyers count as
+  the audience for rule 4.
+- **Puzzles borrowed from another series** (unpublished New York Times
+  puzzles solved at a tournament before they ran in the paper) belong to
+  that series, not the tournament. They are recorded in the other series,
+  and the tournament may be noted as a sighting.
+- **Cryptic-only tournaments** are out, under rule 1.
 
 
 ## Exception to the above: puzzles that are in some way noteworthy
