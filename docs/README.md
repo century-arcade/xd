@@ -14,7 +14,7 @@ project of [Century Arcade](https://github.com/century-arcade), with technical h
 ## Sites using the corpus
 
 - [The Cross(word) Reference](https://crosswordreference.com): browse and search puzzles, clues, and answers across the corpus.
-- [xd.saul.pw](https://xd.saul.pw): Saul's original plagiarism analysis, plus statistics and reports. 
+- [xd.saul.pw](https://xd.saul.pw): Saul's original plagiarism analysis, plus statistics and reports.
 - [Spread the Word(list)](https://www.spreadthewordlist.com/): clue database build on the xd Crossword Corpus.
 - [Puzzmo Crossword Data](https://data.puzzmo.com/xwd): search clues and answers in the corpus.
 - [Ugleh's Grid Search](https://ugleh.com/gridsearch/): find published puzzles that match a custom block pattern.
@@ -91,19 +91,7 @@ Open an issue in [this repository](https://github.com/century-arcade/xd), or fin
 
 We thank the following individuals for their contributions to the xd Crossword Corpus:
 
-- Barry Haldiman
-- Quiara Vasquez
-- Ben Zimmer
-- Evan Birnholz
-- David Steinberg
-- Ben Tausig
-- [Roy Leban](https://royleban.com/)
-- [Alex Boisvert](https://alexboisvert.com/)
-- [Mike Selinker](https://www.selinker.com/)
-- [Enrique Henestroza Anguiano](https://datalexic.com/)
-- Alex Bajcz
-- Daniel Kirkdorffer
-- [jmviz](https://github.com/jmviz)
-- [Jim Horne](https://xwordinfo.com/)
+Barry Haldiman, [Roy Leban](https://royleban.com/), Quiara Vasquez, [Mike Selinker](https://www.selinker.com/), [Alex Boisvert](https://alexboisvert.com/),
+[jmviz](https://github.com/jmviz), Daniel Kirkdorffer, Evan Birnholz, Alex Bajcz, [Enrique Henestroza Anguiano](https://datalexic.com/), David Steinberg, Ben Tausig, and Ben Zimmer.
 
-Additionally we'd like to think the whole team behind [Pre-Shortzian Puzzle Project](http://www.preshortzianpuzzleproject.com/) for inspiring our project.
+Additionally we'd like to thank David Steinberg, Jim Horne, and the whole team behind [Pre-Shortzian Puzzle Project](http://www.preshortzianpuzzleproject.com/) for inspiring our project.
