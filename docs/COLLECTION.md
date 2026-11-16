@@ -27,9 +27,9 @@ A person made the puzzle: chose the answers and wrote the clues.
 
 The puzzle belongs to a publication series with at least 10 puzzles: a regular recurring feature
 in a newspaper or magazine, a numbered series on a blog or web site, a book or published 
-collection, an app that adds puzzles regularly, or a crossword tournament, counted across all
-the years it was held (see "Tournament puzzles" below). Below that, we feel a publication isn't
-worth the effort to add, except in special circumstances.
+collection, or an app that adds puzzles regularly. Below that, we feel a publication isn't worth the 
+effort to add, except in special circumstances. Tournaments are exempt from this rule (see
+"Tournament puzzles" below).
 
 - Contributions of fewer than 10 puzzles are still encouraged, provided they
   are part of a larger series. They form a placeholder until more can be 
@@ -52,19 +52,15 @@ at least 10 people could plausibly have seen and solved it. This rules out:
 
 ## Tournament puzzles **[proposed]**
 
-Puzzles written for a crossword-solving tournament are in scope. A tournament
-prints only a handful of puzzles each time it's held, so rules 3 and 4 apply
-to it this way:
+Puzzles written for a crossword-solving tournament are in scope, however few
+there are. A tournament prints only a handful of puzzles each time it's held,
+and many were held only once, but a set of puzzles written for people to
+compete on is noteworthy in itself, so rule 3 (a series of at least 10)
+doesn't apply.
 
-- **The tournament is the series.** Its puzzles are counted across every year
-  it was held, not one year at a time: the Indie 500 printed 6 to 9 puzzles a
-  year, 41 over its five years. A tournament that has printed fewer than 10
-  in all may still be added, as the start of a series, if it's likely to be
-  held again or its puzzles are hard to find any other way.
-- **A tournament held once** (a library's one-day contest, a fundraiser)
-  is a one-off and falls under the noteworthy exception below. Historical
-  contests usually qualify, such as the championships of the 1920s, whose
-  puzzles may survive only in a newspaper report.
+- **Any tournament qualifies,** including one held only once: a library's
+  one-day contest, a fundraiser, the online tournament of March 2020 held
+  while in-person events were cancelled, the championships of the 1920s.
 - **The whole packet counts**: the competition puzzles, the final in each
   division's version, and any warm-up, tiebreaker or bonus puzzle printed
   with them.
