@@ -54,6 +54,8 @@ identification only.
 - **David Steinberg**: editor; founder of the
   [Pre-Shortzian Puzzle Project](http://www.preshortzianpuzzleproject.com/);
   Andrews McMeel Universal.
+- **Ben Zimmer**: linguist, lexicographer, and language columnist; #gridspotting aficionado.
+  Co-founder [Crossword Craze](https://crosswordcraze.today/).
 
 ## Continuity
 
