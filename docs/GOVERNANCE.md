@@ -44,7 +44,16 @@ rights and licensing. Advisors are asked for their views once a year, when the
 policies and the preservation assessment are reviewed, and when a hard case
 comes up. They do not vote and have no duties.
 
-Advisors are listed here with their consent. *(None yet listed.)*
+An advisor does not advise on decisions about puzzles from a publication they
+work for, and the maintainers do not ask them to. They may still tell the
+maintainers that publisher's position.
+
+Advisors are listed here with their consent. Affiliations are for
+identification only.
+
+- **David Steinberg**: editor; founder of the
+  [Pre-Shortzian Puzzle Project](http://www.preshortzianpuzzleproject.com/);
+  Andrews McMeel Universal.
 
 ## Continuity
 
