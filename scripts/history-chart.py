@@ -25,7 +25,7 @@ EVENTS = [
     # (date, label, dy) dy nudges the label up (negative) or down to avoid overlaps
     (date(2016, 3, 4), "FiveThirtyEight story", 30),
     (date(2016, 8, 26), "the collection is committed to git", -46),
-    (date(2026, 9, 25), "The Cross Reference", -74),
+    (date(2026, 9, 25), "The Crossword Reference", -74),
     (date(2026, 10, 9), "Every Puzzle Project imports", -46),
     (date(2026, 11, 6), "centuryarcade.org", -18),
 ]
