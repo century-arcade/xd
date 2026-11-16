@@ -1,6 +1,6 @@
 # xd
 
-[![pipeline status](https://img.shields.io/endpoint?url=https://status.centuryarcade.org/badge.json)](https://status.centuryarcade.org/)
+[![tests](https://img.shields.io/github/actions/workflow/status/century-arcade/xd/ci.yml?branch=master&label=tests)](https://github.com/century-arcade/xd/actions/workflows/ci.yml) [![pages](https://img.shields.io/github/actions/workflow/status/century-arcade/xd/pages%2Fpages-build-deployment?branch=master&label=pages)](https://github.com/century-arcade/xd/actions/workflows/pages/pages-build-deployment) [![pypi xdlint](https://img.shields.io/pypi/v/xdlint?label=pypi%20xdlint)](https://pypi.org/project/xdlint/) [![pipeline](https://img.shields.io/endpoint?url=https://status.centuryarcade.org/badge.json)](https://status.centuryarcade.org/)
 
 This repository is the home of the xd Crossword Corpus project: its site is https://centuryarcade.org/xd/, and its policy documents (access, collection, editorial, datasets, preservation, governance) are in [`docs/`](docs/).
 
