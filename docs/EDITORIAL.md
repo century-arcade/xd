@@ -96,21 +96,25 @@ Each convention below is marked:
   - Two constructors are joined with "and" ("Brooke Husic and Ada Nicolle").
     **[proposed]** for new imports. The corpus has both (about 3,200 files
     with "and", 3,300 with "&"), and existing files are not changed.
-  - Each person is named the way the names table spells them, not
+  - Each person is named the way the names tables spell them, not
     necessarily as printed. **[proposed]** See "People's names" below for
     what is rewritten and what stays.
-- **`Byline:`** is the byline exactly as published. **[practice]** for
-  Judge, **[proposed]** everywhere: it is present whenever `Author:` or
-  `Editor:` differs from what was printed, beyond the formatting above ("By ",
-  "&" for "and", an editor credit moved to `Editor:`). Examples: `B. E.
-  Quigley`, `www.brendanemmettquigley.com`, `Submitted by W. T. Litson, Jr.,
-  Oceanside, L. I.`, `Puzzle by John Doe, clues by Mary Jane`. It is an extra
+- **`Byline:`** is the author credit exactly as published. **[practice]** for
+  Judge, **[proposed]** everywhere: it is present whenever `Author:` differs
+  from what was printed, beyond the formatting above ("By ", "&" for "and", an
+  editor credit moved to `Editor:`). Examples: `B. E. Quigley`,
+  `www.brendanemmettquigley.com`, `brooke` (Puzzmo), `Submitted by W. T.
+  Litson, Jr., Oceanside, L. I.`, `Puzzle by John Doe, clues by Mary Jane`.
+  It holds only what was printed: where an outlet prints the editor as a
+  credit of its own, a normalized `Editor:` doesn't add it to `Byline:`, because
+  that would mean writing a byline the outlet never printed. It is an extra
   header, which the spec allows; adding it to the spec is
   [xdformat issue 11](https://github.com/century-arcade/xdformat/issues/11).
 - **`Editor:`** has a header of its own, never folded into `Copyright:` or
   `Author:`. **[established]** Some older shelves use the form `Author: X / Ed.
   Y`. New imports use `Editor:`. Names in it follow "People's names", like
-  `Author:`.
+  `Author:`. When `Editor:` is normalized, its printed form is the names table
+  row that rewrote it (Puzzmo's `Ann` is Ann Hagerty in `puzzmo/names.tsv`).
 - **`Copyright:`** holds only the rights or syndication line. **[established]**
 - **`Date:`** is the date this publication printed or posted the puzzle, in
   `YYYY-MM-DD` form, and must match the file name. **[established]** For a
@@ -152,7 +156,7 @@ Each convention below is marked:
 **[proposed]** throughout. `Author:` and `Editor:` name people; `Byline:`
 keeps what was printed. So `Author:` can use one spelling per person without
 losing anything, but only where we're sure it's the same person. Who is the
-same person is decided once, in the names table, not by each importer.
+same person is decided once, in the names tables, not by each importer.
 
 - **Rewritten to the person's name** (the printed form goes in `Byline:`):
   - initials, a middle name or initial, a nickname: `B. E. Quigley`,
@@ -160,19 +164,23 @@ same person is decided once, in the names table, not by each importer.
   - a misspelling with no possible intent: `Bremdan Emmett Quigley`, `Will
     Shorts`;
   - a website or handle printed as the whole credit:
-    `www.brendanemmettquigley.com`;
+    `www.brendanemmettquigley.com`. A site that credits people by the name
+    they choose there prints handles, even ones that look like first names:
+    Puzzmo's `brooke`, `rafa` and `Ann`;
+  - a publication's own way of crediting someone: Newsday's `S.N.` for
+    Stanley Newman;
   - a former name, only when the person has linked the two names publicly.
     Names follow the Trans Metadata Collective's
     [Metadata Best Practices for Trans and Gender Diverse Resources](https://doi.org/10.5281/zenodo.6686841),
     which we adopt as our policy: use the name the person uses now.
 - **Kept as printed** (no `Byline:` needed unless the byline says more):
   - a pen name or house name: `Anna Gram`, `Thomas Joseph`. It's the credit
-    the person or publisher chose. The names table says who is behind it;
-  - anything we aren't sure of: an attribution the table marks "likely", a
-    surname or first name alone, a byline that may be a joke on the theme
-    (`Peter O'Gordon` on an Irish theme);
-  - a name the names table doesn't have yet. That's normal for a new
-    constructor.
+    the person or publisher chose. The names tables say who is behind it;
+  - anything we aren't sure of: an attribution a table marks "likely", a
+    surname or first name alone (unless the publication's table says it is
+    that publication's handle or initials for someone, as above), a byline
+    that may be a joke on the theme (`Peter O'Gordon` on an Irish theme);
+  - a name no table has yet. That's normal for a new constructor.
 - **Removed, and not kept in `Byline:`**: things that were never part of the
   byline. A date stamp (`Rich Norris010201`), conversion leftovers (`Fred
   Piscop?ACROSS`, `s Brendan Emmett Quigley`), an email or website a feed
@@ -181,26 +189,50 @@ same person is decided once, in the names table, not by each importer.
   address, "clues by") stays in `Byline:`.
 - **The wrong person credited** (not a spelling) is corrected in `Author:`
   and the commit says how it's known. `Byline:` keeps what was printed.
-- **The names table** (`aliases.tsv` at the corpus root) has one row per
-  printed form that isn't the person's own name: the byline as printed, the
-  person, the kind (`variant`, `misspelling`, `former`, `pen`, `house`), a
-  status (`confirmed` or `likely`), an optional scope (publication, role,
-  dates) for names that would be wrong elsewhere, an optional Wikidata QID,
-  and a source. Variants and misspellings need no source; pen, house and
-  former names do.
+- **The names tables** are `names.tsv` files at two levels, one row per
+  printed form that isn't the person's own name. A name is looked up in its
+  shelf's table first, then the corpus's.
+  - **A shelf's table** (`<shelf>/names.tsv`, beside its `ABOUT.md`) holds
+    how that publication credits people: Puzzmo's handles, Newsday's `S.N.`,
+    Newsday's editor credited as `Stanley`, a misspelling the outlet repeats,
+    a house name (`Thomas Joseph`) and who made its puzzles when. It covers
+    every series on the shelf (`puzzmo/` is pzmo, pzmomini and pzmobig), so
+    most rows need no scope. Whoever imports or reviews the shelf sees it
+    there.
+  - **The corpus's table** (`names.tsv` at the root) holds facts about a
+    person that hold wherever they're printed: their own variants (`Louis
+    Sabin` for Lou Sabin, `B. E. Quigley`), a former name, a pen name
+    (`Anna Gram`). A row belongs here when its printed form turns up on more
+    than one shelf, or could.
+  - Each row has the byline as printed, the person, the kind (`variant`,
+    `misspelling`, `former`, `pen`, `house`), a status (`confirmed` or
+    `likely`), an optional scope (series, role, dates) for a name that would
+    be wrong more widely, an optional Wikidata QID, and a source. Variants and
+    misspellings need no source; pen, house and former names, and a handle
+    resolved from anything but the outlet's own data, do.
+  - A one-off typo in one file needs no row: correct the name, and `Byline:`
+    keeps what was printed. Add a row when the same slip recurs.
   - Names are compared after folding case, accents and punctuation, so
     `erik agard` and `Erik Agard` need no row.
   - A person's own name is the one they use now, where they've said;
-    otherwise the fullest form they're most often printed with.
+    otherwise the fullest form they're most often printed with. Every
+    person a shelf's table names is spelled the way the corpus spells them.
   - Guesses ("may be") stay out. A "likely" row links the names but never
     rewrites `Author:`.
 - **What contributors do**: type the byline as printed in `Author:` (or
-  `Byline:`), split out the editor, and fix nothing else. A fixer applies the
-  names table: it moves the printed form to `Byline:` and writes the person's
-  name in `Author:`. The import check lists each name the table doesn't know,
-  with any near match ("one letter from Brendan Emmett Quigley"), so a typo
-  or a new variant is caught while the source is open; add a row, or say so in
-  the MR.
+  `Byline:`), split out the editor, and fix nothing else. Fetching and
+  converting never resolve names, so a converter run again over an old source
+  archive still gives what was printed.
+- **Where names are normalized**: a step of every import, after converting
+  and before committing. A fixer applies the tables: it writes the person's
+  name in `Author:` and `Editor:`, and puts the printed author credit in
+  `Byline:` (a file that already has `Byline:` keeps it). The nightly runs it,
+  and so does a contributor's import. Because it runs on files, not sources,
+  adding a row later fixes the files already on the shelf too. The MR check
+  flags a name a table resolves that a file still has as printed, and lists
+  each name no table knows, with any near match ("one letter from Brendan
+  Emmett Quigley"), so a typo or a new variant is caught while the source is
+  open; add a row, or say so in the MR.
 
 ## Identifiers and file names
 
@@ -347,10 +379,12 @@ Which puzzles we collect is in [COLLECTION.md](COLLECTION.md).
   proposed `Text-As-Of:` header is xdformat issue 16. "Versions of a puzzle"
   covers a revision only when both captures exist.
 - **Backfilling people's names.** Applying "People's names" to existing files
-  adds `Byline:` to every file whose `Author:` or `Editor:` changes (a few
-  thousand, by crossref's 2026-09 count) and is one corpus-wide commit per
-  kind. It waits until the names table has settled, so the corpus isn't
-  rewritten each time a row changes.
+  changes `Author:` or `Editor:` in a few thousand files (by crossref's
+  2026-09 count), adding `Byline:` where `Author:` changes. It goes shelf by
+  shelf, each shelf's table and files in one MR, starting with Puzzmo (gxd
+  !417). crossref's alias list (about 630 rows: 494 seen on one shelf only,
+  129 on several) is the starting point for the rest; its one-shelf rows go
+  to shelf tables, and its others to the corpus's table.
 - **Related xdformat issues** (the format's open design questions; check them
   for the latest): [16, `Text-As-Of:`](https://github.com/century-arcade/xdformat/issues/16),
   [11, a `Byline:` field](https://github.com/century-arcade/xdformat/issues/11),
