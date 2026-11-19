@@ -1758,11 +1758,12 @@ def _(ctx):
 
 
 # The spec mentions only 'Refs:' as a clue-metadata key, while explicitly
-# leaving the namespace open. Other tools (e.g. xd-crossword-tools) have
-# adopted further keys like 'Hint:' and 'Alt:'/'Alt1:'..'Alt9:' for
-# Schrödinger puzzles, but those aren't in the spec; surfacing them as
-# unrecognized is intentional, pending a spec discussion.
-RECOGNIZED_CLUE_META_KEYS = {"refs"}
+# leaving the namespace open. The corpus also uses 'Hint:' (a hint for the
+# clue, as Puzzmo's daily crossword gives every clue) and 'Easy:'/'Hard:'
+# (a second set of clues for the grid), per docs/EDITORIAL.md. Other keys,
+# such as xd-crossword-tools' 'Alt:'/'Alt1:'..'Alt9:' for Schrödinger
+# puzzles, are surfaced as unrecognized, pending a spec discussion.
+RECOGNIZED_CLUE_META_KEYS = {"refs", "hint", "easy", "hard"}
 
 
 @rule("XD206", Severity.INFO, "unrecognized-clue-metadata-key")
