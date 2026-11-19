@@ -956,10 +956,17 @@ class TestInfoRules:
     def test_xd206_unrecognized_clue_meta_key(self):
         text = SIMPLE.replace(
             "A1. First ~ ABC\n",
-            "A1. First ~ ABC\nA1 ^Hint: a hint\n",
+            "A1. First ~ ABC\nA1 ^Hnt: a hint\n",
         )
         f = run_rule("XD206", text)
-        assert any("'hint'" in x.message for x in f)
+        assert any("'hnt'" in x.message for x in f)
+
+    def test_xd206_hint_easy_hard_recognized(self):
+        text = SIMPLE.replace(
+            "A1. First ~ ABC\n",
+            "A1. First ~ ABC\nA1 ^Hint: a hint\nA1 ^Easy: easier\nA1 ^Hard: harder\n",
+        )
+        assert run_rule("XD206", text) == []
 
     def test_xd207_unknown_section(self):
         text = (
