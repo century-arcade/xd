@@ -169,10 +169,24 @@ same person is decided once, in the names tables, not by each importer.
     Puzzmo's `brooke`, `rafa` and `Ann`;
   - a publication's own way of crediting someone: Newsday's `S.N.` for
     Stanley Newman;
-  - a former name, only when the person has linked the two names publicly.
-    Names follow the Trans Metadata Collective's
-    [Metadata Best Practices for Trans and Gender Diverse Resources](https://doi.org/10.5281/zenodo.6686841),
-    which we adopt as our policy: use the name the person uses now.
+  - an earlier name the person still uses publicly alongside their current
+    one, such as a maiden name they published under: `Margaret Petherbridge`
+    for Margaret Farrar.
+- **A name the person has left behind** is corrected by hand, not by a table.
+  We follow the Trans Metadata Collective's
+  [Metadata Best Practices for Trans and Gender Diverse Resources](https://doi.org/10.5281/zenodo.6686841)
+  (v2.6, 2025, sections 3.2.4 and 3.2.6): their work is found under the name
+  they use now, and the old name is used as little as possible and never shown
+  beside the new one.
+  - Write the current name in `Author:` or `Editor:`. No `Byline:` (or the
+    current name in brackets, `Byline: [Current Name]`, to show it was
+    supplied, not printed).
+  - The old name goes nowhere we publish: not `Byline:`, not a names table,
+    not a commit message, MR or issue. The source archive keeps what was
+    printed.
+  - Where we can ask the person, we do, and do what they say.
+  - When it isn't clear whether an earlier name is one the person still uses
+    or one they've left behind, treat it as left behind.
 - **Kept as printed** (no `Byline:` needed unless the byline says more):
   - a pen name or house name: `Anna Gram`, `Thomas Joseph`. It's the credit
     the person or publisher chose. The names tables say who is behind it;
@@ -201,15 +215,17 @@ same person is decided once, in the names tables, not by each importer.
     there.
   - **The corpus's table** (`names.tsv` at the root) holds facts about a
     person that hold wherever they're printed: their own variants (`Louis
-    Sabin` for Lou Sabin, `B. E. Quigley`), a former name, a pen name
-    (`Anna Gram`). A row belongs here when its printed form turns up on more
+    Sabin` for Lou Sabin, `B. E. Quigley`), an earlier name they still use
+    publicly (`Margaret Petherbridge`), a pen name (`Anna Gram`). A row belongs here when its printed form turns up on more
     than one shelf, or could.
   - Each row has the byline as printed, the person, the kind (`variant`,
     `misspelling`, `former`, `pen`, `house`), a status (`confirmed` or
     `likely`), an optional scope (series, role, dates) for a name that would
     be wrong more widely, an optional Wikidata QID, and a source. Variants and
     misspellings need no source; pen, house and former names, and a handle
-    resolved from anything but the outlet's own data, do.
+    resolved from anything but the outlet's own data, do. A `former` row is
+    only for an earlier name the person still uses publicly, and its source
+    shows that; a name they've left behind never gets a row (see above).
   - A one-off typo in one file needs no row: correct the name, and `Byline:`
     keeps what was printed. Add a row when the same slip recurs.
   - Names are compared after folding case, accents and punctuation, so
