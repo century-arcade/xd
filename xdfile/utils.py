@@ -90,6 +90,17 @@ def clean_latin1_utf8_mojibake(s: str) -> str:
     return _LATIN1_UTF8_RE.sub(repl, s)
 
 
+def tidy_space(s):
+    """Whitespace in converted text: a run that holds a tab, newline or
+    other non-space whitespace becomes one space (it's layout in the
+    source); a no-break space becomes a space; a run of plain spaces is
+    kept as received, since some are the puzzle (spaced-out letters, blank
+    patterns). The ends are trimmed. xdlint XD210 reports the kept runs."""
+    s = s.replace('\xa0', ' ')
+    s = re.sub(r'\s*[^\S ]\s*', ' ', s)
+    return s.strip()
+
+
 def clean_c1_controls(s: str) -> str:
     """Clean C1 control codepoints (U+0080-U+009F) out of a string.
 

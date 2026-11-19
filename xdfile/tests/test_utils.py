@@ -123,3 +123,10 @@ def test_strip_by_prefix():
     assert utils.strip_by_prefix("by by Mike Shenk") == "Mike Shenk"
     assert utils.strip_by_prefix("Byron Walden") == "Byron Walden"
     assert utils.strip_by_prefix("By") == "By"
+
+
+def test_tidy_space():
+    from xdfile.utils import tidy_space
+    assert tidy_space("S         L        O        T") == "S         L        O        T"
+    assert tidy_space("one\n   two") == "one two"
+    assert tidy_space("\tx  y\n") == "x  y"

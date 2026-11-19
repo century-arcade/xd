@@ -1009,11 +1009,33 @@ class TestInfoRules:
         f = run_rule("XD208", SIMPLE)
         assert f == []
 
-    def test_xd209_double_space_in_clue_flagged(self):
+    def test_xd209_double_space_in_clue_text_is_xd210s(self):
         text = SIMPLE.replace("A1. First ~ ABC", "A1. First  word ~ ABC")
-        f = run_rule("XD209", text)
+        assert run_rule("XD209", text) == []
+        f = run_rule("XD210", text)
         assert len(f) == 1
         assert "2 spaces" in f[0].message
+
+    def test_xd209_clue_syntax_runs_flagged(self):
+        for clue in ("A1.  First ~ ABC", "A1. First  ~ ABC", "A1. First ~  ABC", "A1.  ~ ABC"):
+            text = SIMPLE.replace("A1. First ~ ABC", clue)
+            assert len(run_rule("XD209", text)) == 1, clue
+            assert run_rule("XD210", text) == [], clue
+
+    def test_xd209_metadata_syntax_runs_flagged(self):
+        text = SIMPLE.replace("A1. First ~ ABC\n", "A1. First ~ ABC\nA1 ^Hint:  a  b\n")
+        f209 = run_rule("XD209", text)
+        f210 = run_rule("XD210", text)
+        assert len(f209) == 1 and len(f210) == 1
+        assert f209[0].line == f210[0].line
+
+    def test_xd210_header_value_run(self):
+        text = SIMPLE.replace("Title: T", "Title: T  U")
+        assert run_rule("XD209", text) == []
+        assert len(run_rule("XD210", text)) == 1
+
+    def test_xd210_clean_on_simple(self):
+        assert run_rule("XD210", SIMPLE) == []
 
     def test_xd209_double_space_in_header_flagged(self):
         text = SIMPLE.replace("Title: T", "Title:  T")
@@ -1408,12 +1430,20 @@ class TestFixers:
         assert n == 0
         assert new1 == new2
 
-    def test_xd209_collapse_interior_run(self):
-        text = SIMPLE.replace("A1. First ~ ABC", "A1. First  word ~ ABC")
+    def test_xd209_collapse_syntax_run_only(self):
+        text = SIMPLE.replace("A1. First ~ ABC", "A1.  R O C _   A _ D  ~ ABC")
         new, n = xdlint.FIXERS["XD209"][1](text)
+        assert n == 2
+        assert "A1. R O C _   A _ D ~ ABC" in new
+
+    def test_xd210_is_unsafe_and_collapses_text_runs(self):
+        unsafe, fn = xdlint.FIXERS["XD210"]
+        assert unsafe
+        text = SIMPLE.replace("A1. First ~ ABC", "A1.  R O C _   A _ D ~ ABC")
+        new, n = fn(text)
         assert n == 1
-        assert "First word" in new
-        assert "First  word" not in new
+        assert "A1.  R O C _ A _ D ~ ABC" in new
+        assert fn(new)[1] == 0
 
     def test_xd209_preserves_grid(self):
         # Grid rows must not be collapsed even when they contain (malformed)

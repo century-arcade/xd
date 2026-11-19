@@ -14,7 +14,7 @@ import urllib.error
 import time
 
 import xdfile
-from .utils import warn, clean_c1_controls, clean_latin1_utf8_mojibake
+from .utils import warn, clean_c1_controls, clean_latin1_utf8_mojibake, tidy_space
 from .utils import clean_author_header
 
 
@@ -68,9 +68,8 @@ def decode(s):
     # Remove spurious semicolons from invalid HTML entity refs
     # (e.g. html2text converts "B&O" to "B&O;")
     s = re.sub(r'&([A-Za-z0-9]+);', r'&\1', s)
-    # Collapse any run of whitespace to a single space (clue text shouldn't have tabs or multi-space runs)
-    s = re.sub(r'\s+', ' ', s)
-    return s
+    # Tabs and newlines become a space; runs of spaces are kept (tidy_space).
+    return tidy_space(s)
 
 
 def unquote(s):

@@ -181,3 +181,13 @@ def test_decode_percent_escaped_non_utf8_bytes():
     # UTF-8 escapes and plain percent signs are unchanged.
     assert decode("caf%C3%A9 %E2%80%94 50%25") == "café — 50%"
     assert decode("100% sure") == "100% sure"
+
+
+def test_decode_keeps_runs_of_spaces():
+    # Runs of plain spaces are kept as received: some are the puzzle.
+    # gxd/puzzmo/2024/pzmo2024-01-08.xd A29 hint (Puzzmo xd text).
+    assert decode("into R O C _   A _ D   R _ _ _") == "into R O C _   A _ D   R _ _ _"
+    # Tabs, newlines and no-break spaces are layout: one space. Ends trimmed.
+    assert decode("a\t b\r\nc") == "a b c"
+    assert decode("a\xa0\xa0b") == "a  b"
+    assert decode("  First word ") == "First word"

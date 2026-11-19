@@ -1836,20 +1836,84 @@ def _(ctx):
 _MULTI_SPACE_RE = re.compile(r"(?<=\S) {2,}(?=\S)")
 
 
-@rule("XD209", Severity.WARNING, "multiple-internal-spaces")
-def _(ctx):
-    """Run of 2+ ASCII spaces between non-space characters. puz2xd's
-    decode() collapses these on import (re.sub(r'\\s+', ' ', s)); files
-    that escaped the collapse retain them. Skips grid rows."""
-    grid_lines = {row.line for row in ctx.parsed.grid}
-    for i, line in enumerate(ctx.parsed.lines, 1):
+_HEADER_KEY_RE = re.compile(r"^\s*[^:\s][^:]*:")
+_CLUE_POS_RE = re.compile(r"^\s*[A-Za-z][\w-]*\.")
+_META_KEY_RE = re.compile(r"^\s*[A-Za-z][\w-]*\s+\^[A-Za-z][\w-]*\s*:")
+_META_POS_RE = re.compile(r"^\s*[A-Za-z][\w-]*")
+_CLUE_SEP_RE = re.compile(r"(?<= )~(?= |$)")
+
+
+def _space_runs(parsed: ParsedXd):
+    """Each interior run of 2+ spaces outside the grid, as (line, match,
+    in_syntax). in_syntax runs sit where the format puts one space: after
+    a header's 'Key:', after a clue's 'A1.', on either side of the clue's
+    ' ~ ' separator, around a metadata line's '^Key:'. Every other run is
+    inside text (a clue, a header value, a hint, the notes), where it may
+    be what the publisher printed."""
+    grid_lines = {row.line for row in parsed.grid}
+    header_lines = {h.line for h in parsed.headers}
+    clue_lines = {c.line for c in parsed.clues}
+    first_clue = min(clue_lines) if clue_lines else None
+    for i, line in enumerate(parsed.lines, 1):
         if i in grid_lines:
             continue
-        m = _MULTI_SPACE_RE.search(line)
-        if m:
+        runs = list(_MULTI_SPACE_RE.finditer(line))
+        if not runs:
+            continue
+        edges = set()  # offsets where a run would be syntax: its start or end
+        if i in header_lines:
+            m = _HEADER_KEY_RE.match(line)
+            if m:
+                edges.add(("start", m.end()))
+        elif i in clue_lines:
+            m = _CLUE_POS_RE.match(line)
+            if m:
+                edges.add(("start", m.end()))
+            seps = list(_CLUE_SEP_RE.finditer(line))
+            if seps:
+                t = seps[-1].start()
+                edges.add(("end", t))
+                edges.add(("start", t + 1))
+        elif first_clue is not None and i > first_clue and CLUE_META_RE.match(line):
+            m = _META_KEY_RE.match(line)
+            if m:
+                edges.add(("start", m.end()))
+            m = _META_POS_RE.match(line)
+            if m:
+                edges.add(("start", m.end()))
+        for r in runs:
+            yield i, r, ("start", r.start()) in edges or ("end", r.end()) in edges
+
+
+@rule("XD209", Severity.WARNING, "multiple-internal-spaces")
+def _(ctx):
+    """Run of 2+ ASCII spaces where the format puts one: after 'Key:',
+    after 'A1.', around the ' ~ ' separator or '^Key:'. Runs inside text
+    are XD210's. Skips grid rows."""
+    seen = set()
+    for i, m, in_syntax in _space_runs(ctx.parsed):
+        if in_syntax and i not in seen:
+            seen.add(i)
             yield finding("XD209", Severity.WARNING, i,
                           f"run of {len(m.group(0))} spaces at "
                           f"col {m.start() + 1} (collapse to single space)")
+
+
+@rule("XD210", Severity.INFO, "spaces-in-text")
+def _(ctx):
+    """Run of 2+ spaces inside text: a clue, a header value, clue metadata,
+    the notes. Converters keep these as received. Most are slips or mark
+    something lost (a dropped 'à' in 'Cancel,   la', lost italics in
+    'M*A*S*H    meal'), but some are the puzzle (spaced-out letters,
+    blank patterns like 'R O C _   A _ D   R _ _ _'). Check the source
+    before collapsing; the fixer runs only with --unsafe-fixes."""
+    seen = set()
+    for i, m, in_syntax in _space_runs(ctx.parsed):
+        if not in_syntax and i not in seen:
+            seen.add(i)
+            yield finding("XD210", Severity.INFO, i,
+                          f"run of {len(m.group(0))} spaces in text at "
+                          f"col {m.start() + 1} (check the source before collapsing)")
 
 
 # ---------------------------------------------------------------------------
@@ -1880,9 +1944,10 @@ FIX_ORDER = [
     "XD203",  # de-indent grid rows
     "XD204",  # tabs -> spaces
     "XD201",  # trim trailing whitespace
-    "XD209",  # collapse interior runs of 2+ spaces (after XD201 so trailing
-              # runs are already gone; after XD204/XD208 so tabs and NBSPs
-              # have already become regular spaces)
+    "XD209",  # collapse runs of 2+ spaces in the syntax (after XD201 so
+              # trailing runs are already gone; after XD204/XD208 so tabs
+              # and NBSPs have already become regular spaces)
+    "XD210",  # collapse runs of 2+ spaces inside text; unsafe, opt-in
     "XD103",  # split editor out of Author header
     "XD802",  # move 'Edited by X' out of Copyright into Editor (gxd)
     "XD801",  # drop 'By ' from Author (gxd; after XD103, which already
@@ -2070,23 +2135,34 @@ def _(text):
     return new, count
 
 
-@fixer("XD209")
-def _(text):
-    """Collapse interior runs of 2+ spaces to a single space, on every line
-    except grid rows. Mirrors the trailing whitespace-collapse in decode()."""
+def _collapse_space_runs(text, want_syntax):
     parsed = parse(text)
-    grid_lines = {row.line for row in parsed.grid}
+    spans = {}
+    for i, m, in_syntax in _space_runs(parsed):
+        if in_syntax == want_syntax:
+            spans.setdefault(i, []).append((m.start(), m.end()))
     count = 0
     out = []
     for i, line in enumerate(text.splitlines(keepends=True), 1):
-        if i in grid_lines:
-            out.append(line)
-            continue
-        new, n = _MULTI_SPACE_RE.subn(" ", line)
-        if n:
-            count += n
-        out.append(new)
+        for start, end in reversed(spans.get(i, [])):
+            line = line[:start] + " " + line[end:]
+            count += 1
+        out.append(line)
     return "".join(out), count
+
+
+@fixer("XD209")
+def _(text):
+    """Collapse runs of 2+ spaces where the format puts one space (see
+    _space_runs). Leaves runs inside text, which are XD210's."""
+    return _collapse_space_runs(text, want_syntax=True)
+
+
+@fixer("XD210", unsafe=True)
+def _(text):
+    """Collapse runs of 2+ spaces inside text. Unsafe: some runs are the
+    puzzle, so check each file's source first."""
+    return _collapse_space_runs(text, want_syntax=False)
 
 
 @fixer("XD110")
