@@ -113,9 +113,11 @@ def decode(s):
     # Remove spurious semicolons from invalid HTML entity refs
     # (e.g. html2text converts "B&O" to "B&O;")
     s = re.sub(r'&([A-Za-z0-9]+);', r'&\1', s)
-    # Collapse any run of whitespace to a single space (clue text shouldn't have tabs or multi-space runs)
-    s = re.sub(r'\s+', ' ', s)
-    return s
+    # Tabs, newlines and no-break spaces become a space; runs of plain
+    # spaces are kept as received (xdfile.utils.tidy_space).
+    s = s.replace('\xa0', ' ')
+    s = re.sub(r'\s*[^\S ]\s*', ' ', s)
+    return s.strip()
 
 
 class xdfile:

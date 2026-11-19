@@ -58,6 +58,16 @@ Each convention below is marked:
 - **UTF-8, ASCII where the original is only typography.** **[established]**
   Curly quotes become straight quotes, an ellipsis becomes `...`, and a
   no-break space becomes a space (puz2xd's decode, lint rule XD208).
+- **Runs of spaces inside text stay as published.** **[established]** Some
+  are the puzzle: spaced-out letters (`S         L        O        T ~
+  EXPANSIONSLOT`) or a blank pattern with wider gaps between words
+  (`R O C _   A _ D   R _ _ _`). Most are slips, and many mark something
+  lost, such as a dropped `à` (`Cancel,   la`) or lost italics
+  (`M*A*S*H    meal`). Converters keep them; tabs and line breaks become one
+  space. xdlint's XD210 (info) lists them; fix each one after checking the
+  source (`xdlint --fix --unsafe-fixes --enable-only XD210` collapses them).
+  Runs where the format puts one space, such as after `A1.` or around
+  ` ~ `, are XD209's and `xdlint --fix` collapses them.
 - **Real letters keep their accents**: `Almodóvar`, not `Almodovar`.
   **[established]**
 - **The em dash (U+2014) is kept** as Unicode. Publishers use it both as

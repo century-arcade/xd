@@ -14,7 +14,7 @@ import string
 from lxml import etree
 
 import xdfile
-from xdfile.utils import warn
+from xdfile.utils import warn, tidy_space
 
 
 HEADER_RENAMES = {
@@ -81,14 +81,14 @@ def _flatten(s):
 
 
 def _text(el):
-    """all text inside an element, inline markup dropped, whitespace collapsed"""
-    return " ".join(_flatten("".join(el.itertext())).split())
+    """all text inside an element, inline markup dropped, whitespace tidied"""
+    return tidy_space(_flatten("".join(el.itertext())))
 
 
 def _paragraphs(el):
     """text with inline markup dropped, blank-line paragraph breaks kept"""
     s = _flatten("".join(el.itertext()))
-    paras = [" ".join(p.split()) for p in re.split(r'\n\s*\n', s)]
+    paras = [tidy_space(p) for p in re.split(r'\n\s*\n', s)]
     return "\n\n".join(p for p in paras if p)
 
 
