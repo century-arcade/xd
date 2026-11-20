@@ -186,7 +186,8 @@ same person is decided once, in the names tables, not by each importer.
     their own name for a puzzle or two (`Past Quiara Vasquez`, `Quiara
     Vasquezzzzz` on her own site). `Byline:` keeps the joke, so it still
     shows, and `Author:` puts the puzzle with the rest of the person's work.
-    A one-off joke needs no names table row.
+    A one-off joke is a hand fix like any other and needs no names table
+    row; a joke name the person keeps using gets one, like a handle.
 - **A name the person has left behind** is corrected by hand, not by a table.
   We follow the Trans Metadata Collective's
   [Metadata Best Practices for Trans and Gender Diverse Resources](https://doi.org/10.5281/zenodo.6686841)
