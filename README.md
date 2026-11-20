@@ -36,6 +36,7 @@ The gxd corpus has editorial conventions beyond the format, written in gxd's `ED
 | XD808 | info | provenance in the notes ("Litzed by", "OCR", "downloaded from", ...) | EDITORIAL.md, Notes |
 | XD809 | info, new imports | `&` joins authors (gxd uses "and") | EDITORIAL.md, Headers, `Author:` (proposed) |
 | XD810 | info, new imports | a title that is only a date, not in the form `Tuesday, October 6, 2026` (an outlet label before the date, an open question in EDITORIAL.md, is not checked) | EDITORIAL.md, Headers, `Title:` (proposed) |
+| XD812 | warning, fix | a name in `Author:` or `Editor:` that a names table (`<shelf>/names.tsv`, then the root's `names.tsv`) resolves to a person. The fixer writes the person's name, keeping the joining, and when `Author:` changes adds the printed author credit as `Byline:`, the last header, unless there is one. A warning, though proposed, so a skipped normalize step shows in the MR check | EDITORIAL.md, People's names (proposed) |
 
 The two rules for new imports apply only to puzzles being added, since existing files are not changed: in `--base` mode they run on files the diff adds (not modified ones), and in path mode only with `--new-imports`.
 

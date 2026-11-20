@@ -1957,6 +1957,9 @@ FIX_ORDER = [
               # cleans up the duplicate it leaves behind)
     "XD109",  # rewrite comma separators in the Rebus header to spaces
     "XD202",  # reorder canonical headers (picks up the new Editor)
+    "XD812",  # people's names from the names tables, printed credit in
+              # Byline: (gxd; after XD103/XD801 have cut Author: down to
+              # names, after XD202 so Byline: stays the last header)
     "XD102",  # collapse 2+ blank lines in clues to 1
     "XD013",  # synthesize ^Refs from cross-refs in clue bodies
     "XD703",  # expand deprecated inline-embed rebus answers ('IE/EI'
@@ -1974,13 +1977,19 @@ FIX_ORDER = [
 # Fixers whose behavior depends on --profile take it as a keyword,
 # fn(text, profile=None); the rest are called as fn(text).
 PROFILE_AWARE_FIXERS: set = set()
+# Fixers that need the file's path (its shelf, pubid, nearby tables) take it
+# as a keyword, fn(text, path=None); without a path they change nothing.
+PATH_AWARE_FIXERS: set = set()
 
 
-def fixer(code: str, unsafe: bool = False, profile_aware: bool = False):
+def fixer(code: str, unsafe: bool = False, profile_aware: bool = False,
+          path_aware: bool = False):
     def deco(fn: FixerFn) -> FixerFn:
         FIXERS[code] = (unsafe, fn)
         if profile_aware:
             PROFILE_AWARE_FIXERS.add(code)
+        if path_aware:
+            PATH_AWARE_FIXERS.add(code)
         return fn
     return deco
 
@@ -3200,11 +3209,221 @@ def _(ctx):
                   f"with no zero padding (EDITORIAL.md, Headers)")
 
 
+# People's names (gxd EDITORIAL.md, "People's names", [proposed]). Author:
+# and Editor: name people; the names tables (names.tsv beside the shelf,
+# then at the corpus root) say which printed forms are which person.
+# A copy of xdfile/names.py, kept in lockstep with it; tests/test_xdlint.py
+# checks that the two agree. (xdlint.py stays standalone, so it can't
+# import xdfile.)
+_NAMES_COLUMNS = ["byline", "person", "kind", "status", "pub", "role",
+                  "start", "end", "qid", "source", "note"]
+_NAMES_REWRITE_KINDS = {"variant", "misspelling", "former"}
+_NAMES_JOIN_RE = re.compile(r"(, | and | & )")
+
+
+def _name_key(name: str) -> str:
+    """Case, accents and punctuation aside (xdfile.names.name_key)."""
+    import unicodedata
+    s = "".join(c for c in unicodedata.normalize("NFKD", name)
+                if not unicodedata.combining(c))
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", s.lower())).strip()
+
+
+def _read_names_table(path: str) -> Dict[str, List[dict]]:
+    import csv
+    out: Dict[str, List[dict]] = {}
+    try:
+        f = open(path, encoding="utf-8", newline="")
+    except FileNotFoundError:
+        return out
+    with f:
+        for row in csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_NONE):
+            row = {k: (row.get(k) or "").strip() for k in _NAMES_COLUMNS}
+            if row["byline"] and row["person"]:
+                out.setdefault(_name_key(row["byline"]), []).append(row)
+    return out
+
+
+def _names_corpus_root(start: str) -> Optional[str]:
+    d = os.path.abspath(start)
+    while True:
+        if os.path.exists(os.path.join(d, ".git")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def _names_table_paths(shelf: str, root: Optional[str] = None) -> List[str]:
+    """names.tsv paths for a directory, nearest first, up to the enclosing
+    git checkout's root (xdfile.names.table_paths)."""
+    shelf = os.path.abspath(shelf)
+    root = os.path.abspath(root) if root else _names_corpus_root(shelf)
+    if root is None or not (shelf + os.sep).startswith(root.rstrip(os.sep) + os.sep):
+        return [os.path.join(shelf, "names.tsv")]
+    paths = []
+    d = shelf
+    while True:
+        paths.append(os.path.join(d, "names.tsv"))
+        if d == root:
+            return paths
+        d = os.path.dirname(d)
+
+
+_NAMES_TABLES: Dict[str, Dict[str, List[dict]]] = {}
+
+
+def _load_names(shelf: str, root: Optional[str] = None):
+    tables = []
+    for p in _names_table_paths(shelf, root):
+        if p not in _NAMES_TABLES:
+            _NAMES_TABLES[p] = _read_names_table(p)
+        tables.append(_NAMES_TABLES[p])
+    return tables
+
+
+def _names_row_applies(row, pub=None, role=None, date=None) -> bool:
+    if row["status"] != "confirmed" or row["kind"] not in _NAMES_REWRITE_KINDS:
+        return False
+    if row["pub"] and (pub or "").lower() not in row["pub"].lower().split():
+        return False
+    if row["role"] and (role or "").lower() != row["role"].lower():
+        return False
+    start, end, date = row["start"], row["end"], date or ""
+    if not (start or end):
+        return True
+    if not date:
+        return False
+    if start and date[:len(start)] < start:
+        return False
+    if end and date[:len(end)] > end:
+        return False
+    return True
+
+
+def _resolve_name(name, tables, pub=None, role=None, date=None) -> Optional[str]:
+    """xdfile.names.resolve: the person a printed name is, or None."""
+    key = _name_key(name)
+    if not key:
+        return None
+    for table in tables:
+        people = {r["person"] for r in table.get(key, ())
+                  if _names_row_applies(r, pub, role, date)}
+        if len(people) == 1:
+            return people.pop()
+        if people:
+            return None
+    return None
+
+
+def _normalize_names(value, tables, pub=None, role=None, date=None) -> str:
+    """xdfile.names.normalize: each name a table resolves written as the
+    person, the joining kept."""
+    whole = _resolve_name(value, tables, pub, role, date)
+    if whole is not None:
+        return whole
+    parts = _NAMES_JOIN_RE.split(value)
+    for i in range(0, len(parts), 2):
+        person = _resolve_name(parts[i], tables, pub, role, date)
+        if person is not None:
+            parts[i] = person
+    return "".join(parts)
+
+
+# The pubid of an .xd file name (the .xd forms of xdfile.utils.parse_pubid).
+_PUBID_DATED_RE = re.compile(r"([A-Za-z0-9]+?)-?\d{4}-\d{2}-\d{2}")
+_PUBID_YEAR_ISSUE_RE = re.compile(
+    r"([A-Za-z0-9]*[A-Za-z])(?:18|19|20)\d{2}-[A-Za-z]+\d+$")
+_PUBID_HYPHEN_RE = re.compile(r"([A-Za-z0-9]+)-")
+
+
+def _file_pubid(path: str) -> Optional[str]:
+    base = os.path.basename(path)
+    base = base[:-3] if base.lower().endswith(".xd") else base
+    m = (_PUBID_DATED_RE.match(base) or _PUBID_YEAR_ISSUE_RE.match(base)
+         or _PUBID_HYPHEN_RE.match(base))
+    return m.group(1).lower() if m else None
+
+
+def _names_scope(path: str, parsed: ParsedXd):
+    """(tables, pub, date) for a file: the names tables beside it and above
+    it, its pubid, and its Date: (or the date in its name)."""
+    date = (get_header(parsed, "date") or "").strip()
+    if not date:
+        m = _ISO_DATE_RE.search(os.path.basename(path))
+        date = m.group(1) if m else ""
+    return (_load_names(os.path.dirname(os.path.abspath(path))),
+            _file_pubid(path), date)
+
+
+_NAMES_ROLES = {"author": "author", "editor": "editor"}
+
+
+def _names_changes(path: str, parsed: ParsedXd):
+    """(header, new value) for each Author:/Editor: a names table rewrites."""
+    if not path:
+        return []
+    tables, pub, date = _names_scope(path, parsed)
+    if not any(tables):
+        return []
+    out = []
+    for h in parsed.headers:
+        role = _NAMES_ROLES.get(h.key.lower())
+        if role is None:
+            continue
+        new = _normalize_names(h.value, tables, pub, role, date)
+        if new != h.value:
+            out.append((h, new))
+    return out
+
+
+@rule("XD812", Severity.WARNING, "name-not-canonical", profile="gxd",
+      doc="EDITORIAL.md People's names: Author:/Editor: by the names "
+          "tables, Byline: as printed [proposed]")
+def _(ctx):
+    """A name in Author: or Editor: that a names table resolves to a person
+    is written as that person (gxd EDITORIAL.md, "People's names"). The
+    fixer rewrites it and keeps the printed author credit in Byline:."""
+    for h, new in _names_changes(ctx.filename, ctx.parsed):
+        yield finding("XD812", Severity.WARNING, h.line,
+                      f"{h.key} {h.value!r} is {new!r} by the names tables "
+                      f"(EDITORIAL.md, People's names)")
+
+
+@fixer("XD812", path_aware=True)
+def _(text, path=None):
+    """Rewrite Author:/Editor: names the tables resolve, keeping the joining.
+    When Author: changes and there is no Byline: yet, add the printed author
+    credit as Byline:, the last header. Editor text never goes in Byline:."""
+    parsed = parse(text)
+    changes = _names_changes(path, parsed)
+    if not changes:
+        return text, 0
+    lines = text.splitlines(keepends=True)
+    printed_author = None
+    for h, new in changes:
+        i = h.line - 1
+        lines[i] = f"{h.key}: {new}{_line_ending(lines[i])}"
+        if h.key.lower() == "author" and printed_author is None:
+            printed_author = h.value
+    has_byline = any(h.key.lower() == "byline" for h in parsed.headers)
+    if printed_author is not None and not has_byline:
+        last = max(h.line for h in parsed.headers) - 1
+        nl = _detect_nl(text)
+        if not _line_ending(lines[last]):
+            lines[last] += nl
+        lines.insert(last + 1, f"Byline: {printed_author}{nl}")
+    return "".join(lines), len(changes)
+
+
 def apply_fixes(text: str, codes: Optional[set], unsafe_ok: bool,
-                profile: Optional[str] = None) -> Tuple[str, Dict[str, int]]:
+                profile: Optional[str] = None,
+                path: Optional[str] = None) -> Tuple[str, Dict[str, int]]:
     """Apply fixers in canonical order. Each fixer is idempotent and
     reparses internally if needed, so a single pass is sufficient.
-    Fixers for a profile's own rules run only under that profile."""
+    Fixers for a profile's own rules run only under that profile.
+    `path` is the file's path, for fixers that need it (PATH_AWARE_FIXERS)."""
     counts: Dict[str, int] = {}
     for code in FIX_ORDER:
         if codes is not None and code not in codes:
@@ -3219,6 +3438,8 @@ def apply_fixes(text: str, codes: Optional[set], unsafe_ok: bool,
             continue
         if code in PROFILE_AWARE_FIXERS:
             new_text, n = fn(text, profile=profile)
+        elif code in PATH_AWARE_FIXERS:
+            new_text, n = fn(text, path=path)
         else:
             new_text, n = fn(text)
         if new_text != text:
@@ -3516,7 +3737,7 @@ def _run_fix_mode(args, total, source, active_codes):
             continue
 
         new_text, counts = apply_fixes(ctx.text, fix_codes, args.unsafe_fixes,
-                                       profile=args.profile)
+                                       profile=args.profile, path=path)
         changed = new_text != ctx.text
 
         if changed:

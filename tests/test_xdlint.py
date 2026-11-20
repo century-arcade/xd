@@ -2113,7 +2113,7 @@ class TestNonUtf8Decode:
 # ---------------------------------------------------------------------------
 
 GXD_CODES = {"XD801", "XD802", "XD803", "XD804", "XD805", "XD806", "XD807",
-             "XD808", "XD809", "XD810"}
+             "XD808", "XD809", "XD810", "XD812"}
 
 
 def gxd_findings(text, filename="t.xd", is_new=False, code=None):
@@ -2468,3 +2468,155 @@ class TestGxdProfileCLI:
                               "--max-severity", "info", "-q"])
         hits = [line.split("\t")[0] for line in out.splitlines() if "\tXD809\t" in line]
         assert hits == ["new2024-01-01.xd:2"]
+
+
+# ---------------------------------------------------------------------------
+# XD812 name-not-canonical (gxd): names tables, Byline as printed
+# ---------------------------------------------------------------------------
+
+_NAMES_HEAD = ("byline\tperson\tkind\tstatus\tpub\trole\tstart\tend\tqid\t"
+               "source\tnote\n")
+
+
+def _names_row(byline, person, kind="variant", status="confirmed", pub="",
+               role="", start="", end=""):
+    return "\t".join([byline, person, kind, status, pub, role, start, end,
+                      "", "", ""]) + "\n"
+
+
+PUZZMO_ROWS = [
+    _names_row("brooke", "Brooke Husic"),
+    _names_row("./orta", "Orta Therox"),
+    _names_row("Ann", "Ann Hagerty", role="editor"),
+    _names_row("alex", "Alex Briñas", pub="pzmo", start="2025-06-06",
+               end="2025-06-06"),
+    _names_row("dylan", "Dylan Somebody", status="likely"),
+]
+
+
+@pytest.fixture
+def names_shelf(tmp_path):
+    """A gxd-like checkout (.git marks the root) with puzzmo/names.tsv."""
+    xdlint._NAMES_TABLES.clear()
+    (tmp_path / ".git").mkdir()
+    shelf = tmp_path / "puzzmo" / "2025"
+    shelf.mkdir(parents=True)
+    (tmp_path / "puzzmo" / "names.tsv").write_text(
+        _NAMES_HEAD + "".join(PUZZMO_ROWS), encoding="utf-8")
+    yield shelf
+    xdlint._NAMES_TABLES.clear()
+
+
+def _puzzmo(author, editor="Chris Piuma", extra="", date="2025-06-06"):
+    return SIMPLE.replace(
+        "Author: A\nDate: 2024-01-01\n",
+        f"Author: {author}\nEditor: {editor}\nCopyright: © 2025 x\n"
+        f"Date: {date}\n{extra}")
+
+
+class TestXD812Names:
+    def _fix(self, text, path):
+        return xdlint.apply_fixes(text, {"XD812"}, False, profile="gxd",
+                                  path=str(path))
+
+    def test_flags_names_a_table_resolves(self, names_shelf):
+        text = _puzzmo("brooke and ./orta", editor="Ann")
+        f = run_rule("XD812", text, str(names_shelf / "pzmo2025-06-06.xd"))
+        assert [x.line for x in f] == [2, 3]
+        assert "Brooke Husic and Orta Therox" in f[0].message
+
+    def test_fix_rewrites_and_adds_byline_last(self, names_shelf):
+        text = _puzzmo("brooke and ./orta", extra="Special: circle\n")
+        new, counts = self._fix(text, names_shelf / "pzmo2025-06-06.xd")
+        assert counts == {"XD812": 1}
+        head = new.split("\n\n\n")[0].splitlines()
+        assert head[1] == "Author: Brooke Husic and Orta Therox"
+        assert head[-1] == "Byline: brooke and ./orta"
+        assert head[-2] == "Special: circle"
+        assert self._fix(new, names_shelf / "pzmo2025-06-06.xd") == (new, {})
+
+    def test_editor_change_adds_no_byline(self, names_shelf):
+        text = _puzzmo("Rob Dubbin", editor="Ann")
+        new, _ = self._fix(text, names_shelf / "pzmo2025-06-06.xd")
+        assert "Editor: Ann Hagerty" in new and "Byline:" not in new
+
+    def test_byline_never_holds_editor_text(self, names_shelf):
+        text = _puzzmo("brooke", editor="Ann")
+        new, counts = self._fix(text, names_shelf / "pzmo2025-06-06.xd")
+        assert counts == {"XD812": 2}
+        assert "Byline: brooke\n" in new and "Ann\n" not in new
+
+    def test_existing_byline_is_kept(self, names_shelf):
+        text = _puzzmo("brooke", extra="Byline: By brooke\n")
+        new, _ = self._fix(text, names_shelf / "pzmo2025-06-06.xd")
+        assert "Author: Brooke Husic" in new
+        assert new.count("Byline:") == 1 and "Byline: By brooke" in new
+
+    def test_role_scope(self, names_shelf):
+        text = _puzzmo("Ann", editor="Ann")
+        new, _ = self._fix(text, names_shelf / "pzmo2025-06-06.xd")
+        assert "Author: Ann\n" in new and "Editor: Ann Hagerty" in new
+
+    def test_pub_and_date_scope(self, names_shelf):
+        ok = self._fix(_puzzmo("alex and brooke"),
+                       names_shelf / "pzmo2025-06-06.xd")[0]
+        assert "Author: Alex Briñas and Brooke Husic" in ok
+        other_day = _puzzmo("alex and brooke", date="2025-06-07")
+        new = self._fix(other_day, names_shelf / "pzmo2025-06-07.xd")[0]
+        assert "Author: alex and Brooke Husic" in new
+        other_pub = self._fix(_puzzmo("alex"),
+                              names_shelf / "pzmomini2025-06-06.xd")
+        assert other_pub[1] == {}
+
+    def test_likely_and_unknown_names_kept(self, names_shelf):
+        text = _puzzmo("dylan and Rob Dubbin")
+        assert self._fix(text, names_shelf / "pzmo2025-06-06.xd") == (text, {})
+
+    def test_crlf(self, names_shelf):
+        text = _puzzmo("brooke").replace("\n", "\r\n")
+        new, _ = self._fix(text, names_shelf / "pzmo2025-06-06.xd")
+        assert "Byline: brooke\r\n" in new and "\n" not in new.replace("\r\n", "")
+
+    def test_no_path_or_profile_no_change(self, names_shelf):
+        text = _puzzmo("brooke")
+        assert xdlint.apply_fixes(text, {"XD812"}, False, profile="gxd") == (text, {})
+        assert xdlint.apply_fixes(text, {"XD812"}, False,
+                                  path=str(names_shelf / "pzmo2025-06-06.xd")) == (text, {})
+
+    def test_cli_fix(self, names_shelf):
+        p = names_shelf / "pzmo2025-06-06.xd"
+        p.write_text(_puzzmo("brooke"), encoding="utf-8")
+        code, _out, _err = run_main(["--profile", "gxd", "--enable-only", "XD812",
+                                     "--fix", "-q", str(p)])
+        assert code == 0
+        new = p.read_text(encoding="utf-8")
+        assert "Author: Brooke Husic" in new and "Byline: brooke" in new
+
+    def test_pubid_from_file_name(self):
+        assert xdlint._file_pubid("x/pzmobig2025-01-13.xd") == "pzmobig"
+        assert xdlint._file_pubid("club72-2020-01-01.xd") == "club72"
+        assert xdlint._file_pubid("cc-0948.xd") == "cc"
+
+
+class TestNamesHelperParity:
+    """xdlint.py keeps its own copy of xdfile/names.py (it must stay
+    standalone). They must agree."""
+
+    def test_same_answers(self, names_shelf):
+        names = pytest.importorskip("xdfile.names")
+        names._TABLES.clear()
+        for s in ["Erik Agard", "Julie Bérubé", "William A. Lewis, Jr.",
+                  "./orta", "", "  S.N.  "]:
+            assert xdlint._name_key(s) == names.name_key(s)
+        ours = xdlint._load_names(str(names_shelf))
+        theirs = names.load_names(str(names_shelf))
+        assert ours == theirs
+        assert xdlint._names_table_paths(str(names_shelf)) == \
+            names.table_paths(str(names_shelf))
+        for value in ["brooke and ./orta", "Ann", "alex, brooke & dylan",
+                      "Rob Dubbin", ""]:
+            for pub, role, date in [("pzmo", "author", "2025-06-06"),
+                                    ("pzmo", "editor", "2025-06-07"),
+                                    ("pzmomini", "author", None)]:
+                assert xdlint._normalize_names(value, ours, pub, role, date) \
+                    == names.normalize(value, theirs, pub, role, date)
