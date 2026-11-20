@@ -8,6 +8,7 @@ xd*egg*
 build/
 wwwroot/
 gxd/
+xdformat/
 pub/
 tags
 Session.vim
