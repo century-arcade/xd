@@ -10,10 +10,13 @@ NOW=$(shell date +"%Y%m%d-%H%M%S")
 YEAR=$(shell date +"%Y")
 WWWZIP=/tmp/${NOW}-www.zip
 
+DATASETS_DIR=../xd-datasets
+SNAPSHOT=$(shell date +"%Y.%m")
+
 S3_REGION=us-west-2
 S3_WWW=s3://xd.saul.pw
 
-.PHONY: gxd.sqlite clean clean-cache sample sample-plan
+.PHONY: datasets gxd.sqlite clean clean-cache sample sample-plan
 
 all: analyze gridmatches website
 
@@ -50,6 +53,13 @@ analyze:
 	scripts/27-pubyear-stats.py -c ${GXD_DIR}
 	scripts/26-mkzip-clues.py -c ${GXD_DIR} -o ${WWW_DIR}/xd-clues.zip
 	scripts/29-mkzip-metadata.py -c ${GXD_DIR} -o ${WWW_DIR}/xd-metadata.zip
+
+# Versioned snapshots of the public zips for Hugging Face and Kaggle, built
+# from the output of `analyze`. Writes ${DATASETS_DIR}/${SNAPSHOT}/xd-clues/
+# and .../xd-metadata/; upload is by hand.
+#   make datasets SNAPSHOT=2026.11
+datasets:
+	scripts/30-mkdatasets.py --snapshot ${SNAPSHOT} -o ${DATASETS_DIR}/${SNAPSHOT} ${WWW_DIR}/xd-clues.zip ${WWW_DIR}/xd-metadata.zip
 
 website: website-static
 	mkdir -p ${WWW_DIR}/pub/gxd
