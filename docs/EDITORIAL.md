@@ -181,7 +181,12 @@ same person is decided once, in the names tables, not by each importer.
     Stanley Newman;
   - an earlier name the person still uses publicly alongside their current
     one, such as a maiden name they published under: `Margaret Petherbridge`
-    for Margaret Farrar.
+    for Margaret Farrar;
+  - a joke byline, when it's clear who made the puzzle: a person playing on
+    their own name for a puzzle or two (`Past Quiara Vasquez`, `Quiara
+    Vasquezzzzz` on her own site). `Byline:` keeps the joke, so it still
+    shows, and `Author:` puts the puzzle with the rest of the person's work.
+    A one-off joke needs no names table row.
 - **A name the person has left behind** is corrected by hand, not by a table.
   We follow the Trans Metadata Collective's
   [Metadata Best Practices for Trans and Gender Diverse Resources](https://doi.org/10.5281/zenodo.6686841)
@@ -198,12 +203,14 @@ same person is decided once, in the names tables, not by each importer.
   - When it isn't clear whether an earlier name is one the person still uses
     or one they've left behind, treat it as left behind.
 - **Kept as printed** (no `Byline:` needed unless the byline says more):
-  - a pen name or house name: `Anna Gram`, `Thomas Joseph`. It's the credit
-    the person or publisher chose. The names tables say who is behind it;
+  - a pen name or house name: `Anna Gram`, `Thomas Joseph`. It's a name used
+    across many puzzles, not a one-off joke: the credit the person or
+    publisher chose. The names tables say who is behind it;
   - anything we aren't sure of: an attribution a table marks "likely", a
     surname or first name alone (unless the publication's table says it is
     that publication's handle or initials for someone, as above), a byline
-    that may be a joke on the theme (`Peter O'Gordon` on an Irish theme);
+    that may be a joke on the theme but with no sure maker (`Peter O'Gordon`
+    on an Irish theme);
   - a name no table has yet. That's normal for a new constructor.
 - **Removed, and not kept in `Byline:`**: things that were never part of the
   byline. A date stamp (`Rich Norris010201`), conversion leftovers (`Fred
