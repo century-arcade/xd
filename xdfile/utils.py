@@ -278,7 +278,7 @@ def summary(_s, _m=0):
 
 # print without logging if -d
 def debug(s):
-    if g_args.debug:
+    if g_args and g_args.debug:
         print(" " + s)
 
 
@@ -553,7 +553,11 @@ def construct_date(y, m, d):
         debug("bad day %s" % d)
         return None
 
-    return datetime.date(year, mon, day)
+    try:
+        return datetime.date(year, mon, day)
+    except ValueError:
+        debug("bad date %s-%s-%s" % (y, m, d))
+        return None
 
 
 def parse_iso8601(s):
