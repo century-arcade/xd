@@ -183,7 +183,7 @@ def shelf_path_from_xdid(xdid):
     nysun/2007/ alongside nys2007-03-27.
     """
     # Date format with optional letter variant: <pubid>YYYY-MM-DD[a-z]
-    m = re.match(r'^([a-z]+)(\d{4})-\d{2}-\d{2}[a-z]?$', xdid)
+    m = re.match(r'^([a-z0-9]+?)-?(\d{4})-\d{2}-\d{2}[a-z]?$', xdid)
     if m:
         pubid = m.group(1)
         publ = metadb.xd_publications().get(pubid)
@@ -191,7 +191,7 @@ def shelf_path_from_xdid(xdid):
         year = m.group(2)
         return "%s/%s/%s" % (publisher, year, xdid)
     # Number format: <pubid>-NNN[a-z], or a number_slug like 219_5
-    m = re.match(r'^([a-z]+)-\d[A-Za-z0-9_]*$', xdid)
+    m = re.match(r'^([a-z0-9]+)-\d[A-Za-z0-9_]*$', xdid)
     if m:
         pubid = m.group(1)
         publ = metadb.xd_publications().get(pubid)
