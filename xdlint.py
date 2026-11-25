@@ -3217,7 +3217,7 @@ def _(ctx):
 # import xdfile.)
 _NAMES_COLUMNS = ["byline", "person", "kind", "status", "pub", "role",
                   "start", "end", "qid", "source", "note"]
-_NAMES_REWRITE_KINDS = {"variant", "misspelling", "former"}
+_NAMES_REWRITE_KINDS = {"variant", "misspelling"}
 _NAMES_JOIN_RE = re.compile(r"(, | and | & )")
 
 

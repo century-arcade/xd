@@ -168,6 +168,14 @@ keeps what was printed. So `Author:` can use one spelling per person without
 losing anything, but only where we're sure it's the same person. Who is the
 same person is decided once, in the names tables, not by each importer.
 
+The files fix spellings; the tables link names. A spelling of a name (initials,
+a typo, a handle) means the same person forever, so it's corrected in the file
+once. A different name (a pen name, a house name, a maiden or married name) is
+a fact about the person that can change over time, so the file keeps the name
+the puzzle was published under and the names tables say who it is. A name
+change is a new table row and rewrites no files. The one exception is a name
+the person has left behind (below).
+
 - **Rewritten to the person's name** (the printed form goes in `Byline:`):
   - initials, a middle name or initial, a nickname: `B. E. Quigley`,
     `Brendan Quigley`, `Liz Gorski`;
@@ -179,9 +187,6 @@ same person is decided once, in the names tables, not by each importer.
     Puzzmo's `brooke`, `rafa` and `Ann`;
   - a publication's own way of crediting someone: Newsday's `S.N.` for
     Stanley Newman;
-  - an earlier name the person still uses publicly alongside their current
-    one, such as a maiden name they published under: `Margaret Petherbridge`
-    for Margaret Farrar;
   - a joke byline, when it's clear who made the puzzle: a person playing on
     their own name for a puzzle or two (`Past Quiara Vasquez`, `Quiara
     Vasquezzzzz` on her own site). `Byline:` keeps the joke, so it still
@@ -207,6 +212,12 @@ same person is decided once, in the names tables, not by each importer.
   - a pen name or house name: `Anna Gram`, `Thomas Joseph`. It's a name used
     across many puzzles, not a one-off joke: the credit the person or
     publisher chose. The names tables say who is behind it;
+  - an earlier name the person published under and doesn't disown, such as a
+    maiden name: `Margaret Petherbridge`, not rewritten to Margaret Farrar. A
+    `former` row in the names tables links the two. A spelling of the earlier
+    name is rewritten to that name, not to the later one (`M. Petherbridge` is
+    `Margaret Petherbridge`). When a constructor changes their name, their
+    earlier puzzles keep the old one and nothing is rewritten;
   - anything we aren't sure of: an attribution a table marks "likely", a
     surname or first name alone (unless the publication's table says it is
     that publication's handle or initials for someone, as above), a byline
@@ -233,24 +244,32 @@ same person is decided once, in the names tables, not by each importer.
     there.
   - **The corpus's table** (`names.tsv` at the root) holds facts about a
     person that hold wherever they're printed: their own variants (`Louis
-    Sabin` for Lou Sabin, `B. E. Quigley`), an earlier name they still use
-    publicly (`Margaret Petherbridge`), a pen name (`Anna Gram`). A row belongs here when its printed form turns up on more
+    Sabin` for Lou Sabin, `B. E. Quigley`), an earlier name they published
+    under (`Margaret Petherbridge`), a pen name (`Anna Gram`). A row belongs here when its printed form turns up on more
     than one shelf, or could.
   - Each row has the byline as printed, the person, the kind (`variant`,
     `misspelling`, `former`, `pen`, `house`), a status (`confirmed` or
     `likely`), an optional scope (series, role, dates) for a name that would
     be wrong more widely, an optional Wikidata QID, and a source. Variants and
     misspellings need no source; pen, house and former names, and a handle
-    resolved from anything but the outlet's own data, do. A `former` row is
-    only for an earlier name the person still uses publicly, and its source
-    shows that; a name they've left behind never gets a row (see above).
+    resolved from anything but the outlet's own data, do. `variant` and
+    `misspelling` rows rewrite `Author:` and `Editor:`; `former`, `pen` and
+    `house` rows only link a name to the person and rewrite nothing. A
+    `former` row is only for an earlier name the person doesn't disown, and
+    its source shows that; a name they've left behind never gets a row (see
+    above).
   - A one-off typo in one file needs no row: correct the name, and `Byline:`
     keeps what was printed. Add a row when the same slip recurs.
   - Names are compared after folding case, accents and punctuation, so
     `erik agard` and `Erik Agard` need no row.
-  - A person's own name is the one they use now, where they've said;
-    otherwise the fullest form they're most often printed with. Every
-    person a shelf's table names is spelled the way the corpus spells them.
+  - The spelling a variant is rewritten to is the one the person uses for
+    that name, where they've said; otherwise the fullest form they're most
+    often printed with. A `former`, `pen` or `house` row's person is the
+    name they use now. Every person a shelf's table names is spelled the way
+    the corpus spells them.
+  - **When a table changes**: a new or corrected `variant` or `misspelling`
+    row and the files it rewrites go in the same MR, and touch only the files
+    with that spelling. A `former`, `pen` or `house` row changes no files.
   - Guesses ("may be") stay out. A "likely" row links the names but never
     rewrites `Author:`.
 - **What contributors do**: type the byline as printed in `Author:` (or
@@ -418,7 +437,8 @@ Which puzzles we collect is in [COLLECTION.md](COLLECTION.md).
   shelf, each shelf's table and files in one MR, starting with Puzzmo (gxd
   !417). crossref's alias list (about 630 rows: 494 seen on one shelf only,
   129 on several) is the starting point for the rest; its one-shelf rows go
-  to shelf tables, and its others to the corpus's table.
+  to shelf tables, and its others to the corpus's table. Its married and
+  maiden name rows become `former` rows, which rewrite nothing.
 - **Related xdformat issues** (the format's open design questions; check them
   for the latest): [16, `Text-As-Of:`](https://github.com/century-arcade/xdformat/issues/16),
   [11, a `Byline:` field](https://github.com/century-arcade/xdformat/issues/11),

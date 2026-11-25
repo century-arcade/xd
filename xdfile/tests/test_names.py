@@ -67,9 +67,8 @@ def test_only_confirmed_rewrite_kinds(tmp_path):
         row("maybe", "Someone", status="likely"),
     ])
     assert names.resolve("brooke", shelf) == "Brooke Husic"
-    assert names.resolve("Margaret Petherbridge", shelf) == "Margaret Farrar"
     assert names.resolve("Shorts", shelf) == "Will Shortz"
-    for kept in ("Anna Gram", "Thomas Joseph", "maybe", "nobody"):
+    for kept in ("Margaret Petherbridge", "Anna Gram", "Thomas Joseph", "maybe", "nobody"):
         assert names.resolve(kept, shelf) is None
 
 
