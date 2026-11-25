@@ -8,11 +8,11 @@ table (`names.tsv` at the root, facts about a person wherever printed). A name
 is looked up in its shelf's table first, then the corpus's.
 
 Columns: byline, person, kind, status, pub, role, start, end, qid, source,
-note. Only `confirmed` rows of kind `variant`, `misspelling` or `former`
-rewrite a name; `pen` and `house` names are kept as printed, and a `likely`
-row never rewrites. The optional scope narrows a row: `pub` (space-separated
-pubids), `role` (author or editor), `start` and `end` (dates, inclusive; a
-year or year-month covers all of it).
+note. Only `confirmed` rows of kind `variant` or `misspelling` rewrite a
+name; `former`, `pen` and `house` names are kept as printed (the row links
+them to the person), and a `likely` row never rewrites. The optional scope
+narrows a row: `pub` (space-separated pubids), `role` (author or editor),
+`start` and `end` (dates, inclusive; a year or year-month covers all of it).
 
 Fetching and converting never resolve names; normalizing is an import step
 between converting and committing (xdlint XD812 --fix, --profile gxd).
@@ -33,9 +33,10 @@ import unicodedata
 COLUMNS = ["byline", "person", "kind", "status", "pub", "role", "start", "end",
            "qid", "source", "note"]
 
-# Kinds that rewrite a name to the person's own; pen and house names are the
-# credit someone chose and stay as printed.
-REWRITE_KINDS = {"variant", "misspelling", "former"}
+# Kinds that rewrite a name to the person's own spelling of it. Former, pen and
+# house names are different names, the credit someone chose, and stay as
+# printed; their rows only say who it is.
+REWRITE_KINDS = {"variant", "misspelling"}
 
 # How Author: and Editor: join names; kept as they are when names change.
 JOIN_RE = re.compile(r"(, | and | & )")
