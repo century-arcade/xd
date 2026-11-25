@@ -386,6 +386,7 @@ def parse_puz(contents, filename):
     if circles:
         xd.set_header("Special", "circle")
 
+    diagramless = puzobj.puzzletype == 0x0401
     for r, row in enumerate(puzzle):
         rowstr = ""
         for c, cell in enumerate(row):
@@ -394,7 +395,9 @@ def parse_puz(contents, filename):
             elif cell.solution == puzzle.block:
                 rowstr += BLOCK_CHAR
             elif cell.solution == ':':
-                rowstr += OPEN_CHAR
+                # Across Lite marks a diagramless puzzle's black squares
+                # with ':' (puzzle type 0x0401); elsewhere ':' is a void cell.
+                rowstr += BLOCK_CHAR if diagramless else OPEN_CHAR
             elif cell == puzzle.empty:
                 rowstr += UNKNOWN_CHAR
             else:
