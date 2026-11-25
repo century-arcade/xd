@@ -68,3 +68,29 @@ def test_parse_puz_plain_author_unchanged():
     xd = parse_puz(_tiny_puz('Matt Gaffney'), 'wsj2026-10-21.puz')
     assert xd.get_header('Author') == 'Matt Gaffney'
     assert 'Editor' not in xd.to_unicode()
+
+
+def _colon_puz(puzzletype):
+    import puz
+    p = puz.Puzzle()
+    p.width = p.height = 3
+    p.puzzletype = puzzletype
+    p.solution = 'ABCD:EFGH'
+    p.fill = '----:----'
+    p.title = 'T'
+    p.author = 'A'
+    p.clues = ['a1', 'd1', 'd2', 'a3']
+    return p.tobytes()
+
+
+def test_parse_puz_diagramless_colon_is_block():
+    """Across Lite's diagramless type stores black squares as ':'."""
+    from xdfile.puz2xd import parse_puz
+    xd = parse_puz(_colon_puz(0x0401), 'x.puz')
+    assert [''.join(r) for r in xd.grid] == ['ABC', 'D#E', 'FGH']
+
+
+def test_parse_puz_normal_colon_is_void():
+    from xdfile.puz2xd import parse_puz
+    xd = parse_puz(_colon_puz(0x0001), 'x.puz')
+    assert [''.join(r) for r in xd.grid] == ['ABC', 'D_E', 'FGH']
